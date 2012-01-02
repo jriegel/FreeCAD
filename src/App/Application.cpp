@@ -1280,7 +1280,7 @@ void Application::processCmdLineFiles(void)
                 Base::Interpreter().runFile(File.filePath().c_str(), true);
             }
             else if (File.hasExtension("py")) {
-                try {
+                try{
                     Base::Interpreter().loadModule(File.fileNamePure().c_str());
                 }
                 catch(const PyException&) {
