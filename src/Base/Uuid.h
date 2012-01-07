@@ -1,5 +1,5 @@
 /***************************************************************************
- *   (c) Jürgen Riegel (juergen.riegel@web.de) 2008                        *
+ *   (c) Jï¿½rgen Riegel (juergen.riegel@web.de) 2008                        *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -32,7 +32,7 @@ namespace Base
 {
 
 /** Creates a Uuid
- * \author Jürgen Riegel
+ * \author Jï¿½rgen Riegel
  */
 class BaseExport Uuid
 {
@@ -47,8 +47,15 @@ public:
     const std::string& getValue(void) const;
     static std::string createUuid(void);
 
+    /// raw data
+    unsigned long  Data1;
+    unsigned short Data2;
+    unsigned short Data3;
+    unsigned char  Data4[ 8 ];
+
 private:
     std::string _uuid;
+
 };
 
 } //namespace Base
