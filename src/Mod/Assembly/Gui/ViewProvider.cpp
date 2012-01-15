@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2008 Jürgen Riegel (juergen.riegel@web.de)              *
+ *   Copyright (c) 2011 Juergen Riegel <FreeCAD@juergen-riegel.net>        *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -21,56 +21,30 @@
  ***************************************************************************/
 
 
-#ifndef ASSEMGBLYGUI_PRECOMPILED_H
-#define ASSEMGBLYGUI_PRECOMPILED_H
+#include "PreCompiled.h"
 
-#include <FCConfig.h>
-
-// Importing of App classes
-#ifdef FC_OS_WIN32
-# define AssemblyAppExport __declspec(dllimport)
-# define PartGuiExport     __declspec(dllimport)
-# define AssemblyGuiExport __declspec(dllexport)
-#else // for Linux
-# define AssemblyAppExport
-# define PartGuiExport
-# define AssemblyGuiExport
+#ifndef _PreComp_
 #endif
 
+#include "ViewProvider.h"
+#include <Gui/Command.h>
+//#include <Gui/Document.h>
 
-#ifdef _PreComp_
+using namespace AssemblyGui;
 
-// Python
-#include <Python.h>
+PROPERTY_SOURCE(AssemblyGui::ViewProvider,PartGui::ViewProviderPart)
 
-// standard
-#include <iostream>
-#include <assert.h>
-#include <cmath>
+ViewProvider::ViewProvider()
+{
+}
 
-// STL
-#include <vector>
-#include <map>
-#include <string>
-#include <list>
-#include <set>
-#include <algorithm>
-#include <stack>
-#include <queue>
-#include <bitset>
+ViewProvider::~ViewProvider()
+{
+}
 
-#include <ode/ode.h>
-
-#ifdef FC_OS_WIN32
-# include <windows.h>
-#endif
+bool ViewProvider::doubleClicked(void)
+{
+    return true;
+}
 
 
-// Qt Toolkit
-#ifndef __Qt4All__
-# include <Gui/Qt4All.h>
-#endif
-
-#endif //_PreComp_
-
-#endif // ASSEMGBLYGUI_PRECOMPILED_H
