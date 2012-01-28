@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2012     *
+ *   Copyright (c) Jï¿½rgen Riegel          (juergen.riegel@web.de) 2012     *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -61,6 +61,8 @@ public:
     /// return a hit element to the selection path or 0
     virtual std::string getElement(const SoDetail *) const;
     virtual SoDetail* getDetail(const char*) const;
+
+    static void measureDistanceCallback(void * ud, SoEventCallback * n);
 
 protected:
     void onChanged(const App::Property* prop);
