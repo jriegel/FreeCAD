@@ -1063,7 +1063,6 @@ void DocumentItem::slotHighlightObject (const Gui::ViewProviderDocumentObject& o
     default:
         break;
     }
-
     jt->second->setFont(0,f);
 }
 
