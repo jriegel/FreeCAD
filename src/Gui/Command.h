@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2002 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 2002 Juergen Riegel <juergen.riegel@web.de>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -144,7 +144,7 @@ protected:
  * - anything else, especially altering the document must be done on application level. See doCommand() for details.
  *
  * @see CommandManager
- * @author Jürgen Riegel
+ * @author Jï¿½rgen Riegel
  */
 class GuiExport Command : public CommandBase
 {
@@ -251,8 +251,6 @@ public:
     static void copyVisual(const char* to, const char* attr_to, const char* from, const char* attr_from);
     /// Get Python tuple from object and sub-elements 
     static std::string getPythonTuple(const std::string& name, const std::vector<std::string>& subnames);
-    /// import an external module only once 
-    //static void addModule(const char* sModuleName);
     /// translate a string to a python string literal (needed e.g. in file names for windows...)
     const std::string strToPython(const char* Str);
     const std::string strToPython(const std::string &Str){return strToPython(Str.c_str());};
@@ -317,7 +315,7 @@ private:
  * passing between the C++ and the Python world. This includes everything like setting resources such as
  * bitmaps, activation or bindings to the user interface.
  * @see CommandManager
- * @author Jürgen Riegel
+ * @author Jï¿½rgen Riegel
  */
 class PythonCommand: public Command
 {
@@ -469,7 +467,7 @@ protected:
  *  on are handles here. Further the Building of Toolbars and (Context) 
  *  menus (connecting to a QAction) is done here.
  *  @see Command
- *  @author Jürgen Riegel
+ *  @author Jï¿½rgen Riegel
  */
 class GuiExport CommandManager
 {
@@ -537,7 +535,7 @@ private:
 /** The Command Macro Standard
  *  This macro makes it easier to define a new command.
  *  The parameters are the class name.
- *  @author Jürgen Riegel
+ *  @author Jï¿½rgen Riegel
  */
 #define DEF_STD_CMD(X) class X : public Gui::Command \
 {\
@@ -552,7 +550,7 @@ protected: \
 /** The Command Macro Standard + isActive()
  *  This macro makes it easier to define a new command.
  *  The parameters are the class name
- *  @author Jürgen Riegel
+ *  @author Jï¿½rgen Riegel
  */
 #define DEF_STD_CMD_A(X) class X : public Gui::Command \
 {\
@@ -569,7 +567,7 @@ protected: \
 /** The Command Macro Standard + createAction()
  *  This macro makes it easier to define a new command.
  *  The parameters are the class name
- *  @author Jürgen Riegel
+ *  @author Jï¿½rgen Riegel
  */
 #define DEF_STD_CMD_C(X) class X : public Gui::Command \
 {\
@@ -664,7 +662,7 @@ protected: \
  *  This macro makes it easier to define a new command for the 3D View
  *  It activate the command only when a 3DView is active.
  *  The parameters are the class name
- *  @author Jürgen Riegel
+ *  @author Jï¿½rgen Riegel
  */
 #define DEF_3DV_CMD(X) class X : public Gui::Command \
 {\
