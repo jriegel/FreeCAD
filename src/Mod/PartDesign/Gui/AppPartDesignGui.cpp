@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2008 Jürgen Riegel (juergen.riegel@web.de)              *
+ *   Copyright (c) 2008 Juergen Riegel (juergen.riegel@web.de)             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -33,6 +33,7 @@
 
 #include "Workbench.h"
 #include "ViewProviderPocket.h"
+#include "ViewProviderBody.h"
 #include "ViewProviderPad.h"
 #include "ViewProviderChamfer.h"
 #include "ViewProviderFillet.h"
@@ -87,6 +88,7 @@ void PartDesignGuiExport initPartDesignGui()
 
     PartDesignGui::Workbench                 ::init();
     PartDesignGui::ViewProvider              ::init();
+    PartDesignGui::ViewProviderBody      ::init();
     PartDesignGui::ViewProviderPocket        ::init();
     PartDesignGui::ViewProviderPad           ::init();
     PartDesignGui::ViewProviderRevolution    ::init();
