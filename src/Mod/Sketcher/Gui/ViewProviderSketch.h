@@ -379,6 +379,7 @@ protected:
     bool relative;
 
     Gui::Rubberband* rubberband;
+    std::string oldWb;
 };
 
 } // namespace PartGui
