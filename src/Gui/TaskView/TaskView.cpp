@@ -115,7 +115,7 @@ void TaskGroup::actionEvent (QActionEvent* e)
             TaskIconLabel *label = new TaskIconLabel(
                 action->icon(), action->text(), this);
             this->addIconLabel(label);
-            connect(label,SIGNAL(clicked()),action,SIGNAL(triggered()));
+            connect(label,SIGNAL(clicked()),action,SIGNAL(triggered()),Qt::QueuedConnection);
             break;
         }
     case QEvent::ActionChanged:
