@@ -536,10 +536,8 @@ bool TaskDlgPadParameters::reject()
     // get the support and Sketch
     PartDesign::Pad* pcPad = static_cast<PartDesign::Pad*>(PadView->getObject()); 
     Sketcher::SketchObject *pcSketch = 0;
-    App::DocumentObject    *pcSupport = 0;
     if (pcPad->Sketch.getValue()) {
-        pcSketch = static_cast<Sketcher::SketchObject*>(pcPad->Sketch.getValue()); 
-        pcSupport = pcSketch->Support.getValue();
+        pcSketch = static_cast<Sketcher::SketchObject*>(pcPad->Sketch.getValue());
     }
 
     // roll back the done things
@@ -550,12 +548,7 @@ bool TaskDlgPadParameters::reject()
     if (!Gui::Application::Instance->getViewProvider(pcPad)) {
         if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
             Gui::Application::Instance->getViewProvider(pcSketch)->show();
-        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
-            Gui::Application::Instance->getViewProvider(pcSupport)->show();
     }
-
-    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
-    //Gui::Command::commitCommand();
 
     return true;
 }
