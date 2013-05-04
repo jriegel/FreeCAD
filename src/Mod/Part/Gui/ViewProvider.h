@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2004 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 2004 Juergen Riegel <juergen.riegel@web.de>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -56,6 +56,8 @@ public:
     /// destructor
     virtual ~ViewProviderPart();
     virtual bool doubleClicked(void);
+
+    virtual bool onDelete(const std::vector<std::string> &);
 
 protected:
     void applyColor(const Part::ShapeHistory& hist,
