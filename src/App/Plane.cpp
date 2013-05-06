@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) J�rgen Riegel          (juergen.riegel@web.de) 2012     *
+ *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2012    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -48,6 +48,10 @@ Plane::~Plane(void)
 {
 }
 
+Base::BoundBox3d Plane::getBoundBox()
+{
+    return Base::BoundBox3d(-10, -10, -10, 10, 10, 10);
+}
 
 
 

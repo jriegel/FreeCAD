@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) J�rgen Riegel          (juergen.riegel@web.de) 2012     *
+ *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2012    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -53,6 +53,9 @@ public:
   virtual const char* getViewProviderName(void) const {
       return "Gui::ViewProviderPlane";
   }
+
+  /// Return the bounding box of the plane (this is always a fixed size)
+  static Base::BoundBox3d getBoundBox();
 };
 
 
