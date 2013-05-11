@@ -120,7 +120,6 @@ TaskPocketParameters::TaskPocketParameters(ViewProviderPocket *PocketView,QWidge
     ui->changeMode->insertItem(2, tr("To first"));
     ui->changeMode->insertItem(3, tr("Up to face"));
     ui->changeMode->setCurrentIndex(index);
-    ui->checkBoxMidplane->setChecked(midplane);
 
     ui->pocketLength->blockSignals(false);
     ui->checkBoxMidplane->blockSignals(false);
@@ -128,6 +127,10 @@ TaskPocketParameters::TaskPocketParameters(ViewProviderPocket *PocketView,QWidge
     ui->buttonFace->blockSignals(false);
     ui->lineFaceName->blockSignals(false);
     ui->changeMode->blockSignals(false);
+
+    // Activate the Reverse option only if the support is a datum plane
+    ui->checkBoxReversed->setVisible(pcPocket->isSupportDatum());
+
     updateUI(index);
  
     //// check if the sketch has support
@@ -149,6 +152,7 @@ void TaskPocketParameters::updateUI(int index)
         ui->pocketLength->selectAll();
         QMetaObject::invokeMethod(ui->pocketLength, "setFocus", Qt::QueuedConnection);
         ui->checkBoxMidplane->setEnabled(true);
+        // Reverse only makes sense if Midplane is not true
         ui->checkBoxReversed->setEnabled(!ui->checkBoxMidplane->isChecked()); // Will flip direction of dimension
         ui->buttonFace->setEnabled(false);
         ui->lineFaceName->setEnabled(false);
@@ -164,8 +168,8 @@ void TaskPocketParameters::updateUI(int index)
         ui->pocketLength->setEnabled(false);
         ui->checkBoxMidplane->setEnabled(false); // Can't have a midplane to a single face
         ui->checkBoxReversed->setEnabled(false); // Will change the direction it seeks for its first face? 
-						 // Doesnt work so is currently disabled. Fix probably lies 
-						 // somwhere in IF block on line 125 of FeaturePocket.cpp
+                                                 // Doesnt work so is currently disabled. Fix probably lies 
+                                                 // somwhere in IF block on line 125 of FeaturePocket.cpp
         ui->buttonFace->setEnabled(false);
         ui->lineFaceName->setEnabled(false);
         onButtonFace(false);
@@ -363,6 +367,11 @@ double TaskPocketParameters::getLength(void) const
     return ui->pocketLength->value().getValue();
 }
 
+bool   TaskPocketParameters::getReversed(void) const
+{
+    return ui->checkBoxReversed->isChecked();
+}
+
 int TaskPocketParameters::getMode(void) const
 {
     return ui->changeMode->currentIndex();
@@ -457,6 +466,7 @@ bool TaskDlgPocketParameters::accept()
     try {
         //Gui::Command::openCommand("Pocket changed");
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Length = %f",name.c_str(),parameter->getLength());
+        Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Reversed = %i",name.c_str(),parameter->getReversed()?1:0);
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Type = %u",name.c_str(),parameter->getMode());
         std::string facename = parameter->getFaceName().data();
         PartDesign::Pocket* pcPocket = static_cast<PartDesign::Pocket*>(PocketView->getObject());

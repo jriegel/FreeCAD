@@ -54,6 +54,7 @@ public:
 
     double getLength(void) const;
     bool getMidplane(void) const;
+    bool getReversed(void) const;
     int getMode(void) const;
     QByteArray getFaceName(void) const;
     const bool updateView() const;
