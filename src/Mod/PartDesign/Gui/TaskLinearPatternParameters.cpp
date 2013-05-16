@@ -32,6 +32,7 @@
 #include "TaskLinearPatternParameters.h"
 #include "TaskMultiTransformParameters.h"
 #include "Workbench.h"
+#include "ReferenceSelection.h"
 #include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
@@ -452,7 +453,7 @@ bool TaskDlgLinearPatternParameters::accept()
         std::vector<std::string> directions;
         App::DocumentObject* obj;
         linearpatternParameter->getDirection(obj, directions);
-        std::string direction = linearpatternParameter->getPythonStr(obj, directions);
+        std::string direction = getPythonStr(obj, directions);
         if (!direction.empty()) {
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = %s", name.c_str(), direction.c_str());
         } else
