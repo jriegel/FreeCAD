@@ -96,6 +96,8 @@ SET(FeaturesSketchBased_SRCS
     FeatureSubtractive.cpp
     FeatureHole.h
     FeatureHole.cpp
+    FeatureBoolean.h
+    FeatureBoolean.cpp
 )
 
 SOURCE_GROUP("SketchBasedFeatures" FILES ${FeaturesSketchBased_SRCS})
