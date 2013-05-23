@@ -59,7 +59,6 @@ public:
     bool   getReversed(void) const;
     bool   getMidplane(void) const;
     QByteArray getFaceName(void) const;
-    const bool updateView() const;
     void saveHistory(void);
 
 private Q_SLOTS:
