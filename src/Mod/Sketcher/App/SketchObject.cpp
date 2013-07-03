@@ -78,6 +78,8 @@ SketchObject::SketchObject()
     ADD_PROPERTY_TYPE(Constraints,     (0)  ,"Sketch",(App::PropertyType)(App::Prop_None),"Sketch constraints");
     ADD_PROPERTY_TYPE(ExternalGeometry,(0,0),"Sketch",(App::PropertyType)(App::Prop_None),"Sketch external geometry");
 
+    allowOtherBody = true;
+
     for (std::vector<Part::Geometry *>::iterator it=ExternalGeo.begin(); it != ExternalGeo.end(); ++it)
         if (*it) delete *it;
     ExternalGeo.clear();
@@ -1900,7 +1902,7 @@ int SketchObject::DeleteUnusedInternalGeometry(int GeoId)
 int SketchObject::addExternal(App::DocumentObject *Obj, const char* SubName)
 {
     // so far only externals to the support of the sketch and datum features
-    if (Support.getValue() != Obj)
+    if (!allowOtherBody && (Support.getValue() != Obj))
         if (!Obj->getTypeId().isDerivedFrom(App::Plane::getClassTypeId()) &&
             !Obj->getTypeId().isDerivedFrom(Part::Datum::getClassTypeId()))
         return -1;
