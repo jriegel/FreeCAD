@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2008     *
+ *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2008    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -365,6 +365,14 @@ bool Part2DObject::seekTrimPoints(const std::vector<Geometry *> &geomlist,
 void Part2DObject::acceptGeometry()
 {
     // implemented in sub-classes
+}
+
+void Part2DObject::onChanged(const App::Property* prop)
+{
+    // Update the Placement if the Support changes
+    if ((prop == &Support) && (Support.getValue() != NULL))
+        positionBySupport();
+    Part::Feature::onChanged(prop);
 }
 
 // Python Drawing feature ---------------------------------------------------------
