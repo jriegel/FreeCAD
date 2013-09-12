@@ -99,6 +99,9 @@ public:
     bool scanGeometry(const std::vector<Part::Geometry *> &GeoList) const;
     bool isGeometryInvalid(){return invalidGeometry;}
 
+    /// Return status of geometry for better error reporting
+    bool hasInvalidGeometry() const { return invalidGeometry; }
+
 private:
     std::vector<Constraint *> _lValueList;
 
