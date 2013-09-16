@@ -70,6 +70,7 @@ class PartDesignWorkbench ( Workbench ):
                     from WizardShaft import WizardShaft
                 except ImportError:
                     print "Wizard shaft module cannot be loaded"
+                from FeatureHole import HoleGui
                 import PartDesignGui
                 import PartDesign
                 try:
