@@ -95,7 +95,7 @@ if(BUILD_ASSEMBLY)
 endif(BUILD_ASSEMBLY)
 
 if(BUILD_CAM)
-    add_subdirectory(Cam)
+#    add_subdirectory(Cam)
 endif(BUILD_CAM)
 
 if(BUILD_FEM)
