@@ -23,13 +23,17 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <Inventor/nodes/SoPickStyle.h>
+# include <QApplication>
 #endif
 
 #include <boost/math/special_functions/fpclassify.hpp>
 #include <Base/Console.h>
 
 #include <App/Plane.h>
+#include <Gui/Action.h>
 #include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
 #include <Gui/Document.h>
 #include <Gui/Command.h>
 #include <Gui/MainWindow.h>
@@ -50,7 +54,41 @@
 using namespace std;
 using namespace SketcherGui;
 
+
 /* helper functions ======================================================*/
+
+// Return counter-clockwise angle from horizontal out of p1 to p2 in radians.
+double GetPointAngle (const Base::Vector2D &p1, const Base::Vector2D &p2)
+{
+  double dX = p2.fX - p1.fX;
+  double dY = p2.fY - p1.fY;
+  return dY >= 0 ? atan2(dY, dX) : atan2(dY, dX) + 2*M_PI;
+}
+
+/*
+Find the centerpoint of a circle drawn through any 3 points:
+
+Given points p1-3, draw 2 lines: S12 and S23 which each connect two points.  From the
+midpoint of each line, draw a perpendicular line (S12p/S23p) across the circle.  These
+lines will cross at the centerpoint.
+
+Mathematically, line S12 will have a slope of m12 which can be determined.  Therefore,
+the slope m12p is -1/m12. Line S12p will have an equation of y = m12p*x + b12p.  b12p can
+be solved for using the midpoint of the line.  This can be done for both lines.  Since
+both S12p and S23p cross at the centerpoint, solving the two equations together will give
+the location of the centerpoint.
+*/
+Base::Vector2D GetCircleCenter (const Base::Vector2D &p1, const Base::Vector2D &p2, const Base::Vector2D &p3)
+{
+  double m12p = (p1.fX - p2.fX) / (p2.fY - p1.fY);
+  double m23p = (p2.fX - p3.fX) / (p3.fY - p2.fY);
+  double x = 1/( 2*(m12p - m23p) ) * ( m12p*(p1.fX + p2.fX) -
+                                       m23p*(p2.fX + p3.fX) +
+                                       p3.fY - p1.fY );
+  double y = m12p * ( x - (p1.fX + p2.fX)/2 ) + (p1.fY + p2.fY)/2;
+
+  return Base::Vector2D(x, y);
+}
 
 void ActivateHandler(Gui::Document *doc,DrawSketchHandler *handler)
 {
@@ -85,6 +123,7 @@ SketcherGui::ViewProviderSketch* getSketchViewprovider(Gui::Document *doc)
     }
     return 0;
 }
+
 
 /* Sketch commands =======================================================*/
 
@@ -220,8 +259,6 @@ protected:
     std::vector<Base::Vector2D> EditCurve;
     std::vector<AutoConstraint> sugConstr1, sugConstr2;
 };
-
-
 
 DEF_STD_CMD_A(CmdSketcherCreateLine);
 
@@ -429,8 +466,6 @@ protected:
     std::vector<AutoConstraint> sugConstr1, sugConstr2;
 };
 
-
-
 DEF_STD_CMD_A(CmdSketcherCreateRectangle);
 
 CmdSketcherCreateRectangle::CmdSketcherCreateRectangle()
@@ -505,7 +540,8 @@ public:
     DrawSketchHandlerLineSet()
       : Mode(STATUS_SEEK_First),SegmentMode(SEGMENT_MODE_Line),
         TransitionMode(TRANSITION_MODE_Free),suppressTransition(false),EditCurve(2),
-        firstVertex(-1),firstCurve(-1),previousCurve(-1),previousPosId(Sketcher::none) {}
+        firstCurve(-1),previousCurve(-1),
+        firstPosId(Sketcher::none),previousPosId(Sketcher::none) {}
     virtual ~DrawSketchHandlerLineSet() {}
     /// mode table
     enum SELECT_MODE {
@@ -751,13 +787,9 @@ public:
                     }
                 }
 
-            // in case a transition is set up, firstCurve and firstVertex should
-            // remain set to -1 in order to disable closing the wire
-            if (previousCurve == -1) {
-                // remember our first point
-                firstVertex = getHighestVertexIndex() + 1;
-                firstCurve = getHighestCurveIndex() + 1;
-            }
+            // remember our first point (even if we are doing a transition from a previous curve)
+            firstCurve = getHighestCurveIndex() + 1;
+            firstPosId = Sketcher::start;
 
             if (SegmentMode == SEGMENT_MODE_Line)
                 EditCurve.resize(TransitionMode == TRANSITION_MODE_Free ? 2 : 3);
@@ -774,10 +806,20 @@ public:
                 sketchgui->drawEdit(EditCurve);
                 sketchgui->purgeHandler(); // no code after this line, Handler get deleted in ViewProvider
             }
-            if (sketchgui->getPreselectPoint() == firstVertex && firstVertex != -1)
-                Mode = STATUS_Close;
-            else
-                Mode = STATUS_Do;
+
+            Mode = STATUS_Do;
+            if (sketchgui->getPreselectPoint() != -1 && firstPosId != Sketcher::none) {
+                int GeoId;
+                Sketcher::PointPos PosId;
+                sketchgui->getSketchObject()->getGeoVertexIndex(sketchgui->getPreselectPoint(),GeoId,PosId);
+                if (sketchgui->getSketchObject()->arePointsCoincident(GeoId,PosId,firstCurve,firstPosId))
+                    Mode = STATUS_Close;
+            }
+            else if (sketchgui->getPreselectCross() == 0 && firstPosId != Sketcher::none) {
+                // close line started at root point
+                if (sketchgui->getSketchObject()->arePointsCoincident(-1,Sketcher::start,firstCurve,firstPosId))
+                    Mode = STATUS_Close;
+            }
         }
         return true;
     }
@@ -809,7 +851,7 @@ public:
                     std::min(startAngle,endAngle), std::max(startAngle,endAngle));
             }
             // issue the constraint
-            if (previousCurve != -1) {
+            if (previousPosId != Sketcher::none) {
                 int lastCurve = getHighestCurveIndex();
                 Sketcher::PointPos lastStartPosId = (SegmentMode == SEGMENT_MODE_Arc && startAngle > endAngle) ?
                                                     Sketcher::end : Sketcher::start;
@@ -817,7 +859,7 @@ public:
                                                   Sketcher::start : Sketcher::end;
                 // in case of a tangency constraint, the coincident constraint is redundant
                 std::string constrType = "Coincident";
-                if (!suppressTransition) {
+                if (!suppressTransition && previousCurve != -1) {
                     if (TransitionMode == TRANSITION_MODE_Tangent)
                         constrType = "Tangent";
                     else if (TransitionMode == TRANSITION_MODE_Perpendicular_L ||
@@ -829,10 +871,6 @@ public:
                     sketchgui->getObject()->getNameInDocument(), constrType.c_str(),
                     previousCurve, previousPosId, lastCurve, lastStartPosId);
                 if (Mode == STATUS_Close) {
-                    int firstGeoId;
-                    Sketcher::PointPos firstPosId;
-                    sketchgui->getSketchObject()->getGeoVertexIndex(firstVertex, firstGeoId, firstPosId);
-                    //assert(firstCurve == firstGeoId);
                     // close the loop by constrain to the first curve point
                     Gui::Command::doCommand(Gui::Command::Doc,
                         "App.ActiveDocument.%s.addConstraint(Sketcher.Constraint('Coincident',%i,%i,%i,%i)) ",
@@ -910,9 +948,9 @@ protected:
     bool suppressTransition;
 
     std::vector<Base::Vector2D> EditCurve;
-    int firstVertex;
     int firstCurve;
     int previousCurve;
+    Sketcher::PointPos firstPosId;
     Sketcher::PointPos previousPosId;
     std::vector<AutoConstraint> sugConstr1, sugConstr2;
 
@@ -951,7 +989,6 @@ protected:
     }
 };
 
-
 DEF_STD_CMD_A(CmdSketcherCreatePolyline);
 
 CmdSketcherCreatePolyline::CmdSketcherCreatePolyline()
@@ -976,6 +1013,7 @@ bool CmdSketcherCreatePolyline::isActive(void)
 {
     return isCreateGeoActive(getActiveGuiDocument());
 }
+
 
 // ======================================================================================
 
@@ -1196,8 +1234,8 @@ CmdSketcherCreateArc::CmdSketcherCreateArc()
 {
     sAppModule      = "Sketcher";
     sGroup          = QT_TR_NOOP("Sketcher");
-    sMenuText       = QT_TR_NOOP("Create arc");
-    sToolTipText    = QT_TR_NOOP("Create an arc in the sketch");
+    sMenuText       = QT_TR_NOOP("Create arc by center");
+    sToolTipText    = QT_TR_NOOP("Create an arc by its center and by its end points");
     sWhatsThis      = sToolTipText;
     sStatusTip      = sToolTipText;
     sPixmap         = "Sketcher_CreateArc";
@@ -1213,6 +1251,359 @@ bool CmdSketcherCreateArc::isActive(void)
 {
     return isCreateGeoActive(getActiveGuiDocument());
 }
+
+
+// ======================================================================================
+
+/* XPM */
+static const char *cursor_create3pointarc[]={
+"32 32 3 1",
+"+ c white",
+"# c red",
+". c None",
+"......+...........###...........",
+"......+...........#.#...........",
+"......+...........###...........",
+"......+..............##.........",
+"......+...............##........",
+".......................#........",
+"+++++...+++++...........#.......",
+"........................##......",
+"......+..................#......",
+"......+..................#......",
+"......+...................#.....",
+"......+...................#.....",
+"......+...................#.....",
+"..........................#.....",
+"..........................#.....",
+"..........................#.....",
+"..........................#.....",
+".........................#......",
+".......................###......",
+".......................#.#......",
+".......................###......",
+"...###.................#........",
+"...#.#................#.........",
+"...###...............#..........",
+"......##...........##...........",
+".......###.......##.............",
+"..........#######...............",
+"................................",
+"................................",
+"................................",
+"................................",
+"................................"};
+
+class DrawSketchHandler3PointArc : public DrawSketchHandler
+{
+public:
+    DrawSketchHandler3PointArc()
+      : Mode(STATUS_SEEK_First),EditCurve(2){}
+    virtual ~DrawSketchHandler3PointArc(){}
+    /// mode table
+    enum SelectMode {
+        STATUS_SEEK_First,      /**< enum value ----. */
+        STATUS_SEEK_Second,     /**< enum value ----. */
+        STATUS_SEEK_Third,      /**< enum value ----. */
+        STATUS_End
+    };
+
+    virtual void activated(ViewProviderSketch *sketchgui)
+    {
+        setCursor(QPixmap(cursor_create3pointarc),7,7);
+    }
+
+    virtual void mouseMove(Base::Vector2D onSketchPos)
+    {
+        if (Mode==STATUS_SEEK_First) {
+            setPositionText(onSketchPos);
+            if (seekAutoConstraint(sugConstr1, onSketchPos, Base::Vector2D(0.f,0.f))) {
+                renderSuggestConstraintsCursor(sugConstr1);
+                return;
+            }
+        }
+        else if (Mode==STATUS_SEEK_Second) {
+            CenterPoint  = EditCurve[0] = (onSketchPos - FirstPoint)/2 + FirstPoint;
+            EditCurve[1] = EditCurve[33] = onSketchPos;
+            radius = (onSketchPos - CenterPoint).Length();
+            double lineAngle = GetPointAngle(CenterPoint, onSketchPos);
+
+            // Build a 32 point circle ignoring already constructed points
+            for (int i=1; i <= 32; i++) {
+                // Start at current angle
+                double angle = (i-1)*2*M_PI/32.0 + lineAngle; // N point closed circle has N segments
+                if (i != 1 && i != 17 ) {
+                    EditCurve[i] = Base::Vector2D(CenterPoint.fX + radius*cos(angle),
+                                                  CenterPoint.fY + radius*sin(angle));
+                }
+            }
+
+            // Display radius and start angle
+            // This lineAngle will report counter-clockwise from +X, not relatively
+            SbString text;
+            text.sprintf(" (%.1fR,%.1fdeg)", (float) radius, (float) lineAngle * 180 / M_PI);
+            setPositionText(onSketchPos, text);
+
+            sketchgui->drawEdit(EditCurve);
+            if (seekAutoConstraint(sugConstr2, onSketchPos, Base::Vector2D(0.f,0.f))) {
+                renderSuggestConstraintsCursor(sugConstr2);
+                return;
+            }
+        }
+        else if (Mode==STATUS_SEEK_Third) {
+            /*
+            Centerline inverts when the arc flips sides.  Easily taken care of by replacing
+            centerline with a point.  It happens because the direction the curve is being drawn
+            reverses.
+            */
+            CenterPoint = EditCurve[30] = GetCircleCenter(FirstPoint, SecondPoint, onSketchPos);
+            radius = (SecondPoint - CenterPoint).Length();
+
+            double angle1 = GetPointAngle(CenterPoint, FirstPoint);
+            double angle2 = GetPointAngle(CenterPoint, SecondPoint);
+            double angle3 = GetPointAngle(CenterPoint, onSketchPos);
+
+            // Always build arc counter-clockwise
+            // Point 3 is between Point 1 and 2
+            if ( angle3 > min(angle1, angle2) && angle3 < max(angle1, angle2) ) {
+                if (angle2 > angle1) {
+                    EditCurve[0] =  FirstPoint;
+                    EditCurve[29] = SecondPoint;
+                    arcPos1 = Sketcher::start;
+                    arcPos2 = Sketcher::end;
+                }
+                else {
+                    EditCurve[0] =  SecondPoint;
+                    EditCurve[29] = FirstPoint;
+                    arcPos1 = Sketcher::end;
+                    arcPos2 = Sketcher::start;
+                }
+                startAngle = min(angle1, angle2);
+                endAngle   = max(angle1, angle2);
+                arcAngle = endAngle - startAngle;
+            }
+            // Point 3 is not between Point 1 and 2
+            else {
+                if (angle2 > angle1) {
+                    EditCurve[0] =  SecondPoint;
+                    EditCurve[29] = FirstPoint;
+                    arcPos1 = Sketcher::end;
+                    arcPos2 = Sketcher::start;
+                }
+                else {
+                    EditCurve[0] =  FirstPoint;
+                    EditCurve[29] = SecondPoint;
+                    arcPos1 = Sketcher::start;
+                    arcPos2 = Sketcher::end;
+                }
+                startAngle = max(angle1, angle2);
+                endAngle   = min(angle1, angle2);
+                arcAngle = 2*M_PI - (startAngle - endAngle);
+            }
+
+            // Build a 30 point circle ignoring already constructed points
+            for (int i=1; i <= 28; i++) {
+                double angle = startAngle + i*arcAngle/29.0; // N point arc has N-1 segments
+                EditCurve[i] = Base::Vector2D(CenterPoint.fX + radius*cos(angle),
+                                              CenterPoint.fY + radius*sin(angle));
+            }
+
+            SbString text;
+            text.sprintf(" (%.1fR,%.1fdeg)", (float) radius, (float) arcAngle * 180 / M_PI);
+            setPositionText(onSketchPos, text);
+
+            sketchgui->drawEdit(EditCurve);
+            if (seekAutoConstraint(sugConstr3, onSketchPos, Base::Vector2D(0.0,0.0),
+                                   AutoConstraint::CURVE)) {
+                renderSuggestConstraintsCursor(sugConstr3);
+                return;
+            }
+        }
+        applyCursor();
+    }
+
+    virtual bool pressButton(Base::Vector2D onSketchPos)
+    {
+        if (Mode==STATUS_SEEK_First){
+            // 32 point curve + center + endpoint
+            EditCurve.resize(34);
+            // 17 is circle halfway point (1+32/2)
+            FirstPoint = EditCurve[17] = onSketchPos;
+
+            Mode = STATUS_SEEK_Second;
+        }
+        else if (Mode==STATUS_SEEK_Second){
+            // 30 point arc and center point
+            EditCurve.resize(31);
+            SecondPoint = onSketchPos;
+
+            Mode = STATUS_SEEK_Third;
+        }
+        else {
+            EditCurve.resize(30);
+
+            sketchgui->drawEdit(EditCurve);
+            applyCursor();
+            Mode = STATUS_End;
+        }
+
+        return true;
+    }
+
+    virtual bool releaseButton(Base::Vector2D onSketchPos)
+    {
+        // Need to look at.  rx might need fixing.
+        if (Mode==STATUS_End) {
+            unsetCursor();
+            resetPositionText();
+            Gui::Command::openCommand("Add sketch arc");
+            Gui::Command::doCommand(Gui::Command::Doc,
+                "App.ActiveDocument.%s.addGeometry(Part.ArcOfCircle"
+                "(Part.Circle(App.Vector(%f,%f,0),App.Vector(0,0,1),%f),"
+                "%f,%f))",
+                      sketchgui->getObject()->getNameInDocument(),
+                      CenterPoint.fX, CenterPoint.fY, radius,
+                      startAngle, endAngle);
+
+            Gui::Command::commitCommand();
+            Gui::Command::updateActive();
+
+            // Auto Constraint first picked point
+            if (sugConstr1.size() > 0) {
+                createAutoConstraints(sugConstr1, getHighestCurveIndex(), arcPos1);
+                sugConstr1.clear();
+            }
+
+            // Auto Constraint second picked point
+            if (sugConstr2.size() > 0) {
+                createAutoConstraints(sugConstr2, getHighestCurveIndex(), arcPos2);
+                sugConstr2.clear();
+            }
+
+            // Auto Constraint third picked point
+            if (sugConstr3.size() > 0) {
+                createAutoConstraints(sugConstr3, getHighestCurveIndex(), Sketcher::none);
+                sugConstr3.clear();
+            }
+
+            EditCurve.clear();
+            sketchgui->drawEdit(EditCurve);
+            sketchgui->purgeHandler(); // no code after this line, Handler get deleted in ViewProvider
+        }
+        return true;
+    }
+protected:
+    SelectMode Mode;
+    std::vector<Base::Vector2D> EditCurve;
+    Base::Vector2D CenterPoint, FirstPoint, SecondPoint;
+    double radius, startAngle, endAngle, arcAngle;
+    std::vector<AutoConstraint> sugConstr1, sugConstr2, sugConstr3;
+    Sketcher::PointPos arcPos1, arcPos2;
+};
+
+DEF_STD_CMD_A(CmdSketcherCreate3PointArc);
+
+CmdSketcherCreate3PointArc::CmdSketcherCreate3PointArc()
+  : Command("Sketcher_Create3PointArc")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = QT_TR_NOOP("Sketcher");
+    sMenuText       = QT_TR_NOOP("Create arc by three points");
+    sToolTipText    = QT_TR_NOOP("Create an arc by its end points and a point along the arc");
+    sWhatsThis      = sToolTipText;
+    sStatusTip      = sToolTipText;
+    sPixmap         = "Sketcher_Create3PointArc";
+    eType           = ForEdit;
+}
+
+void CmdSketcherCreate3PointArc::activated(int iMsg)
+{
+    ActivateHandler(getActiveGuiDocument(),new DrawSketchHandler3PointArc() );
+}
+
+bool CmdSketcherCreate3PointArc::isActive(void)
+{
+    return isCreateGeoActive(getActiveGuiDocument());
+}
+
+
+DEF_STD_CMD_ACL(CmdSketcherCompCreateArc);
+
+CmdSketcherCompCreateArc::CmdSketcherCompCreateArc()
+  : Command("Sketcher_CompCreateArc")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = QT_TR_NOOP("Sketcher");
+    sMenuText       = QT_TR_NOOP("Create arc");
+    sToolTipText    = QT_TR_NOOP("Create an arc in the sketcher");
+    sWhatsThis      = sToolTipText;
+    sStatusTip      = sToolTipText;
+    eType           = ForEdit;
+}
+
+void CmdSketcherCompCreateArc::activated(int iMsg)
+{
+    if (iMsg==0)
+        ActivateHandler(getActiveGuiDocument(),new DrawSketchHandlerArc());
+    else if (iMsg==1)
+        ActivateHandler(getActiveGuiDocument(),new DrawSketchHandler3PointArc());
+    else
+        return;
+
+    // Since the default icon is reset when enabing/disabling the command we have
+    // to explicitly set the icon of the used command.
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    assert(iMsg < a.size());
+    pcAction->setIcon(a[iMsg]->icon());
+}
+
+Gui::Action * CmdSketcherCompCreateArc::createAction(void)
+{
+    Gui::ActionGroup* pcAction = new Gui::ActionGroup(this, Gui::getMainWindow());
+    pcAction->setDropDownMenu(true);
+    applyCommandData(pcAction);
+
+    QAction* arc1 = pcAction->addAction(QString());
+    arc1->setIcon(Gui::BitmapFactory().pixmapFromSvg("Sketcher_CreateArc", QSize(24,24)));
+    QAction* arc2 = pcAction->addAction(QString());
+    arc2->setIcon(Gui::BitmapFactory().pixmapFromSvg("Sketcher_Create3PointArc", QSize(24,24)));
+
+    _pcAction = pcAction;
+    languageChange();
+
+    pcAction->setIcon(arc1->icon());
+    int defaultId = 0;
+    pcAction->setProperty("defaultAction", QVariant(defaultId));
+
+    return pcAction;
+}
+
+void CmdSketcherCompCreateArc::languageChange()
+{
+    Command::languageChange();
+
+    if (!_pcAction)
+        return;
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    QAction* arc1 = a[0];
+    arc1->setText(QApplication::translate("CmdSketcherCompCreateArc","Center and end points"));
+    arc1->setToolTip(QApplication::translate("Sketcher_CreateArc","Create an arc by its center and by its end points"));
+    arc1->setStatusTip(QApplication::translate("Sketcher_CreateArc","Create an arc by its center and by its end points"));
+    QAction* arc2 = a[1];
+    arc2->setText(QApplication::translate("CmdSketcherCompCreateArc","End points and rim point"));
+    arc2->setToolTip(QApplication::translate("Sketcher_Create3PointArc","Create an arc by its end points and a point along the arc"));
+    arc2->setStatusTip(QApplication::translate("Sketcher_Create3PointArc","Create an arc by its end points and a point along the arc"));
+}
+
+bool CmdSketcherCompCreateArc::isActive(void)
+{
+    return isCreateGeoActive(getActiveGuiDocument());
+}
+
 
 // ======================================================================================
 
@@ -1390,6 +1781,306 @@ bool CmdSketcherCreateCircle::isActive(void)
     return isCreateGeoActive(getActiveGuiDocument());
 }
 
+
+// ======================================================================================
+
+/* XPM */
+static const char *cursor_create3pointcircle[]={
+"32 32 3 1",
+"+ c white",
+"# c red",
+". c None",
+"......+.........................",
+"......+.........................",
+"......+.........................",
+"......+.........................",
+"......+.........................",
+"................................",
+"+++++...+++++...................",
+"................................",
+"......+........#######..........",
+"......+......##.......##........",
+"......+.....#...........#.......",
+"......+....#.............#......",
+"......+...#...............#.....",
+".........#.................#....",
+".......###.................###..",
+".......#.#.................#.#..",
+".......###.................###..",
+".......#.....................#..",
+".......#.........###.........#..",
+".......#.........#.#.........#..",
+".......#.........###.........#..",
+".......#.....................#..",
+".......#.....................#..",
+"........#...................#...",
+"........#...................#...",
+".........#.................#....",
+"..........#...............#.....",
+"...........#.............#......",
+"............#...........#.......",
+".............##..###..##........",
+"...............###.###..........",
+".................###............"};
+
+class DrawSketchHandler3PointCircle : public DrawSketchHandler
+{
+public:
+    DrawSketchHandler3PointCircle()
+      : Mode(STATUS_SEEK_First),EditCurve(2),N(32.0){}
+    virtual ~DrawSketchHandler3PointCircle(){}
+    /// mode table
+    enum SelectMode {
+        STATUS_SEEK_First,      /**< enum value ----. */
+        STATUS_SEEK_Second,     /**< enum value ----. */
+        STATUS_SEEK_Third,      /**< enum value ----. */
+        STATUS_End
+    };
+
+    virtual void activated(ViewProviderSketch *sketchgui)
+    {
+        setCursor(QPixmap(cursor_create3pointcircle),7,7);
+    }
+
+    virtual void mouseMove(Base::Vector2D onSketchPos)
+    {
+        if (Mode == STATUS_SEEK_First) {
+            setPositionText(onSketchPos);
+            if (seekAutoConstraint(sugConstr1, onSketchPos, Base::Vector2D(0.f,0.f), 
+                                   AutoConstraint::CURVE)) {
+                // Disable tangent snap on 1st point
+                if (sugConstr1.back().Type == Sketcher::Tangent)
+                    sugConstr1.pop_back();
+                else
+                    renderSuggestConstraintsCursor(sugConstr1);
+                return;
+            }
+        }
+        else if (Mode == STATUS_SEEK_Second || Mode == STATUS_SEEK_Third) {
+            if (Mode == STATUS_SEEK_Second)
+                CenterPoint  = EditCurve[N+1] = (onSketchPos - FirstPoint)/2 + FirstPoint;
+            else
+                CenterPoint = EditCurve[N+1] = GetCircleCenter(FirstPoint, SecondPoint, onSketchPos);
+            radius = (onSketchPos - CenterPoint).Length();
+            double lineAngle = GetPointAngle(CenterPoint, onSketchPos);
+
+            // Build a N point circle
+            for (int i=1; i < N; i++) {
+                // Start at current angle
+                double angle = i*2*M_PI/N + lineAngle; // N point closed circle has N segments
+                EditCurve[i] = Base::Vector2D(CenterPoint.fX + radius*cos(angle),
+                                              CenterPoint.fY + radius*sin(angle));
+            }
+            // Beginning and end of curve should be exact
+            EditCurve[0] = EditCurve[N] = onSketchPos;
+            
+            // Display radius and start angle
+            // This lineAngle will report counter-clockwise from +X, not relatively
+            SbString text;
+            text.sprintf(" (%.1fR,%.1fdeg)", (float) radius, (float) lineAngle * 180 / M_PI);
+            setPositionText(onSketchPos, text);
+
+            sketchgui->drawEdit(EditCurve);
+            if (Mode == STATUS_SEEK_Second) {
+                if (seekAutoConstraint(sugConstr2, onSketchPos, Base::Vector2D(0.f,0.f), 
+                                       AutoConstraint::CURVE)) {
+                    // Disable tangent snap on 2nd point
+                    if (sugConstr2.back().Type == Sketcher::Tangent)
+                        sugConstr2.pop_back();
+                    else
+                        renderSuggestConstraintsCursor(sugConstr2);
+                    return;
+                }
+            }
+            else {
+                if (seekAutoConstraint(sugConstr3, onSketchPos, Base::Vector2D(0.0,0.0), 
+                                       AutoConstraint::CURVE)) {
+                    renderSuggestConstraintsCursor(sugConstr3);
+                    return;
+                }
+            }
+        }
+        applyCursor();
+    }
+
+    virtual bool pressButton(Base::Vector2D onSketchPos)
+    {
+        if (Mode == STATUS_SEEK_First) {
+            // N point curve + center + endpoint
+            EditCurve.resize(N+2);
+            FirstPoint = onSketchPos;
+
+            Mode = STATUS_SEEK_Second;
+        }
+        else if (Mode == STATUS_SEEK_Second) {
+            SecondPoint = onSketchPos;
+
+            Mode = STATUS_SEEK_Third;
+        }
+        else {
+            EditCurve.resize(N);
+
+            sketchgui->drawEdit(EditCurve);
+            applyCursor();
+            Mode = STATUS_End;
+        }
+
+        return true;
+    }
+
+    virtual bool releaseButton(Base::Vector2D onSketchPos)
+    {
+        // Need to look at.  rx might need fixing.
+        if (Mode==STATUS_End) {
+            unsetCursor();
+            resetPositionText();
+            Gui::Command::openCommand("Add sketch circle");
+            Gui::Command::doCommand(Gui::Command::Doc,
+                "App.ActiveDocument.%s.addGeometry(Part.Circle"
+                "(App.Vector(%f,%f,0),App.Vector(0,0,1),%f))",
+                      sketchgui->getObject()->getNameInDocument(),
+                      CenterPoint.fX, CenterPoint.fY,
+                      radius);
+
+            Gui::Command::commitCommand();
+            Gui::Command::updateActive();
+
+            // Auto Constraint first picked point
+            if (sugConstr1.size() > 0) {
+                createAutoConstraints(sugConstr1, getHighestCurveIndex(), Sketcher::none);
+                sugConstr1.clear();
+            }
+
+            // Auto Constraint second picked point
+            if (sugConstr2.size() > 0) {
+                createAutoConstraints(sugConstr2, getHighestCurveIndex(), Sketcher::none);
+                sugConstr2.clear();
+            }
+
+            // Auto Constraint third picked point
+            if (sugConstr3.size() > 0) {
+                createAutoConstraints(sugConstr3, getHighestCurveIndex(), Sketcher::none);
+                sugConstr3.clear();
+            }
+
+            EditCurve.clear();
+            sketchgui->drawEdit(EditCurve);
+            sketchgui->purgeHandler(); // no code after this line, Handler get deleted in ViewProvider
+        }
+        return true;
+    }
+protected:
+    SelectMode Mode;
+    std::vector<Base::Vector2D> EditCurve;
+    Base::Vector2D CenterPoint, FirstPoint, SecondPoint;
+    double radius, N; // N should be even
+    std::vector<AutoConstraint> sugConstr1, sugConstr2, sugConstr3;
+};
+
+DEF_STD_CMD_A(CmdSketcherCreate3PointCircle);
+
+CmdSketcherCreate3PointCircle::CmdSketcherCreate3PointCircle()
+  : Command("Sketcher_Create3PointCircle")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = QT_TR_NOOP("Sketcher");
+    sMenuText       = QT_TR_NOOP("Create circle by three points");
+    sToolTipText    = QT_TR_NOOP("Create a circle by 3 perimeter points");
+    sWhatsThis      = sToolTipText;
+    sStatusTip      = sToolTipText;
+    sPixmap         = "Sketcher_Create3PointCircle";
+    eType           = ForEdit;
+}
+
+void CmdSketcherCreate3PointCircle::activated(int iMsg)
+{
+    ActivateHandler(getActiveGuiDocument(),new DrawSketchHandler3PointCircle() );
+}
+
+bool CmdSketcherCreate3PointCircle::isActive(void)
+{
+    return isCreateGeoActive(getActiveGuiDocument());
+}
+
+
+DEF_STD_CMD_ACL(CmdSketcherCompCreateCircle);
+
+CmdSketcherCompCreateCircle::CmdSketcherCompCreateCircle()
+  : Command("Sketcher_CompCreateCircle")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = QT_TR_NOOP("Sketcher");
+    sMenuText       = QT_TR_NOOP("Create circle");
+    sToolTipText    = QT_TR_NOOP("Create a circle in the sketcher");
+    sWhatsThis      = sToolTipText;
+    sStatusTip      = sToolTipText;
+    eType           = ForEdit;
+}
+
+void CmdSketcherCompCreateCircle::activated(int iMsg)
+{
+    if (iMsg==0)
+        ActivateHandler(getActiveGuiDocument(),new DrawSketchHandlerCircle());
+    else if (iMsg==1)
+        ActivateHandler(getActiveGuiDocument(),new DrawSketchHandler3PointCircle());
+    else
+        return;
+
+    // Since the default icon is reset when enabing/disabling the command we have
+    // to explicitly set the icon of the used command.
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    assert(iMsg < a.size());
+    pcAction->setIcon(a[iMsg]->icon());
+}
+
+Gui::Action * CmdSketcherCompCreateCircle::createAction(void)
+{
+    Gui::ActionGroup* pcAction = new Gui::ActionGroup(this, Gui::getMainWindow());
+    pcAction->setDropDownMenu(true);
+    applyCommandData(pcAction);
+
+    QAction* arc1 = pcAction->addAction(QString());
+    arc1->setIcon(Gui::BitmapFactory().pixmapFromSvg("Sketcher_CreateCircle", QSize(24,24)));
+    QAction* arc2 = pcAction->addAction(QString());
+    arc2->setIcon(Gui::BitmapFactory().pixmapFromSvg("Sketcher_Create3PointCircle", QSize(24,24)));
+
+    _pcAction = pcAction;
+    languageChange();
+
+    pcAction->setIcon(arc1->icon());
+    int defaultId = 0;
+    pcAction->setProperty("defaultAction", QVariant(defaultId));
+
+    return pcAction;
+}
+
+void CmdSketcherCompCreateCircle::languageChange()
+{
+    Command::languageChange();
+
+    if (!_pcAction)
+        return;
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    QAction* arc1 = a[0];
+    arc1->setText(QApplication::translate("CmdSketcherCompCreateCircle", "Center and rim point"));
+    arc1->setToolTip(QApplication::translate("Sketcher_CreateCircle", "Create a circle by its center and by a rim point"));
+    arc1->setStatusTip(QApplication::translate("Sketcher_CreateCircle", "Create a circle by its center and by a rim point"));
+    QAction* arc2 = a[1];
+    arc2->setText(QApplication::translate("CmdSketcherCompCreateCircle", "3 rim points"));
+    arc2->setToolTip(QApplication::translate("Sketcher_Create3PointCircle", "Create a circle by 3 rim points"));
+    arc2->setStatusTip(QApplication::translate("Sketcher_Create3PointCircle", "Create a circle by 3 rim points"));
+}
+
+bool CmdSketcherCompCreateCircle::isActive(void)
+{
+    return isCreateGeoActive(getActiveGuiDocument());
+}
+    
+
 // ======================================================================================
 
 /* XPM */
@@ -1488,7 +2179,6 @@ protected:
     std::vector<AutoConstraint> sugConstr;
 };
 
-
 DEF_STD_CMD_A(CmdSketcherCreatePoint);
 
 CmdSketcherCreatePoint::CmdSketcherCreatePoint()
@@ -1513,6 +2203,7 @@ bool CmdSketcherCreatePoint::isActive(void)
 {
     return isCreateGeoActive(getActiveGuiDocument());
 }
+
 
 // ======================================================================================
 
@@ -1540,6 +2231,7 @@ bool CmdSketcherCreateText::isActive(void)
     return false;
 }
 
+
 // ======================================================================================
 
 DEF_STD_CMD_A(CmdSketcherCreateDraftLine);
@@ -1566,6 +2258,7 @@ bool CmdSketcherCreateDraftLine::isActive(void)
     return false;
 }
 
+
 // ======================================================================================
 
 namespace SketcherGui {
@@ -1585,18 +2278,18 @@ namespace SketcherGui {
                 return false;
             std::string element(sSubName);
             if (element.substr(0,4) == "Edge") {
-                int index=std::atoi(element.substr(4,4000).c_str());
+                int GeoId = std::atoi(element.substr(4,4000).c_str()) - 1;
                 Sketcher::SketchObject *Sketch = static_cast<Sketcher::SketchObject*>(object);
-                const Part::Geometry *geom = Sketch->getGeometry(index);
+                const Part::Geometry *geom = Sketch->getGeometry(GeoId);
                 if (geom->getTypeId() == Part::GeomLineSegment::getClassTypeId())
                     return true;
             }
             if (element.substr(0,6) == "Vertex") {
-                int index=std::atoi(element.substr(6,4000).c_str());
+                int VtId = std::atoi(element.substr(6,4000).c_str()) - 1;
                 Sketcher::SketchObject *Sketch = static_cast<Sketcher::SketchObject*>(object);
                 std::vector<int> GeoIdList;
                 std::vector<Sketcher::PointPos> PosIdList;
-                Sketch->getCoincidentPoints(index, GeoIdList, PosIdList);
+                Sketch->getCoincidentPoints(VtId, GeoIdList, PosIdList);
                 if (GeoIdList.size() == 2 && GeoIdList[0] >= 0  && GeoIdList[1] >= 0) {
                     const Part::Geometry *geom1 = Sketch->getGeometry(GeoIdList[0]);
                     const Part::Geometry *geom2 = Sketch->getGeometry(GeoIdList[1]);
@@ -1609,6 +2302,7 @@ namespace SketcherGui {
         }
     };
 };
+
 
 /* XPM */
 static const char *cursor_createfillet[]={
@@ -1737,7 +2431,7 @@ public:
                     Mode = STATUS_SEEK_Second;
                     // add the line to the selection
                     std::stringstream ss;
-                    ss << "Edge" << firstCurve;
+                    ss << "Edge" << firstCurve + 1;
                     Gui::Selection().addSelection(sketchgui->getSketchObject()->getDocument()->getName()
                                                  ,sketchgui->getSketchObject()->getNameInDocument()
                                                  ,ss.str().c_str()
@@ -1813,6 +2507,8 @@ bool CmdSketcherCreateFillet::isActive(void)
 {
     return isCreateGeoActive(getActiveGuiDocument());
 }
+
+
 // ======================================================================================
 
 namespace SketcherGui {
@@ -1832,9 +2528,9 @@ namespace SketcherGui {
                 return false;
             std::string element(sSubName);
             if (element.substr(0,4) == "Edge") {
-                int index=std::atoi(element.substr(4,4000).c_str());
+                int GeoId = std::atoi(element.substr(4,4000).c_str()) - 1;
                 Sketcher::SketchObject *Sketch = static_cast<Sketcher::SketchObject*>(object);
-                const Part::Geometry *geom = Sketch->getGeometry(index);
+                const Part::Geometry *geom = Sketch->getGeometry(GeoId);
                 if (geom->getTypeId() == Part::GeomLineSegment::getClassTypeId() ||
                     geom->getTypeId() == Part::GeomCircle::getClassTypeId()||
                     geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId())
@@ -1844,6 +2540,7 @@ namespace SketcherGui {
         }
     };
 };
+
 
 /* XPM */
 static const char *cursor_trimming[]={
@@ -1965,6 +2662,7 @@ bool CmdSketcherTrimming::isActive(void)
     return isCreateGeoActive(getActiveGuiDocument());
 }
 
+
 // ======================================================================================
 
 namespace SketcherGui {
@@ -2003,6 +2701,7 @@ namespace SketcherGui {
         }
     };
 };
+
 
 /* XPM */
 static const char *cursor_external[]={
@@ -2054,6 +2753,7 @@ public:
 
     virtual void activated(ViewProviderSketch *sketchgui)
     {
+        sketchgui->setAxisPickStyle(false);
         Gui::MDIView *mdi = Gui::Application::Instance->activeDocument()->getActiveView();
         Gui::View3DInventorViewer *viewer;
         viewer = static_cast<Gui::View3DInventor *>(mdi)->getViewer();
@@ -2065,6 +2765,11 @@ public:
         Gui::Selection().rmvSelectionGate();
         Gui::Selection().addSelectionGate(new ExternalSelection(sketchgui->getObject()));
         setCursor(QPixmap(cursor_external),7,7);
+    }
+
+    virtual void deactivated(ViewProviderSketch *sketchgui)
+    {
+        sketchgui->setAxisPickStyle(true);
     }
 
     virtual void mouseMove(Base::Vector2D onSketchPos)
@@ -2149,7 +2854,11 @@ void CreateSketcherCommandsCreateGeo(void)
 
     rcCmdMgr.addCommand(new CmdSketcherCreatePoint());
     rcCmdMgr.addCommand(new CmdSketcherCreateArc());
+    rcCmdMgr.addCommand(new CmdSketcherCreate3PointArc());
+    rcCmdMgr.addCommand(new CmdSketcherCompCreateArc());
     rcCmdMgr.addCommand(new CmdSketcherCreateCircle());
+    rcCmdMgr.addCommand(new CmdSketcherCreate3PointCircle());
+    rcCmdMgr.addCommand(new CmdSketcherCompCreateCircle());
     rcCmdMgr.addCommand(new CmdSketcherCreateLine());
     rcCmdMgr.addCommand(new CmdSketcherCreatePolyline());
     rcCmdMgr.addCommand(new CmdSketcherCreateRectangle());

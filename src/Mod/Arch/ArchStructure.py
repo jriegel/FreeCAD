@@ -21,18 +21,24 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,Draft,ArchComponent,DraftVecUtils,ArchCommands
+import FreeCAD,Draft,ArchComponent,DraftVecUtils,ArchCommands
 from FreeCAD import Vector
-from PySide import QtCore, QtGui
-from DraftTools import translate
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui
+    from DraftTools import translate
+else:
+    def translate(ctxt,txt):
+        return txt
 
 __title__="FreeCAD Structure"
 __author__ = "Yorik van Havre"
 __url__ = "http://www.freecadweb.org"
 
 # Make some strings picked by the translator
-QtCore.QT_TRANSLATE_NOOP("Arch","Wood")
-QtCore.QT_TRANSLATE_NOOP("Arch","Steel")
+if FreeCAD.GuiUp:
+    QtCore.QT_TRANSLATE_NOOP("Arch","Wood")
+    QtCore.QT_TRANSLATE_NOOP("Arch","Steel")
 
 # Possible roles for structural elements
 Roles = ["Beam","Column","Slab","Wall","Containment wall","Roof","Foundation"]
@@ -303,17 +309,27 @@ def makeStructure(baseobj=None,length=0,width=0,height=0,name=translate("Arch","
     obj.ViewObject.ShapeColor = ArchCommands.getDefaultColor("Structure")
     return obj
 
-def makeStructuralSystem(objects,axes):
+def makeStructuralSystem(objects,axes,name=translate("Arch","StructuralSystem")):
     '''makeStructuralSystem(objects,axes): makes a structural system
     based on the given objects and axes'''
     result = []
     if objects and axes:
+        if not isinstance(objects,list):
+            objects = [objects]
         for o in objects:
-            s = makeStructure(o)
-            s.Axes = axes
-            result.append(s)
+            obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython",name)
+            _StructuralSystem(obj)
+            _ViewProviderStructuralSystem(obj.ViewObject)
+            obj.Base = o
+            obj.Axes = axes
+            result.append(obj)
+            o.ViewObject.hide()
+            Draft.formatObject(obj,o)
         FreeCAD.ActiveDocument.recompute()
-    return result
+    if len(result) == 1:
+        return result[0]
+    else:
+        return result
     
 def makeProfile(W=46,H=80,tw=3.8,tf=5.2,name="Profile"):
     '''makeProfile(W,H,tw,tf): returns a shape with one face describing 
@@ -330,7 +346,6 @@ def makeProfile(W=46,H=80,tw=3.8,tf=5.2,name="Profile"):
     Draft._ViewProviderDraft(obj.ViewObject)
     return obj
 
-
 class _CommandStructure:
     "the Arch Structure command definition"
     def GetResources(self):
@@ -346,21 +361,24 @@ class _CommandStructure:
         self.Height = p.GetFloat("StructureHeight",1000)
         self.Profile = 0
         self.continueCmd = False
+        self.DECIMALS = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
+        self.FORMAT = "%." + str(self.DECIMALS) + "f mm"
         sel = FreeCADGui.Selection.getSelection()
         if sel:
-            if Draft.getType(sel[0]) != "Structure":
-                # direct creation
+            st = Draft.getObjectsOfType(sel,"Structure")
+            ax = Draft.getObjectsOfType(sel,"Axis")
+            if st and ax:
+                FreeCAD.ActiveDocument.openTransaction(str(translate("Arch","Create Structural System")))
+                FreeCADGui.doCommand("import Arch")
+                FreeCADGui.doCommand("Arch.makeStructuralSystem(" + ArchCommands.getStringList(st) + "," + ArchCommands.getStringList(ax) + ")")
+                FreeCAD.ActiveDocument.commitTransaction()
+                FreeCAD.ActiveDocument.recompute()
+                return
+            elif not(ax) and not(st):
                 FreeCAD.ActiveDocument.openTransaction(str(translate("Arch","Create Structure")))
                 FreeCADGui.doCommand("import Arch")
-                # if selection contains structs and axes, make a system
-                st = Draft.getObjectsOfType(sel,"Structure")
-                ax = Draft.getObjectsOfType(sel,"Axis")
-                if st and ax:
-                    FreeCADGui.doCommand("Arch.makeStructuralSystem(" + ArchCommands.getStringList(st) + "," + ArchCommands.getStringList(ax) + ")")
-                else:
-                    # else, do normal structs
-                    for obj in sel:
-                        FreeCADGui.doCommand("Arch.makeStructure(FreeCAD.ActiveDocument." + obj.Name + ")")
+                for obj in sel:
+                    FreeCADGui.doCommand("Arch.makeStructure(FreeCAD.ActiveDocument." + obj.Name + ")")
                 FreeCAD.ActiveDocument.commitTransaction()
                 FreeCAD.ActiveDocument.recompute()
                 return
@@ -404,64 +422,58 @@ class _CommandStructure:
 
     def taskbox(self):
         "sets up a taskbox widget"
-        d = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
         w = QtGui.QWidget()
+        ui = FreeCADGui.UiLoader()
         w.setWindowTitle(translate("Arch","Structure options").decode("utf8"))
-        lay0 = QtGui.QVBoxLayout(w)
+        grid = QtGui.QGridLayout(w)
         
         # presets box
-        layp = QtGui.QHBoxLayout()
-        lay0.addLayout(layp)
         labelp = QtGui.QLabel(translate("Arch","Preset").decode("utf8"))
-        layp.addWidget(labelp)
         valuep = QtGui.QComboBox()
         fpresets = [" "]
         for p in Presets[1:]:
             fpresets.append(str(translate("Arch",p[0]))+" "+p[1]+" ("+str(p[2])+"x"+str(p[3])+"mm)")
         valuep.addItems(fpresets)
-        layp.addWidget(valuep)
+        grid.addWidget(labelp,0,0,1,1)
+        grid.addWidget(valuep,0,1,1,1)
         
         # length
-        lay1 = QtGui.QHBoxLayout()
-        lay0.addLayout(lay1)
         label1 = QtGui.QLabel(translate("Arch","Length").decode("utf8"))
-        lay1.addWidget(label1)
-        self.vLength = QtGui.QDoubleSpinBox()
-        self.vLength.setDecimals(d)
-        self.vLength.setMaximum(99999.99)
-        self.vLength.setValue(self.Length)
-        lay1.addWidget(self.vLength)
+        self.vLength = ui.createWidget("Gui::InputField")
+        self.vLength.setText(self.FORMAT % self.Length)
+        grid.addWidget(label1,1,0,1,1)
+        grid.addWidget(self.vLength,1,1,1,1)
         
         # width
-        lay2 = QtGui.QHBoxLayout()
-        lay0.addLayout(lay2)
         label2 = QtGui.QLabel(translate("Arch","Width").decode("utf8"))
-        lay2.addWidget(label2)
-        self.vWidth = QtGui.QDoubleSpinBox()
-        self.vWidth.setDecimals(d)
-        self.vWidth.setMaximum(99999.99)
-        self.vWidth.setValue(self.Width)
-        lay2.addWidget(self.vWidth)
+        self.vWidth = ui.createWidget("Gui::InputField")
+        self.vWidth.setText(self.FORMAT % self.Width)
+        grid.addWidget(label2,2,0,1,1)
+        grid.addWidget(self.vWidth,2,1,1,1)
 
         # height
-        lay3 = QtGui.QHBoxLayout()
-        lay0.addLayout(lay3)
         label3 = QtGui.QLabel(translate("Arch","Height").decode("utf8"))
-        lay3.addWidget(label3)
-        self.vHeight = QtGui.QDoubleSpinBox()
-        self.vHeight.setDecimals(d)
-        self.vHeight.setMaximum(99999.99)
-        self.vHeight.setValue(self.Height)
-        lay3.addWidget(self.vHeight)
+        self.vHeight = ui.createWidget("Gui::InputField")
+        self.vHeight.setText(self.FORMAT % self.Height)
+        grid.addWidget(label3,3,0,1,1)
+        grid.addWidget(self.vHeight,3,1,1,1)
         
         # horizontal button
         value5 = QtGui.QPushButton(translate("Arch","Rotate").decode("utf8"))
-        lay0.addWidget(value5)
+        grid.addWidget(value5,4,0,1,2)
 
         # continue button
-        value4 = QtGui.QCheckBox(translate("Arch","Continue").decode("utf8"))
-        lay0.addWidget(value4)
-        
+        label4 = QtGui.QLabel(translate("Arch","Con&tinue").decode("utf8"))
+        value4 = QtGui.QCheckBox()
+        value4.setObjectName("ContinueCmd")
+        value4.setLayoutDirection(QtCore.Qt.RightToLeft)
+        label4.setBuddy(value4)
+        if hasattr(FreeCADGui,"draftToolBar"):
+            value4.setChecked(FreeCADGui.draftToolBar.continueMode)
+            self.continueCmd = FreeCADGui.draftToolBar.continueMode
+        grid.addWidget(label4,5,0,1,1)
+        grid.addWidget(value4,5,1,1,1)
+
         QtCore.QObject.connect(valuep,QtCore.SIGNAL("currentIndexChanged(int)"),self.setPreset)
         QtCore.QObject.connect(self.vLength,QtCore.SIGNAL("valueChanged(double)"),self.setLength)
         QtCore.QObject.connect(self.vWidth,QtCore.SIGNAL("valueChanged(double)"),self.setWidth)
@@ -472,11 +484,12 @@ class _CommandStructure:
         
     def update(self,point,info):
         "this function is called by the Snapper when the mouse is moved"
-        if self.Height >= self.Length:
-            delta = Vector(0,0,self.Height/2)
-        else:
-            delta = Vector(self.Length/2,0,0)
-        self.tracker.pos(point.add(delta))
+        if FreeCADGui.Control.activeDialog():
+            if self.Height >= self.Length:
+                delta = Vector(0,0,self.Height/2)
+            else:
+                delta = Vector(self.Length/2,0,0)
+            self.tracker.pos(point.add(delta))
         
     def setWidth(self,d):
         self.Width = d
@@ -492,11 +505,13 @@ class _CommandStructure:
 
     def setContinue(self,i):
         self.continueCmd = bool(i)
+        if hasattr(FreeCADGui,"draftToolBar"):
+            FreeCADGui.draftToolBar.continueMode = bool(i)
         
     def setPreset(self,i):
         if i > 0:
-            self.vLength.setValue(float(Presets[i][2]))
-            self.vWidth.setValue(float(Presets[i][3]))
+            self.vLength.setText(self.FORMAT % float(Presets[i][2]))
+            self.vWidth.setText(self.FORMAT % float(Presets[i][3]))
         if len(Presets[i]) == 6:
             self.Profile = i
         else:
@@ -506,34 +521,22 @@ class _CommandStructure:
         l = self.Length
         w = self.Width
         h = self.Height
-        self.vLength.setValue(h)
-        self.vHeight.setValue(w)
-        self.vWidth.setValue(l)
+        self.vLength.setText(self.FORMAT % h)
+        self.vHeight.setText(self.FORMAT % w)
+        self.vWidth.setText(self.FORMAT % l)
        
 class _Structure(ArchComponent.Component):
     "The Structure object"
     def __init__(self,obj):
         ArchComponent.Component.__init__(self,obj)
-        obj.addProperty("App::PropertyLink","Tool","Arch",
-                        translate("Arch","An optional extrusion path for this element"))
-        obj.addProperty("App::PropertyLength","Length","Arch",
-                        translate("Arch","The length of this element, if not based on a profile"))
-        obj.addProperty("App::PropertyLength","Width","Arch",
-                        translate("Arch","The width of this element, if not based on a profile"))
-        obj.addProperty("App::PropertyLength","Height","Arch",
-                        translate("Arch","The height or extrusion depth of this element. Keep 0 for automatic"))
-        obj.addProperty("App::PropertyLinkList","Axes","Arch",
-                        translate("Arch","Axes systems this structure is built on"))
-        obj.addProperty("App::PropertyLinkList","Armatures","Arch",
-                        translate("Arch","Armatures contained in this element"))
-        obj.addProperty("App::PropertyVector","Normal","Arch",
-                        translate("Arch","The normal extrusion direction of this object (keep (0,0,0) for automatic normal)"))
-        obj.addProperty("App::PropertyIntegerList","Exclude","Arch",
-                        translate("Arch","The element numbers to exclude when this structure is based on axes"))
-        obj.addProperty("App::PropertyEnumeration","Role","Arch",
-                        translate("Arch","The role of this structural element"))
-        obj.addProperty("App::PropertyVectorList","Nodes","Arch",
-                        translate("Arch","The structural nodes of this element"))
+        obj.addProperty("App::PropertyLink","Tool","Arch",translate("Arch","An optional extrusion path for this element"))
+        obj.addProperty("App::PropertyLength","Length","Arch",translate("Arch","The length of this element, if not based on a profile"))
+        obj.addProperty("App::PropertyLength","Width","Arch",translate("Arch","The width of this element, if not based on a profile"))
+        obj.addProperty("App::PropertyLength","Height","Arch",translate("Arch","The height or extrusion depth of this element. Keep 0 for automatic"))
+        obj.addProperty("App::PropertyLinkList","Armatures","Arch",translate("Arch","Armatures contained in this element"))
+        obj.addProperty("App::PropertyVector","Normal","Arch",translate("Arch","The normal extrusion direction of this object (keep (0,0,0) for automatic normal)"))
+        obj.addProperty("App::PropertyEnumeration","Role","Arch",translate("Arch","The role of this structural element"))
+        obj.addProperty("App::PropertyVectorList","Nodes","Arch",translate("Arch","The structural nodes of this element"))
         self.Type = "Structure"
         obj.Length = 1
         obj.Width = 1
@@ -550,25 +553,27 @@ class _Structure(ArchComponent.Component):
         width = 1
         height = 1
         if hasattr(obj,"Length"):
-            if obj.Length:
-                length = obj.Length
+            if obj.Length.Value:
+                length = obj.Length.Value
         if hasattr(obj,"Width"):
-            if obj.Width:
-                width = obj.Width
+            if obj.Width.Value:
+                width = obj.Width.Value
         if hasattr(obj,"Height"):
-            if obj.Height:
-                height = obj.Height
+            if obj.Height.Value:
+                height = obj.Height.Value
             else:
                 for p in obj.InList:
                     if Draft.getType(p) == "Floor":
-                        if p.Height:
-                            height = p.Height
+                        if p.Height.Value:
+                            height = p.Height.Value
 
         # creating base shape
         pl = obj.Placement
         base = None
         if obj.Base:
             if obj.Base.isDerivedFrom("Part::Feature"):
+                if obj.Base.Shape.isNull():
+                    return
                 if hasattr(obj,"Tool"):
                     if obj.Tool:
                         try:
@@ -634,36 +639,17 @@ class _Structure(ArchComponent.Component):
         base = self.processSubShapes(obj,base,pl)
             
         if base:
-            # applying axes
-            pts = self.getAxisPoints(obj)
-            apl = self.getAxisPlacement(obj)
-            if pts:
-                fsh = []
-                for i in range(len(pts)):
-                    if hasattr(obj,"Exclude"):
-                        if i in obj.Exclude:
-                            continue
-                    sh = base.copy()
-                    if apl:
-                        sh.Placement.Rotation = apl.Rotation
-                    sh.translate(pts[i])
-                    fsh.append(sh)
-                    obj.Shape = Part.makeCompound(fsh)
-
-            # finalizing
-            else:
-                if base:
-                    if not base.isNull():
-                        if base.isValid() and base.Solids:
-                            if base.Volume < 0:
-                                base.reverse()
-                            if base.Volume < 0:
-                                FreeCAD.Console.PrintError(translate("Arch","Couldn't compute a shape"))
-                                return
-                            base = base.removeSplitter()
-                            obj.Shape = base
-                if not pl.isNull():
-                    obj.Placement = pl
+            if not base.isNull():
+                if base.isValid() and base.Solids:
+                    if base.Volume < 0:
+                        base.reverse()
+                    if base.Volume < 0:
+                        FreeCAD.Console.PrintError(translate("Arch","Couldn't compute a shape"))
+                        return
+                    base = base.removeSplitter()
+                    obj.Shape = base
+                    if not pl.isNull():
+                        obj.Placement = pl
 
     def onChanged(self,obj,prop):
         self.hideSubobjects(obj,prop)
@@ -690,27 +676,7 @@ class _Structure(ArchComponent.Component):
                     self.nodes = [p1,p2]
                     #print "calculating nodes: ",self.nodes
                     obj.Nodes = self.nodes
-        
-    def getAxisPoints(self,obj):
-        "returns the gridpoints of linked axes"
-        import DraftGeomUtils
-        pts = []
-        if len(obj.Axes) == 1:
-            for e in obj.Axes[0].Shape.Edges:
-                pts.append(e.Vertexes[0].Point)
-        elif len(obj.Axes) >= 2:
-            set1 = obj.Axes[0].Shape.Edges
-            set2 = obj.Axes[1].Shape.Edges
-            for e1 in set1:
-                for e2 in set2: 
-                    pts.extend(DraftGeomUtils.findIntersection(e1,e2))
-        return pts
 
-    def getAxisPlacement(self,obj):
-        "returns an axis placement"
-        if obj.Axes:
-            return obj.Axes[0].Placement
-        return None
 
 class _ViewProviderStructure(ArchComponent.ViewProviderComponent):
     "A View Provider for the Structure object"
@@ -778,40 +744,122 @@ class _ViewProviderStructure(ArchComponent.ViewProviderComponent):
                 self.pointstyle.pointSize = vobj.NodeSize
         ArchComponent.ViewProviderComponent.onChanged(self,vobj,prop)
 
-
 class _Profile(Draft._DraftObject):
     "A parametric beam profile object"
     
     def __init__(self,obj):
-        obj.addProperty("App::PropertyDistance","Width","Draft","Width of the beam").Width = 10
-        obj.addProperty("App::PropertyDistance","Height","Draft","Height of the beam").Height = 30
-        obj.addProperty("App::PropertyDistance","WebThickness","Draft","Thickness of the webs").WebThickness = 3
-        obj.addProperty("App::PropertyDistance","FlangeThickness","Draft","Thickness of the flange").FlangeThickness = 2
+        obj.addProperty("App::PropertyLength","Width","Draft","Width of the beam").Width = 10
+        obj.addProperty("App::PropertyLength","Height","Draft","Height of the beam").Height = 30
+        obj.addProperty("App::PropertyLength","WebThickness","Draft","Thickness of the webs").WebThickness = 3
+        obj.addProperty("App::PropertyLength","FlangeThickness","Draft","Thickness of the flange").FlangeThickness = 2
         Draft._DraftObject.__init__(self,obj,"Profile")
         
     def execute(self,obj):
         import Part
         pl = obj.Placement
-        p1 = Vector(-obj.Width/2,-obj.Height/2,0)
-        p2 = Vector(obj.Width/2,-obj.Height/2,0)
-        p3 = Vector(obj.Width/2,(-obj.Height/2)+obj.FlangeThickness,0)
-        p4 = Vector(obj.WebThickness/2,(-obj.Height/2)+obj.FlangeThickness,0)
-        p5 = Vector(obj.WebThickness/2,obj.Height/2-obj.FlangeThickness,0)
-        p6 = Vector(obj.Width/2,obj.Height/2-obj.FlangeThickness,0)
-        p7 = Vector(obj.Width/2,obj.Height/2,0)
-        p8 = Vector(-obj.Width/2,obj.Height/2,0)
-        p9 = Vector(-obj.Width/2,obj.Height/2-obj.FlangeThickness,0)
-        p10 = Vector(-obj.WebThickness/2,obj.Height/2-obj.FlangeThickness,0)
-        p11 = Vector(-obj.WebThickness/2,(-obj.Height/2)+obj.FlangeThickness,0)
-        p12 = Vector(-obj.Width/2,(-obj.Height/2)+obj.FlangeThickness,0)
+        p1 = Vector(-obj.Width.Value/2,-obj.Height.Value/2,0)
+        p2 = Vector(obj.Width.Value/2,-obj.Height.Value/2,0)
+        p3 = Vector(obj.Width.Value/2,(-obj.Height.Value/2)+obj.FlangeThickness.Value,0)
+        p4 = Vector(obj.WebThickness.Value/2,(-obj.Height.Value/2)+obj.FlangeThickness.Value,0)
+        p5 = Vector(obj.WebThickness.Value/2,obj.Height.Value/2-obj.FlangeThickness.Value,0)
+        p6 = Vector(obj.Width.Value/2,obj.Height.Value/2-obj.FlangeThickness.Value,0)
+        p7 = Vector(obj.Width.Value/2,obj.Height.Value/2,0)
+        p8 = Vector(-obj.Width.Value/2,obj.Height.Value/2,0)
+        p9 = Vector(-obj.Width.Value/2,obj.Height.Value/2-obj.FlangeThickness.Value,0)
+        p10 = Vector(-obj.WebThickness.Value/2,obj.Height.Value/2-obj.FlangeThickness.Value,0)
+        p11 = Vector(-obj.WebThickness.Value/2,(-obj.Height.Value/2)+obj.FlangeThickness.Value,0)
+        p12 = Vector(-obj.Width.Value/2,(-obj.Height.Value/2)+obj.FlangeThickness.Value,0)
         p = Part.makePolygon([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p1])
         p = Part.Face(p)
         obj.Shape = p
         obj.Placement = pl
+
+class _StructuralSystem(ArchComponent.Component):
+    "The Structural System object"
+    def __init__(self,obj):
+        ArchComponent.Component.__init__(self,obj)
+        obj.addProperty("App::PropertyLinkList","Axes","Arch",translate("Arch","Axes systems this structure is built on"))
+        obj.addProperty("App::PropertyIntegerList","Exclude","Arch",translate("Arch","The element numbers to exclude when this structure is based on axes"))
+        self.Type = "StructuralSystem"
         
-    def onChanged(self,obj,prop):
-        if prop in ["Width","Height","WebThickness","FlangeThickness"]:
-            self.execute(obj)
+    def execute(self,obj):
+        "creates the structure shape"
+        
+        import Part, DraftGeomUtils
+        
+        # creating base shape
+        pl = obj.Placement
+        if obj.Base:
+            if obj.Base.isDerivedFrom("Part::Feature"):
+                if obj.Base.Shape.isNull():
+                    return
+                if not obj.Base.Shape.Solids:
+                    return
+
+                base = None
+                                
+                # applying axes
+                pts = self.getAxisPoints(obj)
+                apl = self.getAxisPlacement(obj)
+
+                if pts:
+                    fsh = []
+                    for i in range(len(pts)):
+                        sh = obj.Base.Shape.copy()
+                        if hasattr(obj,"Exclude"):
+                            if i in obj.Exclude:
+                                continue
+                        if apl:
+                            sh.Placement.Rotation = sh.Placement.Rotation.multiply(apl.Rotation)
+                        sh.translate(pts[i])
+                        fsh.append(sh)
+
+                    if fsh:
+                        base = Part.makeCompound(fsh)
+                        base = self.processSubShapes(obj,base,pl)
+
+                if base:
+                    if not base.isNull():
+                        if base.isValid() and base.Solids:
+                            if base.Volume < 0:
+                                base.reverse()
+                            if base.Volume < 0:
+                                FreeCAD.Console.PrintError(translate("Arch","Couldn't compute a shape"))
+                                return
+                            base = base.removeSplitter()
+                            obj.Shape = base
+                            if not pl.isNull():
+                                obj.Placement = pl
+        
+    def getAxisPoints(self,obj):
+        "returns the gridpoints of linked axes"
+        import DraftGeomUtils
+        pts = []
+        if len(obj.Axes) == 1:
+            for e in obj.Axes[0].Shape.Edges:
+                pts.append(e.Vertexes[0].Point)
+        elif len(obj.Axes) >= 2:
+            set1 = obj.Axes[0].Shape.Edges
+            set2 = obj.Axes[1].Shape.Edges
+            for e1 in set1:
+                for e2 in set2: 
+                    pts.extend(DraftGeomUtils.findIntersection(e1,e2))
+        return pts
+
+    def getAxisPlacement(self,obj):
+        "returns an axis placement"
+        if obj.Axes:
+            return obj.Axes[0].Placement
+        return None
 
 
-FreeCADGui.addCommand('Arch_Structure',_CommandStructure())
+class _ViewProviderStructuralSystem(ArchComponent.ViewProviderComponent):
+    "A View Provider for the Structural System object"
+
+    def getIcon(self):
+        import Arch_rc
+        return ":/icons/Arch_StructuralSystem_Tree.svg"
+
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('Arch_Structure',_CommandStructure())

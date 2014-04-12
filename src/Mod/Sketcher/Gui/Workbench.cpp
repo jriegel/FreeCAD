@@ -62,7 +62,9 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     geom->setCommand("Sketcher geometries");
     *geom << "Sketcher_CreatePoint"
           << "Sketcher_CreateArc"
+          << "Sketcher_Create3PointArc"
           << "Sketcher_CreateCircle"
+          << "Sketcher_Create3PointCircle"
           << "Sketcher_CreateLine"
           << "Sketcher_CreatePolyline"
           << "Sketcher_CreateRectangle"
@@ -121,8 +123,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
     Gui::ToolBarItem* geom = new Gui::ToolBarItem(root);
     geom->setCommand("Sketcher geometries");
     *geom << "Sketcher_CreatePoint"
-          << "Sketcher_CreateArc"
-          << "Sketcher_CreateCircle"
+          << "Sketcher_CompCreateArc"
+          << "Sketcher_CompCreateCircle"
           << "Sketcher_CreateLine"
           << "Sketcher_CreatePolyline"
           << "Sketcher_CreateRectangle"

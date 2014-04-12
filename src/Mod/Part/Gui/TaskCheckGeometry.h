@@ -41,12 +41,13 @@ class ResultEntry
 public:
     ResultEntry();
     ~ResultEntry();
+    void buildEntryName();
 
     TopoDS_Shape shape;//invisible
     QString name;
     QString type;
     QString error;
-    Gui::ViewProvider *viewProvider;
+    SoSeparator *viewProviderRoot;
     SoSeparator *boxSep;
     SoSwitch *boxSwitch;
     ResultEntry *parent;
@@ -54,98 +55,19 @@ public:
     QStringList selectionStrings;
 };
 
-class SetupResultBase
-{
-protected:
-    SetupResultBase(){}
-public:
-    virtual void go(ResultEntry *entry) = 0;
-protected:
-    QString selectionName(ResultEntry *entry, const TopoDS_Shape &shape);
-    void addTypedSelection(ResultEntry *entry, const TopoDS_Shape &shape, TopAbs_ShapeEnum type);
-};
+QString buildSelectionName(const ResultEntry *entry, const TopoDS_Shape &shape);
+void goSetupResultTypedSelection(ResultEntry *entry, const TopoDS_Shape &shape, TopAbs_ShapeEnum type);
+void goSetupResultBoundingBox(ResultEntry *entry);
+void goSetupResultShellNotClosed(ResultEntry *entry);
+void goSetupResultWireNotClosed(ResultEntry *entry);
+void goSetupResultInvalidPointCurve(ResultEntry *entry);
+void goSetupResultIntersectingWires(ResultEntry *entry);
+void goSetupResultInvalidCurveSurface(ResultEntry *entry);
+void goSetupResultInvalidSameParameterFlag(ResultEntry *entry);
+void goSetupResultUnorientableShapeFace(ResultEntry *entry);
 
-class SetupResultBoundingBox : public SetupResultBase
-{
-private:
-    SetupResultBoundingBox(){}
-public:
-    virtual void go(ResultEntry *entry);
-    friend SetupResultBoundingBox& getSetupResultBoundingBoxObject();
-};
-SetupResultBoundingBox& getSetupResultBoundingBoxObject();
-
-class SetupResultShellNotClosed : public SetupResultBase
-{
-private:
-    SetupResultShellNotClosed(){}
-public:
-    virtual void go(ResultEntry *entry);
-    friend SetupResultShellNotClosed& getSetupResultShellNotClosedObject();
-};
-SetupResultShellNotClosed& getSetupResultShellNotClosedObject();
-
-class SetupResultWireNotClosed : public SetupResultBase
-{
-private:
-    SetupResultWireNotClosed(){}
-public:
-    virtual void go(ResultEntry *entry);
-    friend SetupResultWireNotClosed& getSetupResultWireNotClosedObject();
-};
-SetupResultWireNotClosed& getSetupResultWireNotClosedObject();
-
-class SetupResultInvalidPointCurve : public SetupResultBase
-{
-private:
-    SetupResultInvalidPointCurve(){}
-public:
-    virtual void go(ResultEntry *entry);
-    friend SetupResultInvalidPointCurve& getSetupResultInvalidPointCurveObject();
-};
-SetupResultInvalidPointCurve& getSetupResultInvalidPointCurveObject();
-
-class SetupResultIntersectingWires : public SetupResultBase
-{
-private:
-    SetupResultIntersectingWires(){}
-public:
-    virtual void go(ResultEntry *entry);
-    friend SetupResultIntersectingWires& getSetupResultIntersectingWiresObject();
-};
-SetupResultIntersectingWires& getSetupResultIntersectingWiresObject();
-
-class SetupResultInvalidCurveSurface : public SetupResultBase
-{
-private:
-    SetupResultInvalidCurveSurface(){}
-public:
-    virtual void go(ResultEntry *entry);
-    friend SetupResultInvalidCurveSurface& getSetupResultInvalidCurveSurfaceObject();
-};
-SetupResultInvalidCurveSurface& getSetupResultInvalidCurveSurfaceObject();
-
-class SetupResultInvalidSameParameterFlag : public SetupResultBase
-{
-private:
-    SetupResultInvalidSameParameterFlag(){}
-public:
-    virtual void go(ResultEntry *entry);
-    friend SetupResultInvalidSameParameterFlag& getSetupResultInvalidSameParameterFlagObject();
-};
-SetupResultInvalidSameParameterFlag& getSetupResultInvalidSameParameterFlagObject();
-
-class SetupResultUnorientableShapeFace : public SetupResultBase
-{
-private:
-    SetupResultUnorientableShapeFace(){}
-public:
-    virtual void go(ResultEntry *entry);
-    friend SetupResultUnorientableShapeFace& getSetupResultUnorientableShapeFaceObject();
-};
-SetupResultUnorientableShapeFace& getSetupResultUnorientableShapeFaceObject();
-
-typedef boost::tuple<TopAbs_ShapeEnum, BRepCheck_Status, SetupResultBase*> FunctionMapType;
+typedef boost::function<void (ResultEntry *entry)> ResultFunction;
+typedef boost::tuple<TopAbs_ShapeEnum, BRepCheck_Status, ResultFunction> FunctionMapType;
 
 class ResultModel : public QAbstractItemModel
 {
@@ -174,6 +96,7 @@ class TaskCheckGeometryResults : public QWidget
 public:
     TaskCheckGeometryResults(QWidget *parent = 0);
     ~TaskCheckGeometryResults();
+    QString getShapeContentString();
 
 private slots:
     void currentRowChanged (const QModelIndex &current, const QModelIndex &previous);
@@ -188,12 +111,15 @@ private:
     void dispatchError(ResultEntry *entry, const BRepCheck_Status &stat);
     bool split(QString &input, QString &doc, QString &object, QString &sub);
     void setupFunctionMap();
+    int goBOPSingleCheck(const TopoDS_Shape &shapeIn, ResultEntry *theRoot, const QString &baseName);
+    void buildShapeContent(const QString &baseName, const TopoDS_Shape &shape);
     ResultModel *model;
     QTreeView *treeView;
     QLabel *message;
     TopTools_MapOfShape checkedMap;
-    Gui::ViewProvider *currentProvider;
+    SoSeparator *currentSeparator;
     std::vector<FunctionMapType> functionMap;
+    std::string shapeContentString;
 };
 
 class TaskCheckGeometryDialog : public Gui::TaskView::TaskDialog
@@ -212,6 +138,8 @@ public:
 private:
     TaskCheckGeometryResults* widget;
     Gui::TaskView::TaskBox* taskbox;
+    Gui::TaskView::TaskBox* shapeContentBox;
+    QTextEdit *contentLabel;
 };
 
 }

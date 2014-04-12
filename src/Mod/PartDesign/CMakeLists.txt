@@ -11,6 +11,8 @@ INSTALL(
         InitGui.py
         TestPartDesignApp.py
         TestPartDesignGui.py
+        InvoluteGearFeature.py
+        InvoluteGearFeature.ui
     DESTINATION
         Mod/PartDesign
 )
@@ -27,6 +29,18 @@ INSTALL(
         Scripts/Spring.py
     DESTINATION
         Mod/PartDesign/Scripts
+       )
+        
+INSTALL(
+    FILES
+        fcgear/__init__.py
+        fcgear/fcgear.py
+        fcgear/fcgeardialog.py
+        fcgear/involute.py
+        fcgear/svggear.py
+    DESTINATION
+        Mod/PartDesign/fcgear
+        
 )
 
 SET(WizardShaft_SRCS

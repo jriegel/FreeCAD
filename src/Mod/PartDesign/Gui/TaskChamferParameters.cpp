@@ -37,6 +37,7 @@
 #include <Gui/ViewProvider.h>
 #include <Gui/WaitCursor.h>
 #include <Base/Console.h>
+#include <Base/UnitsApi.h>
 #include <Gui/Selection.h>
 #include <Gui/Command.h>
 #include <Mod/PartDesign/App/FeatureChamfer.h>
@@ -70,6 +71,7 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
     PartDesign::Chamfer* pcChamfer = static_cast<PartDesign::Chamfer*>(DressUpView->getObject());
     double r = pcChamfer->Size.getValue();
 
+    ui->doubleSpinBox->setDecimals(Base::UnitsApi::getDecimals());
     ui->doubleSpinBox->setMaximum(INT_MAX);
     ui->doubleSpinBox->setValue(r);
     ui->doubleSpinBox->selectAll();

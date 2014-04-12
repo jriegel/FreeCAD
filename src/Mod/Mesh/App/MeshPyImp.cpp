@@ -149,7 +149,7 @@ PyObject*  MeshPy::write(PyObject *args)
 {
     const char* Name;
     char* Ext=0;
-    char* ObjName;
+    char* ObjName=0;
     if (!PyArg_ParseTuple(args, "s|ss",&Name,&Ext,&ObjName))
         return NULL;
 
@@ -1496,6 +1496,11 @@ PyObject*  MeshPy::getSegmentsByCurvature(PyObject *args)
 Py::Int MeshPy::getCountPoints(void) const
 {
     return Py::Int((long)getMeshObjectPtr()->countPoints());
+}
+
+Py::Int MeshPy::getCountEdges(void) const
+{
+    return Py::Int((long)getMeshObjectPtr()->countEdges());
 }
 
 Py::Int MeshPy::getCountFacets(void) const

@@ -26,6 +26,7 @@
 
 #include <App/PropertyUnits.h>
 #include <App/PropertyStandard.h>
+#include <App/PropertyUnits.h>
 #include "FeatureAdditive.h"
 
 namespace PartDesign
@@ -65,6 +66,7 @@ public:
         return "PartDesignGui::ViewProviderPad";
     }
     //@}
+
 private:
     static const char* TypeEnums[];
     //static const char* SideEnums[];

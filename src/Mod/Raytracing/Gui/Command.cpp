@@ -260,7 +260,7 @@ void CmdRaytracingWriteView::activated(int iMsg)
 
     openCommand("Write view");
     doCommand(Doc,"import Raytracing,RaytracingGui");
-    doCommand(Doc,"OutFile = open(unicode('%s','utf-8'),'w')",cFullName.c_str());
+    doCommand(Doc,"OutFile = open(unicode(\"%s\",\"utf-8\"),\"w\")",cFullName.c_str());
     doCommand(Doc,"result = open(App.getResourceDir()+'Mod/Raytracing/Templates/ProjectStd.pov').read()");
     doCommand(Doc,"content = ''");
     doCommand(Doc,"content += RaytracingGui.povViewCamera()");
@@ -486,6 +486,7 @@ CmdRaytracingExportProject::CmdRaytracingExportProject()
   : Command("Raytracing_ExportProject")
 {
     // seting the
+    sAppModule    = "Raytracing";
     sGroup        = QT_TR_NOOP("File");
     sMenuText     = QT_TR_NOOP("&Export project...");
     sToolTipText  = QT_TR_NOOP("Export a Raytracing project to a file");
@@ -545,7 +546,8 @@ DEF_STD_CMD_A(CmdRaytracingRender);
 CmdRaytracingRender::CmdRaytracingRender()
   : Command("Raytracing_Render")
 {
-    sGroup        = QT_TR_NOOP("File");
+    sAppModule    = "Raytracing";
+    sGroup        = QT_TR_NOOP("Raytracing");
     sMenuText     = QT_TR_NOOP("&Render");
     sToolTipText  = QT_TR_NOOP("Renders the current raytracing project with an external renderer");
     sWhatsThis    = "Raytracing_Render";
@@ -608,7 +610,7 @@ void CmdRaytracingRender::activated(int iMsg)
     
     if (renderType == "povray") {
         QStringList filter;
-        filter << QObject::tr("Rendered image(*.png)");
+        filter << QObject::tr("Rendered image (*.png)");
         filter << QObject::tr("All Files (*.*)");
         QString fn = Gui::FileDialog::getSaveFileName(Gui::getMainWindow(), QObject::tr("Rendered image"), QString(), filter.join(QLatin1String(";;")));
         if (!fn.isEmpty()) {
@@ -760,7 +762,8 @@ CmdRaytracingResetCamera::CmdRaytracingResetCamera()
   : Command("Raytracing_ResetCamera")
 {
     // seting the
-    sGroup        = QT_TR_NOOP("File");
+    sAppModule    = "Raytracing";
+    sGroup        = QT_TR_NOOP("Raytracing");
     sMenuText     = QT_TR_NOOP("&Reset Camera");
     sToolTipText  = QT_TR_NOOP("Sets the camera of the selected Raytracing project to match the current view");
     sWhatsThis    = "Raytracing_ResetCamera";

@@ -25,10 +25,15 @@ __title__="FreeCAD Arch Stairs"
 __author__ = "Yorik van Havre"
 __url__ = "http://www.freecadweb.org"
 
-import FreeCAD,FreeCADGui,ArchComponent,ArchCommands,Draft,DraftVecUtils,math
+import FreeCAD,ArchComponent,ArchCommands,Draft,DraftVecUtils,math
 from FreeCAD import Vector
-from DraftTools import translate
-from PySide import QtCore
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui
+    from DraftTools import translate
+else:
+    def translate(ctxt,txt):
+        return txt
 
 
 def makeStairs(base=None,length=4.5,width=1,height=3,steps=17,name=translate("Arch","Stairs")):
@@ -43,6 +48,7 @@ def makeStairs(base=None,length=4.5,width=1,height=3,steps=17,name=translate("Ar
     obj.Width = width
     obj.Height = height
     obj.NumberOfSteps = steps
+    return obj
 
 
 class _CommandStairs:
@@ -51,7 +57,7 @@ class _CommandStairs:
         return {'Pixmap'  : 'Arch_Stairs',
                 'MenuText': QtCore.QT_TRANSLATE_NOOP("Arch_Stairs","Stairs"),
                 'Accel': "S, R",
-                'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Space","Creates a stairs objects")}
+                'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Space","Creates a stairs object")}
 
     def Activated(self):
         FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Stairs"))
@@ -73,42 +79,26 @@ class _Stairs(ArchComponent.Component):
         # http://en.wikipedia.org/wiki/Stairs
         
         # base properties
-        obj.addProperty("App::PropertyLength","Length","Arch",
-                        translate("Arch","The length of these stairs, if no baseline is defined"))
-        obj.addProperty("App::PropertyLength","Width","Arch",
-                        translate("Arch","The width of these stairs"))
-        obj.addProperty("App::PropertyLength","Height","Arch",
-                        translate("Arch","The total height of these stairs"))
-        obj.addProperty("App::PropertyEnumeration","Align","Arch",
-                        translate("Arch","The alignment of these stairs on their baseline, if applicable"))
+        obj.addProperty("App::PropertyLength","Length","Arch",translate("Arch","The length of these stairs, if no baseline is defined"))
+        obj.addProperty("App::PropertyLength","Width","Arch",translate("Arch","The width of these stairs"))
+        obj.addProperty("App::PropertyLength","Height","Arch",translate("Arch","The total height of these stairs"))
+        obj.addProperty("App::PropertyEnumeration","Align","Arch",translate("Arch","The alignment of these stairs on their baseline, if applicable"))
                         
         # steps properties
-        obj.addProperty("App::PropertyInteger","NumberOfSteps","Steps",
-                        translate("Arch","The number of risers in these stairs"))
-        obj.addProperty("App::PropertyLength","TreadDepth","Steps",
-                        translate("Arch","The depth of the treads of these stairs"))
-        obj.addProperty("App::PropertyLength","RiserHeight","Steps",
-                        translate("Arch","The height of the risers of these stairs"))
-        obj.addProperty("App::PropertyLength","Nosing","Steps",
-                        translate("Arch","The size of the nosing"))
-        obj.addProperty("App::PropertyLength","TreadThickness","Steps",
-                        translate("Arch","The thickness of the treads"))
-        obj.addProperty("App::PropertyLength","BlondelRatio","Steps",
-                        translate("Arch","The Blondel ratio, must be between 62 and 64cm or 24.5 and 25.5in"))
+        obj.addProperty("App::PropertyInteger","NumberOfSteps","Steps",translate("Arch","The number of risers in these stairs"))
+        obj.addProperty("App::PropertyLength","TreadDepth","Steps",translate("Arch","The depth of the treads of these stairs"))
+        obj.addProperty("App::PropertyLength","RiserHeight","Steps",translate("Arch","The height of the risers of these stairs"))
+        obj.addProperty("App::PropertyLength","Nosing","Steps",translate("Arch","The size of the nosing"))
+        obj.addProperty("App::PropertyLength","TreadThickness","Steps",translate("Arch","The thickness of the treads"))
+        obj.addProperty("App::PropertyFloat","BlondelRatio","Steps",translate("Arch","The Blondel ratio, must be between 62 and 64cm or 24.5 and 25.5in"))
                         
         # structural properties
-        obj.addProperty("App::PropertyEnumeration","Landings","Structure",
-                        translate("Arch","The type of landings of these stairs"))
-        obj.addProperty("App::PropertyEnumeration","Winders","Structure",
-                        translate("Arch","The type of winders in these stairs"))
-        obj.addProperty("App::PropertyEnumeration","Structure","Structure",
-                        translate("Arch","The type of structure of these stairs"))
-        obj.addProperty("App::PropertyLength","StructureThickness","Structure",
-                        translate("Arch","The thickness of the massive structure or of the stringers"))
-        obj.addProperty("App::PropertyLength","StringerWidth","Structure",
-                        translate("Arch","The width of the stringers"))
-        obj.addProperty("App::PropertyLength","StructureOffset","Structure",
-                        translate("Arch","The offset between the border of the stairs and the structure"))
+        obj.addProperty("App::PropertyEnumeration","Landings","Structure",translate("Arch","The type of landings of these stairs"))
+        obj.addProperty("App::PropertyEnumeration","Winders","Structure",translate("Arch","The type of winders in these stairs"))
+        obj.addProperty("App::PropertyEnumeration","Structure","Structure",translate("Arch","The type of structure of these stairs"))
+        obj.addProperty("App::PropertyLength","StructureThickness","Structure",translate("Arch","The thickness of the massive structure or of the stringers"))
+        obj.addProperty("App::PropertyLength","StringerWidth","Structure",translate("Arch","The width of the stringers"))
+        obj.addProperty("App::PropertyLength","StructureOffset","Structure",translate("Arch","The offset between the border of the stairs and the structure"))
                         
         obj.Align = ['Left','Right','Center']
         obj.Landings = ["None","At center","At each corner"]
@@ -126,14 +116,15 @@ class _Stairs(ArchComponent.Component):
 
         import Part
         self.steps = []
+        self.pseudosteps = []
         self.structures = []
         pl = obj.Placement
         landings = 0
 
         # base tests
-        if not obj.Width:
+        if not obj.Width.Value:
             return
-        if not obj.Height:
+        if not obj.Height.Value:
             if not obj.Base:
                 return
         if obj.NumberOfSteps < 2:
@@ -166,9 +157,9 @@ class _Stairs(ArchComponent.Component):
                     else:
                         self.makeCurvedStairs(obj,edge)
         else:
-            if not obj.Length:
+            if not obj.Length.Value:
                 return
-            edge = Part.Line(Vector(0,0,0),Vector(obj.Length,0,0)).toShape()
+            edge = Part.Line(Vector(0,0,0),Vector(obj.Length.Value,0,0)).toShape()
             if obj.Landings == "At center":
                 landings = 1
                 self.makeStraightStairsWithLanding(obj,edge)
@@ -180,19 +171,25 @@ class _Stairs(ArchComponent.Component):
             shape = self.processSubShapes(obj,shape,pl)
             obj.Shape = shape
             obj.Placement = pl
+        elif self.pseudosteps:
+            shape = Part.makeCompound(self.pseudosteps)
+            obj.Shape = shape
+            obj.Placement = pl
+        else:
+            print "unable to calculate a stairs shape"
 
         # compute step data
         if obj.NumberOfSteps > 1:
-            l = obj.Length
-            h = obj.Height
+            l = obj.Length.Value
+            h = obj.Height.Value
             if obj.Base:
                 if obj.Base.isDerivedFrom("Part::Feature"):
                     l = obj.Base.Shape.Length
                     if obj.Base.Shape.BoundBox.ZLength:
                         h = obj.Base.Shape.BoundBox.ZLength
-            obj.TreadDepth = float(l-(landings*obj.Width))/(obj.NumberOfSteps-(1+landings))
+            obj.TreadDepth = float(l-(landings*obj.Width.Value))/(obj.NumberOfSteps-(1+landings))
             obj.RiserHeight = float(h)/obj.NumberOfSteps
-            obj.BlondelRatio = obj.RiserHeight*2+obj.TreadDepth
+            obj.BlondelRatio = obj.RiserHeight.Value*2+obj.TreadDepth.Value
 
 
     def align(self,basepoint,align,widthvec):
@@ -213,92 +210,94 @@ class _Stairs(ArchComponent.Component):
         import Part,DraftGeomUtils
         v = DraftGeomUtils.vec(edge)
         vLength = Vector(v.x,v.y,0)
-        vWidth = vWidth = DraftVecUtils.scaleTo(vLength.cross(Vector(0,0,1)),obj.Width)
+        vWidth = vWidth = DraftVecUtils.scaleTo(vLength.cross(Vector(0,0,1)),obj.Width.Value)
         vBase = edge.Vertexes[0].Point
-        vNose = DraftVecUtils.scaleTo(vLength,-abs(obj.Nosing))
-        h = obj.Height
-        l = obj.Length
+        vNose = DraftVecUtils.scaleTo(vLength,-abs(obj.Nosing.Value))
+        h = obj.Height.Value
+        l = obj.Length.Value
         if obj.Base:
             if obj.Base.isDerivedFrom("Part::Feature"):
                 l = obj.Base.Shape.Length
                 if obj.Base.Shape.BoundBox.ZLength:
                     h = obj.Base.Shape.BoundBox.ZLength
-        fLength = float(l-obj.Width)/(numberofsteps-2)
+        fLength = float(l-obj.Width.Value)/(numberofsteps-2)
         fHeight = float(h)/numberofsteps
         a = math.atan(fHeight/fLength)
         print "landing data:",fLength,":",fHeight
 
         # step
         p1 = self.align(vBase,obj.Align,vWidth)
-        p1 = p1.add(vNose).add(Vector(0,0,-abs(obj.TreadThickness)))
+        p1 = p1.add(vNose).add(Vector(0,0,-abs(obj.TreadThickness.Value)))
         p2 = p1.add(DraftVecUtils.neg(vNose)).add(vLength)
         p3 = p2.add(vWidth)
         p4 = p3.add(DraftVecUtils.neg(vLength)).add(vNose)
         step = Part.Face(Part.makePolygon([p1,p2,p3,p4,p1]))
-        if obj.TreadThickness:
-            step = step.extrude(Vector(0,0,abs(obj.TreadThickness)))
-        self.steps.append(step)
+        if obj.TreadThickness.Value:
+            step = step.extrude(Vector(0,0,abs(obj.TreadThickness.Value)))
+            self.steps.append(step)
+        else:
+            self.pseudosteps.append(step)
 
         # structure
         lProfile = []
         struct = None
         p7 = None
         p1 = p1.add(DraftVecUtils.neg(vNose))
-        p2 = p1.add(Vector(0,0,-fHeight)).add(Vector(0,0,-obj.StructureThickness/math.cos(a)))
-        resheight = p1.sub(p2).Length - obj.StructureThickness
+        p2 = p1.add(Vector(0,0,-fHeight)).add(Vector(0,0,-obj.StructureThickness.Value/math.cos(a)))
+        resheight = p1.sub(p2).Length - obj.StructureThickness.Value
         reslength = resheight / math.tan(a)
         p3 = p2.add(DraftVecUtils.scaleTo(vLength,reslength)).add(Vector(0,0,resheight))
         p6 = p1.add(vLength)
-        if obj.TreadThickness:
-            p7 = p6.add(Vector(0,0,obj.TreadThickness))
+        if obj.TreadThickness.Value:
+            p7 = p6.add(Vector(0,0,obj.TreadThickness.Value))
 
-        reslength = fLength + (obj.StructureThickness/math.sin(a)-(fHeight-obj.TreadThickness)/math.tan(a))
+        reslength = fLength + (obj.StructureThickness.Value/math.sin(a)-(fHeight-obj.TreadThickness.Value)/math.tan(a))
         if p7:
             p5 = p7.add(DraftVecUtils.scaleTo(vLength,reslength))
         else:
             p5 = p6.add(DraftVecUtils.scaleTo(vLength,reslength))
-        resheight = obj.StructureThickness+obj.TreadThickness
+        resheight = obj.StructureThickness.Value + obj.TreadThickness.Value
         reslength = resheight/math.tan(a)
         p4 = p5.add(DraftVecUtils.scaleTo(vLength,-reslength)).add(Vector(0,0,-resheight))
         if obj.Structure == "Massive":
-            if obj.StructureThickness:
+            if obj.StructureThickness.Value:
                 if p7:
                     struct = Part.Face(Part.makePolygon([p1,p2,p3,p4,p5,p7,p6,p1]))
                 else:
                     struct = Part.Face(Part.makePolygon([p1,p2,p3,p4,p5,p6,p1]))
                 evec = vWidth
-                if obj.StructureOffset:
-                    mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset)
+                if obj.StructureOffset.Value:
+                    mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset.Value)
                     struct.translate(mvec)
                     evec = DraftVecUtils.scaleTo(evec,evec.Length-(2*mvec.Length))
                 struct = struct.extrude(evec)
         elif obj.Structure in ["One stringer","Two stringers"]:
-            if obj.StringerWidth and obj.StructureThickness:
+            if obj.StringerWidth.Value and obj.StructureThickness.Value:
                 p1b = p1.add(Vector(0,0,-fHeight))
                 reslength = fHeight/math.tan(a)
                 p1c = p1.add(DraftVecUtils.scaleTo(vLength,reslength))
                 p5b = None
                 p5c = None
-                if obj.TreadThickness:
-                    reslength = obj.StructureThickness/math.sin(a)
+                if obj.TreadThickness.Value:
+                    reslength = obj.StructureThickness.Value/math.sin(a)
                     p5b = p5.add(DraftVecUtils.scaleTo(vLength,-reslength))
-                    reslength = obj.TreadThickness/math.tan(a)
-                    p5c = p5b.add(DraftVecUtils.scaleTo(vLength,-reslength)).add(Vector(0,0,-obj.TreadThickness))
+                    reslength = obj.TreadThickness.Value/math.tan(a)
+                    p5c = p5b.add(DraftVecUtils.scaleTo(vLength,-reslength)).add(Vector(0,0,-obj.TreadThickness.Value))
                     pol = Part.Face(Part.makePolygon([p1c,p1b,p2,p3,p4,p5,p5b,p5c,p1c]))
                 else:
                     pol = Part.Face(Part.makePolygon([p1c,p1b,p2,p3,p4,p5,p1c]))
-                evec = DraftVecUtils.scaleTo(vWidth,obj.StringerWidth)
+                evec = DraftVecUtils.scaleTo(vWidth,obj.StringerWidth.Value)
                 if obj.Structure == "One stringer":
-                    if obj.StructureOffset:
-                        mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset)
+                    if obj.StructureOffset.Value:
+                        mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset.Value)
                     else:
-                        mvec = DraftVecUtils.scaleTo(vWidth,(vWidth.Length/2)-obj.StringerWidth/2)
+                        mvec = DraftVecUtils.scaleTo(vWidth,(vWidth.Length/2)-obj.StringerWidth.Value/2)
                     pol.translate(mvec)
                     struct = pol.extrude(evec)
                 elif obj.Structure == "Two stringers":
                     pol2 = pol.copy()
-                    if obj.StructureOffset:
-                        mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset)
+                    if obj.StructureOffset.Value:
+                        mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset.Value)
                         pol.translate(mvec)
                         mvec = vWidth.add(mvec.negative())
                         pol2.translate(mvec)
@@ -325,43 +324,45 @@ class _Stairs(ArchComponent.Component):
         if round(v.z,Draft.precision()) != 0:
             h = v.z
         else:
-            h = obj.Height
+            h = obj.Height.Value
         vHeight = Vector(0,0,float(h)/numberofsteps)
-        vWidth = DraftVecUtils.scaleTo(vLength.cross(Vector(0,0,1)),obj.Width)
+        vWidth = DraftVecUtils.scaleTo(vLength.cross(Vector(0,0,1)),obj.Width.Value)
         vBase = edge.Vertexes[0].Point
-        vNose = DraftVecUtils.scaleTo(vLength,-abs(obj.Nosing))
+        vNose = DraftVecUtils.scaleTo(vLength,-abs(obj.Nosing.Value))
         a = math.atan(vHeight.Length/vLength.Length)
-        print "stair data:",vLength.Length,":",vHeight.Length
+        #print "stair data:",vLength.Length,":",vHeight.Length
 
         # steps
         for i in range(numberofsteps-1):
             p1 = vBase.add((Vector(vLength).multiply(i)).add(Vector(vHeight).multiply(i+1)))
             p1 = self.align(p1,obj.Align,vWidth)
-            p1 = p1.add(vNose).add(Vector(0,0,-abs(obj.TreadThickness)))
+            p1 = p1.add(vNose).add(Vector(0,0,-abs(obj.TreadThickness.Value)))
             p2 = p1.add(DraftVecUtils.neg(vNose)).add(vLength)
             p3 = p2.add(vWidth)
             p4 = p3.add(DraftVecUtils.neg(vLength)).add(vNose)
             step = Part.Face(Part.makePolygon([p1,p2,p3,p4,p1]))
-            if obj.TreadThickness:
-                step = step.extrude(Vector(0,0,abs(obj.TreadThickness)))
-            self.steps.append(step)
+            if obj.TreadThickness.Value:
+                step = step.extrude(Vector(0,0,abs(obj.TreadThickness.Value)))
+                self.steps.append(step)
+            else:
+                self.pseudosteps.append(step)
 
         # structure
         lProfile = []
         struct = None
         if obj.Structure == "Massive":
-            if obj.StructureThickness:
+            if obj.StructureThickness.Value:
                 for i in range(numberofsteps-1):
                     if not lProfile:
                         lProfile.append(vBase)
                     last = lProfile[-1]
                     if len(lProfile) == 1:
-                        last = last.add(Vector(0,0,-abs(obj.TreadThickness)))
+                        last = last.add(Vector(0,0,-abs(obj.TreadThickness.Value)))
                     lProfile.append(last.add(vHeight))
                     lProfile.append(lProfile[-1].add(vLength))
-                resHeight1 = obj.StructureThickness/math.cos(a)
+                resHeight1 = obj.StructureThickness.Value/math.cos(a)
                 lProfile.append(lProfile[-1].add(Vector(0,0,-resHeight1)))
-                resHeight2 = ((numberofsteps-1)*vHeight.Length)-(resHeight1+obj.TreadThickness)
+                resHeight2 = ((numberofsteps-1)*vHeight.Length)-(resHeight1+obj.TreadThickness.Value)
                 resLength = (vLength.Length/vHeight.Length)*resHeight2
                 h = DraftVecUtils.scaleTo(vLength,-resLength)
                 lProfile.append(lProfile[-1].add(Vector(h.x,h.y,-resHeight2)))
@@ -370,44 +371,44 @@ class _Stairs(ArchComponent.Component):
                 pol = Part.makePolygon(lProfile)
                 struct = Part.Face(pol)
                 evec = vWidth
-                if obj.StructureOffset:
-                    mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset)
+                if obj.StructureOffset.Value:
+                    mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset.Value)
                     struct.translate(mvec)
                     evec = DraftVecUtils.scaleTo(evec,evec.Length-(2*mvec.Length))
                 struct = struct.extrude(evec)
         elif obj.Structure in ["One stringer","Two stringers"]:
-            if obj.StringerWidth and obj.StructureThickness:
+            if obj.StringerWidth.Value and obj.StructureThickness.Value:
                 hyp = math.sqrt(vHeight.Length**2 + vLength.Length**2)
                 l1 = Vector(vLength).multiply(numberofsteps-1)
-                h1 = Vector(vHeight).multiply(numberofsteps-1).add(Vector(0,0,-abs(obj.TreadThickness)))
+                h1 = Vector(vHeight).multiply(numberofsteps-1).add(Vector(0,0,-abs(obj.TreadThickness.Value)))
                 p1 = vBase.add(l1).add(h1)
                 p1 = self.align(p1,obj.Align,vWidth)
                 lProfile.append(p1)
-                h2 = (obj.StructureThickness/vLength.Length)*hyp
+                h2 = (obj.StructureThickness.Value/vLength.Length)*hyp
                 lProfile.append(lProfile[-1].add(Vector(0,0,-abs(h2))))
                 h3 = lProfile[-1].z-vBase.z
                 l3 = (h3/vHeight.Length)*vLength.Length
                 v3 = DraftVecUtils.scaleTo(vLength,-l3)
                 lProfile.append(lProfile[-1].add(Vector(0,0,-abs(h3))).add(v3))
-                l4 = (obj.StructureThickness/vHeight.Length)*hyp
+                l4 = (obj.StructureThickness.Value/vHeight.Length)*hyp
                 v4 = DraftVecUtils.scaleTo(vLength,-l4)
                 lProfile.append(lProfile[-1].add(v4))
                 lProfile.append(lProfile[0])
                 #print lProfile
                 pol = Part.makePolygon(lProfile)
                 pol = Part.Face(pol)
-                evec = DraftVecUtils.scaleTo(vWidth,obj.StringerWidth)
+                evec = DraftVecUtils.scaleTo(vWidth,obj.StringerWidth.Value)
                 if obj.Structure == "One stringer":
-                    if obj.StructureOffset:
-                        mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset)
+                    if obj.StructureOffset.Value:
+                        mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset.Value)
                     else:
-                        mvec = DraftVecUtils.scaleTo(vWidth,(vWidth.Length/2)-obj.StringerWidth/2)
+                        mvec = DraftVecUtils.scaleTo(vWidth,(vWidth.Length/2)-obj.StringerWidth.Value/2)
                     pol.translate(mvec)
                     struct = pol.extrude(evec)
                 elif obj.Structure == "Two stringers":
                     pol2 = pol.copy()
-                    if obj.StructureOffset:
-                        mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset)
+                    if obj.StructureOffset.Value:
+                        mvec = DraftVecUtils.scaleTo(vWidth,obj.StructureOffset.Value)
                         pol.translate(mvec)
                         mvec = vWidth.add(mvec.negative())
                         pol2.translate(mvec)
@@ -428,19 +429,19 @@ class _Stairs(ArchComponent.Component):
             return
         import Part,DraftGeomUtils
         v = DraftGeomUtils.vec(edge)
-        reslength = edge.Length - obj.Width
+        reslength = edge.Length - obj.Width.Value
         vLength = DraftVecUtils.scaleTo(v,float(reslength)/(obj.NumberOfSteps-2))
         vLength = Vector(vLength.x,vLength.y,0)
-        vWidth = DraftVecUtils.scaleTo(vLength.cross(Vector(0,0,1)),obj.Width)
+        vWidth = DraftVecUtils.scaleTo(vLength.cross(Vector(0,0,1)),obj.Width.Value)
         p1 = edge.Vertexes[0].Point
         if round(v.z,Draft.precision()) != 0:
             h = v.z
         else:
-            h = obj.Height
+            h = obj.Height.Value
         hstep = h/obj.NumberOfSteps
         landing = obj.NumberOfSteps/2
         p2 = p1.add(DraftVecUtils.scale(vLength,landing-1).add(Vector(0,0,landing*hstep)))
-        p3 = p2.add(DraftVecUtils.scaleTo(vLength,obj.Width))
+        p3 = p2.add(DraftVecUtils.scaleTo(vLength,obj.Width.Value))
         p4 = p3.add(DraftVecUtils.scale(vLength,obj.NumberOfSteps-(landing+1)).add(Vector(0,0,(obj.NumberOfSteps-landing)*hstep)))
         self.makeStraightStairs(obj,Part.Line(p1,p2).toShape(),landing)
         self.makeStraightLanding(obj,Part.Line(p2,p3).toShape())
@@ -464,5 +465,5 @@ class _ViewProviderStairs(ArchComponent.ViewProviderComponent):
         import Arch_rc
         return ":/icons/Arch_Stairs_Tree.svg"
 
-
-FreeCADGui.addCommand('Arch_Stairs',_CommandStairs())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('Arch_Stairs',_CommandStairs())

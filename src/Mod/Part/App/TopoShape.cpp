@@ -27,6 +27,7 @@
 # include <cmath>
 # include <cstdlib>
 # include <sstream>
+# include <QString>
 # include <BRepLib.hxx>
 # include <BSplCLib.hxx>
 # include <Bnd_Box.hxx>
@@ -563,7 +564,8 @@ void TopoShape::importIges(const char *FileName)
         IGESControl_Controller::Init();
         Interface_Static::SetIVal("read.surfacecurve.mode",3);
         IGESControl_Reader aReader;
-        if (aReader.ReadFile((const Standard_CString)FileName) != IFSelect_RetDone)
+        QString fn = QString::fromUtf8(FileName);
+        if (aReader.ReadFile((const char*)fn.toLocal8Bit()) != IFSelect_RetDone)
             throw Base::Exception("Error in reading IGES");
 
         Handle_Message_ProgressIndicator pi = new ProgressIndicator(100);
@@ -588,7 +590,8 @@ void TopoShape::importStep(const char *FileName)
 {
     try {
         STEPControl_Reader aReader;
-        if (aReader.ReadFile((const Standard_CString)FileName) != IFSelect_RetDone)
+        QString fn = QString::fromUtf8(FileName);
+        if (aReader.ReadFile((const char*)fn.toLocal8Bit()) != IFSelect_RetDone)
             throw Base::Exception("Error in reading STEP");
 
         Handle_Message_ProgressIndicator pi = new ProgressIndicator(100);
@@ -618,7 +621,8 @@ void TopoShape::importBrep(const char *FileName)
         Handle_Message_ProgressIndicator pi = new ProgressIndicator(100);
         pi->NewScope(100, "Reading BREP file...");
         pi->Show();
-        BRepTools::Read(aShape,(const Standard_CString)FileName,aBuilder,pi);
+        QString fn = QString::fromUtf8(FileName);
+        BRepTools::Read(aShape,(const char*)fn.toLocal8Bit(),aBuilder,pi);
         pi->EndScope();
     #else
         BRepTools::Read(aShape,(const Standard_CString)FileName,aBuilder);
@@ -674,7 +678,7 @@ void TopoShape::write(const char *FileName) const
     }
     else if (File.hasExtension("stl")) {
         // read brep-file
-        exportStl(File.filePath().c_str());
+        exportStl(File.filePath().c_str(),0);
     }
     else{
         throw Base::Exception("Unknown extension");
@@ -691,7 +695,8 @@ void TopoShape::exportIges(const char *filename) const
         //IGESControl_Writer aWriter(Interface_Static::CVal("write.iges.unit"), 1);
         aWriter.AddShape(this->_Shape);
         aWriter.ComputeModel();
-        if (aWriter.Write((const Standard_CString)filename) != IFSelect_RetDone)
+        QString fn = QString::fromUtf8(filename);
+        if (aWriter.Write((const char*)fn.toLocal8Bit()) != IFSelect_RetDone)
             throw Base::Exception("Writing of IGES failed");
     }
     catch (Standard_Failure) {
@@ -721,7 +726,8 @@ void TopoShape::exportStep(const char *filename) const
         makeHeader.SetOriginatingSystem(new TCollection_HAsciiString("FreeCAD"));
         makeHeader.SetDescriptionValue(1, new TCollection_HAsciiString("FreeCAD Model"));
 
-        if (aWriter.Write((const Standard_CString)filename) != IFSelect_RetDone)
+        QString fn = QString::fromUtf8(filename);
+        if (aWriter.Write((const char*)fn.toLocal8Bit()) != IFSelect_RetDone)
             throw Base::Exception("Writing of STEP failed");
         pi->EndScope();
     }
@@ -733,21 +739,30 @@ void TopoShape::exportStep(const char *filename) const
 
 void TopoShape::exportBrep(const char *filename) const
 {
-    if (!BRepTools::Write(this->_Shape,(const Standard_CString)filename))
+    QString fn = QString::fromUtf8(filename);
+    if (!BRepTools::Write(this->_Shape,(const char*)fn.toLocal8Bit()))
         throw Base::Exception("Writing of BREP failed");
 }
 
-void TopoShape::exportBrep(std::ostream& out)
+void TopoShape::exportBrep(std::ostream& out) const
 {
     BRepTools::Write(this->_Shape, out);
 }
 
-void TopoShape::exportStl(const char *filename) const
+void TopoShape::dump(std::ostream& out) const
+{
+    BRepTools::Dump(this->_Shape, out);
+}
+
+void TopoShape::exportStl(const char *filename, double deflection) const
 {
     StlAPI_Writer writer;
-    //writer.RelativeMode() = false;
-    //writer.SetDeflection(0.1);
-    writer.Write(this->_Shape,(const Standard_CString)filename);
+    if (deflection > 0) {
+        writer.RelativeMode() = false;
+        writer.SetDeflection(deflection);
+    }
+    QString fn = QString::fromUtf8(filename);
+    writer.Write(this->_Shape,(const Standard_CString)fn.toLocal8Bit());
 }
 
 void TopoShape::exportFaceSet(double dev, double ca, std::ostream& str) const
@@ -998,12 +1013,13 @@ unsigned int TopoShape::getMemSize (void) const
                         break;
                     case GeomAbs_BezierSurface:
                         memsize += sizeof(Geom_BezierSurface);
-                        memsize += (surface.NbUKnots()+surface.NbVKnots()) * sizeof(Standard_Real);
+                        memsize += (surface.NbUPoles()*surface.NbVPoles()) * sizeof(Standard_Real);
                         memsize += (surface.NbUPoles()*surface.NbVPoles()) * sizeof(Geom_CartesianPoint);
                         break;
                     case GeomAbs_BSplineSurface:
                         memsize += sizeof(Geom_BSplineSurface);
                         memsize += (surface.NbUKnots()+surface.NbVKnots()) * sizeof(Standard_Real);
+                        memsize += (surface.NbUPoles()*surface.NbVPoles()) * sizeof(Standard_Real);
                         memsize += (surface.NbUPoles()*surface.NbVPoles()) * sizeof(Geom_CartesianPoint);
                         break;
                     case GeomAbs_SurfaceOfRevolution:
@@ -1045,12 +1061,13 @@ unsigned int TopoShape::getMemSize (void) const
                         break;
                     case GeomAbs_BezierCurve:
                         memsize += sizeof(Geom_BezierCurve);
-                        memsize += curve.NbKnots() * sizeof(Standard_Real);
+                        memsize += curve.NbPoles() * sizeof(Standard_Real);
                         memsize += curve.NbPoles() * sizeof(Geom_CartesianPoint);
                         break;
                     case GeomAbs_BSplineCurve:
                         memsize += sizeof(Geom_BSplineCurve);
                         memsize += curve.NbKnots() * sizeof(Standard_Real);
+                        memsize += curve.NbPoles() * sizeof(Standard_Real);
                         memsize += curve.NbPoles() * sizeof(Geom_CartesianPoint);
                         break;
                     case GeomAbs_OtherCurve:
@@ -1276,30 +1293,50 @@ bool TopoShape::isClosed() const
 
 TopoDS_Shape TopoShape::cut(TopoDS_Shape shape) const
 {
+    if (this->_Shape.IsNull())
+        Standard_Failure::Raise("Base shape is null");
+    if (shape.IsNull())
+        Standard_Failure::Raise("Tool shape is null");
     BRepAlgoAPI_Cut mkCut(this->_Shape, shape);
     return mkCut.Shape();
 }
 
 TopoDS_Shape TopoShape::common(TopoDS_Shape shape) const
 {
+    if (this->_Shape.IsNull())
+        Standard_Failure::Raise("Base shape is null");
+    if (shape.IsNull())
+        Standard_Failure::Raise("Tool shape is null");
     BRepAlgoAPI_Common mkCommon(this->_Shape, shape);
     return mkCommon.Shape();
 }
 
 TopoDS_Shape TopoShape::fuse(TopoDS_Shape shape) const
 {
+    if (this->_Shape.IsNull())
+        Standard_Failure::Raise("Base shape is null");
+    if (shape.IsNull())
+        Standard_Failure::Raise("Tool shape is null");
     BRepAlgoAPI_Fuse mkFuse(this->_Shape, shape);
     return mkFuse.Shape();
 }
 
 TopoDS_Shape TopoShape::oldFuse(TopoDS_Shape shape) const
 {
+    if (this->_Shape.IsNull())
+        Standard_Failure::Raise("Base shape is null");
+    if (shape.IsNull())
+        Standard_Failure::Raise("Tool shape is null");
     BRepAlgo_Fuse mkFuse(this->_Shape, shape);
     return mkFuse.Shape();
 }
 
 TopoDS_Shape TopoShape::section(TopoDS_Shape shape) const
 {
+    if (this->_Shape.IsNull())
+        Standard_Failure::Raise("Base shape is null");
+    if (shape.IsNull())
+        Standard_Failure::Raise("Tool shape is null");
     BRepAlgoAPI_Section mkSection(this->_Shape, shape);
     return mkSection.Shape();
 }
@@ -1911,6 +1948,9 @@ void TopoShape::transformGeometry(const Base::Matrix4D &rclMat)
 
 TopoDS_Shape TopoShape::transformGShape(const Base::Matrix4D& rclTrf) const
 {
+    if (this->_Shape.IsNull())
+        Standard_Failure::Raise("Cannot transform null shape");
+
     gp_GTrsf mat;
     mat.SetValue(1,1,rclTrf[0][0]);
     mat.SetValue(2,1,rclTrf[1][0]);
@@ -1932,6 +1972,9 @@ TopoDS_Shape TopoShape::transformGShape(const Base::Matrix4D& rclTrf) const
 
 void TopoShape::transformShape(const Base::Matrix4D& rclTrf, bool copy)
 {
+    if (this->_Shape.IsNull())
+        Standard_Failure::Raise("Cannot transform null shape");
+
     gp_Trsf mat;
     mat.SetValues(rclTrf[0][0],rclTrf[0][1],rclTrf[0][2],rclTrf[0][3],
                   rclTrf[1][0],rclTrf[1][1],rclTrf[1][2],rclTrf[1][3],

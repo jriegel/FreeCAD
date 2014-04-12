@@ -28,6 +28,7 @@
 
 #include "ui_TaskGrooveParameters.h"
 #include "TaskGrooveParameters.h"
+#include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Gui/Application.h>
@@ -84,6 +85,7 @@ TaskGrooveParameters::TaskGrooveParameters(ViewProviderGroove *GrooveView,QWidge
     bool mirrored = pcGroove->Midplane.getValue();
     bool reversed = pcGroove->Reversed.getValue();
 
+    ui->doubleSpinBox->setDecimals(Base::UnitsApi::getDecimals());
     ui->doubleSpinBox->setValue(l);
 
     blockUpdate = false;

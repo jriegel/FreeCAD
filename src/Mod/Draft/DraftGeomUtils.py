@@ -111,9 +111,11 @@ def isPtOnEdge(pt,edge) :
                     # return DraftVecUtils.isNull(newArc.Center.sub(center)) \
                     #    and DraftVecUtils.isNull(newArc.Axis-axis) \
                     #    and round(newArc.Radius-radius,precision()) == 0
-                    angle1 = DraftVecUtils.angle(begin.sub(center))
-                    angle2 = DraftVecUtils.angle(end.sub(center))
-                    anglept = DraftVecUtils.angle(pt.sub(center))
+                    angle1 = -DraftVecUtils.angle(begin.sub(center))
+                    angle2 = -DraftVecUtils.angle(end.sub(center))
+                    anglept = -DraftVecUtils.angle(pt.sub(center))
+                    if angle2 < angle1:
+                        angle2 = angle2 + math.pi*2
                     if (angle1 < anglept) and (anglept < angle2):
                         return True
     return False
@@ -191,6 +193,8 @@ def geomType(edge):
             return "Circle"
         elif isinstance(edge.Curve,Part.BSplineCurve):
             return "BSplineCurve"
+        elif isinstance(edge.Curve,Part.BezierCurve):
+            return "BezierCurve"
         elif isinstance(edge.Curve,Part.Ellipse):
             return "Ellipse"
         else:
@@ -278,6 +282,14 @@ def findIntersection(edge1,edge2,infinite1=False,infinite2=False,ex1=False,ex2=F
         else :
             return [] # Lines aren't on same plane
 
+    # First, try to use distToShape if possible
+    if isinstance(edge1,Part.Edge) and isinstance(edge2,Part.Edge) and (not infinite1) and (not infinite2):
+        dist, pts, geom = edge1.distToShape(edge2)
+        sol = []
+        for p in pts:
+            sol.append(p[0])
+        return sol
+
     pt1 = None
 
     if isinstance(edge1,FreeCAD.Vector) and isinstance(edge2,FreeCAD.Vector):
@@ -341,7 +353,8 @@ def findIntersection(edge1,edge2,infinite1=False,infinite2=False,ex1=False,ex2=F
             else :
                 return []
                 
-        else : # Line isn't on Arc's plane
+        else : 
+            # Line isn't on Arc's plane
             if dirVec.dot(arc.Curve.Axis) != 0 :
                 toPlane  = Vector(arc.Curve.Axis) ; toPlane.normalize()
                 d = pt1.dot(toPlane)
@@ -607,7 +620,8 @@ def sortEdges(lEdges, aVertex=None):
                     elif geomType(result[3]) == "Circle":
                         mp = findMidpoint(result[3])
                         return [Part.Arc(aVertex.Point,mp,result[3].Vertexes[0].Point).toShape()]
-                    elif geomType(result[3]) == "BSplineCurve":
+                    elif geomType(result[3]) == "BSplineCurve" or\
+                        geomType(result[3]) == "BezierCurve":
                         if isLine(result[3].Curve):
                             return [Part.Line(aVertex.Point,result[3].Vertexes[0].Point).toShape()]
                         else:
@@ -645,7 +659,8 @@ def sortEdges(lEdges, aVertex=None):
                     mp = findMidpoint(result[3])
                     newedge = Part.Arc(aVertex.Point,mp,result[3].Vertexes[0].Point).toShape()
                     olEdges += [newedge] + next
-                elif geomType(result[3]) == "BSplineCurve":
+                elif geomType(result[3]) == "BSplineCurve" or \
+                    geomType(result[3]) == "BezierCurve":
                     if isLine(result[3].Curve):
                         newedge = Part.Line(aVertex.Point,result[3].Vertexes[0].Point).toShape()
                         olEdges += [newedge] + next
@@ -1096,7 +1111,8 @@ def findDistance(point,edge,strict=False):
                     return None
             else:
                 return dist
-        elif geomType(edge) == "BSplineCurve":
+        elif geomType(edge) == "BSplineCurve" or \
+            geomType(edge) == "BezierCurve":
             try:
                     pr = edge.Curve.parameter(point)
                     np = edge.Curve.value(pr)
@@ -1211,7 +1227,8 @@ def getTangent(edge,frompoint=None):
         '''
         if geomType(edge) == "Line":
                 return vec(edge)
-        elif geomType(edge) == "BSplineCurve":
+        elif geomType(edge) == "BSplineCurve" or \
+            geomType(edge) == "BezierCurve":
                 if not frompoint:
                         return None
                 cp = edge.Curve.parameter(frompoint)
@@ -1780,8 +1797,18 @@ def getCircleFromSpline(edge):
     circle = Part.makeCircle(r,c,n)
     #print circle.Curve
     return circle
-    
-def cleanProjection(shape):
+
+def curvetowire(obj,steps):
+    points = obj.copy().discretize(steps)
+    p0 = points[0]
+    edgelist = []
+    for p in points[1:]:
+        edge = Part.makeLine((p0.x,p0.y,p0.z),(p.x,p.y,p.z))
+        edgelist.append(edge)
+        p0 = p
+    return edgelist
+
+def cleanProjection(shape,tessellate=False):
     "returns a valid compound of edges, by recreating them"
     # this is because the projection algorithm somehow creates wrong shapes.
     # they dispay fine, but on loading the file the shape is invalid
@@ -1804,12 +1831,16 @@ def cleanProjection(shape):
                     newedges.append(a)
                 else:
                     newedges.append(e.Curve.toShape())
-            elif geomType(e) == "BSplineCurve":
-                if isLine(e.Curve):
-                    l = Part.Line(e.Vertexes[0].Point,e.Vertexes[-1].Point).toShape()
-                    newedges.append(l)
+            elif geomType(e) == "BSplineCurve" or \
+                 geomType(e) == "BezierCurve":
+                if tessellate:
+                    newedges.append(Part.Wire(curvetowire(e,e.Curve.NbPoles)))
                 else:
-                    newedges.append(e.Curve.toShape())
+                    if isLine(e.Curve):
+                        l = Part.Line(e.Vertexes[0].Point,e.Vertexes[-1].Point).toShape()
+                        newedges.append(l)
+                    else:
+                        newedges.append(e.Curve.toShape())
             else:
                 newedges.append(e)
         except:

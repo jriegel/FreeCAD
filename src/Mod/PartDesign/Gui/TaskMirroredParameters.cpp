@@ -391,7 +391,19 @@ bool TaskDlgMirroredParameters::accept()
         mirrorParameter->getMirrorPlane(obj, mirrorPlanes);
         std::string mirrorPlane = getPythonStr(obj, mirrorPlanes);
         if (!mirrorPlane.empty()) {
-            Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.MirrorPlane = %s", name.c_str(), mirrorPlane.c_str());
+            App::DocumentObject* sketch = 0;
+            if (mirrorPlane == "H_Axis" || mirrorPlane == "V_Axis" ||
+                (mirrorPlane.size() > 4 && mirrorPlane.substr(0,4) == "Axis"))
+                sketch = mirrorParameter->getSketchObject();
+            else
+                sketch = mirrorParameter->getSupportObject();
+
+            if (sketch) {
+                QString buf = QString::fromLatin1("(App.ActiveDocument.%1,[\"%2\"])");
+                buf = buf.arg(QString::fromLatin1(sketch->getNameInDocument()));
+                buf = buf.arg(QString::fromLatin1(mirrorPlane.c_str()));
+                Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.MirrorPlane = %s", name.c_str(), buf.toStdString().c_str());
+            }
         } else
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.MirrorPlane = None", name.c_str());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");

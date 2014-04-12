@@ -121,6 +121,7 @@ using namespace boost::program_options;
 
 #ifdef _MSC_VER // New handler for Microsoft Visual C++ compiler
 # include <new.h>
+# include <eh.h> // VC exception handling
 #else // Ansi C/C++ new handler
 # include <new>
 #endif
@@ -921,33 +922,51 @@ void segmentation_fault_handler(int sig)
     switch (sig) {
         case SIGSEGV:
             std::cerr << "Illegal storage access..." << std::endl;
+            throw Base::Exception("Illegal storage access! Please save you work under a new file name and restart the application!");
             break;
         case SIGABRT:
             std::cerr << "Abnormal program termination..." << std::endl;
+            throw Base::Exception("Break signal occoured");
             break;
         default:
             std::cerr << "Unknown error occurred..." << std::endl;
             break;
     }
 
-#if defined(__GNUC__)
-    // According to the documentation to C signals we should exit.
-    exit(3);
-#endif
 }
 
-void unhandled_exception_handler()
+void my_terminate_handler()
 {
-    std::cerr << "Unhandled exception..." << std::endl;
+    std::cerr << "Terminating..." << std::endl;
+
 }
 
 void unexpection_error_handler()
 {
     std::cerr << "Unexpected error occurred..." << std::endl;
+    // try to throw to give the user evantually a change to save 
+    throw Base::Exception("Unexpected error occurred! Please save you work under a new file name and restart the application!");
+
     terminate();
 }
 
+#ifdef _MSC_VER // Microsoft compiler
 
+void my_trans_func( unsigned int code, EXCEPTION_POINTERS* pExp )
+{
+
+   //switch (code)
+   //{
+   //    case FLT_DIVIDE_BY_ZERO : 
+   //       //throw CMyFunkyDivideByZeroException(code, pExp);
+   //       throw Base::Exception("Devision by zero!");
+   //    break;
+   //}
+
+   // general C++ SEH exception for things we don't need to handle separately....
+   throw Base::Exception("my_trans_func()");
+}
+#endif
 void Application::init(int argc, char ** argv)
 {
     try {
@@ -963,8 +982,9 @@ void Application::init(int argc, char ** argv)
 #ifdef _MSC_VER // Microsoft compiler
         std::signal(SIGSEGV,segmentation_fault_handler);
         std::signal(SIGABRT,segmentation_fault_handler);
-        std::set_terminate(unhandled_exception_handler);
+        std::set_terminate(my_terminate_handler);
         std::set_unexpected(unexpection_error_handler);
+//        _set_se_translator(my_trans_func);
 #endif
 
         initTypes();
@@ -1000,14 +1020,19 @@ void Application::initTypes(void)
     App ::PropertyContainer         ::init();
     App ::PropertyLists             ::init();
     App ::PropertyBool              ::init();
+    App ::PropertyBoolList          ::init();
     App ::PropertyFloat             ::init();
     App ::PropertyFloatList         ::init();
     App ::PropertyFloatConstraint   ::init();
+    App ::PropertyQuantity          ::init();
+    App ::PropertyQuantityConstraint::init();
     App ::PropertyAngle             ::init();
     App ::PropertyDistance          ::init();
     App ::PropertyLength            ::init();
     App ::PropertySpeed             ::init();
     App ::PropertyAcceleration      ::init();
+    App ::PropertyForce             ::init();
+    App ::PropertyPressure          ::init();
     App ::PropertyInteger           ::init();
     App ::PropertyIntegerConstraint ::init();
     App ::PropertyPercent           ::init();

@@ -21,10 +21,15 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,Draft,ArchComponent,DraftVecUtils,ArchCommands
+import FreeCAD,Draft,ArchComponent,DraftVecUtils,ArchCommands,Units
 from FreeCAD import Vector
-from PySide import QtCore,QtGui,QtSvg
-from DraftTools import translate
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui, QtSvg
+    from DraftTools import translate
+else:
+    def translate(ctxt,txt):
+        return txt
 
 __title__="FreeCAD Window"
 __author__ = "Yorik van Havre"
@@ -35,6 +40,7 @@ AllowedHosts = ["Wall","Structure","Roof"]
 WindowPresets = ["Fixed", "Open 1-pane", "Open 2-pane", "Sash 2-pane", 
                         "Sliding 2-pane", "Simple door", "Glass door"]
 Roles = ["Window","Door"]
+
 
 def makeWindow(baseobj=None,width=None,height=None,parts=None,name=translate("Arch","Window")):
     '''makeWindow(baseobj,[width,height,parts,name]): creates a window based on the
@@ -353,6 +359,12 @@ def makeWindowPreset(windowtype,width,height,h1,h2,h3,w1,w2,o1,o2,placement=None
 
 class _CommandWindow:
     "the Arch Window command definition"
+
+    def __init__(self):
+        # hack for inputwidgets
+        global setArchWindowParamFunction
+        setArchWindowParamFunction = self.setParams
+
     def GetResources(self):
         return {'Pixmap'  : 'Arch_Window',
                 'MenuText': QtCore.QT_TRANSLATE_NOOP("Arch_Window","Window"),
@@ -368,6 +380,8 @@ class _CommandWindow:
         self.Preset = 0
         self.baseFace = None
         self.wparams = ["Width","Height","H1","H2","H3","W1","W2","O1","O2"]
+        self.DECIMALS = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
+        self.FORMAT = "%." + str(self.DECIMALS) + "f mm"
         
         # auto mode
         if sel:
@@ -482,54 +496,51 @@ class _CommandWindow:
 
     def taskbox(self):
         "sets up a taskbox widget"
-        d = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
         w = QtGui.QWidget()
+        ui = FreeCADGui.UiLoader()
         w.setWindowTitle(translate("Arch","Window options"))
-        lay0 = QtGui.QVBoxLayout(w)
+        grid = QtGui.QGridLayout(w)
 
         # presets box
-        layp = QtGui.QHBoxLayout()
-        lay0.addLayout(layp)
         labelp = QtGui.QLabel(translate("Arch","Preset"))
-        layp.addWidget(labelp)
         valuep = QtGui.QComboBox()
         valuep.addItems(["Create from scratch"]+WindowPresets)
         valuep.setCurrentIndex(self.Preset)
-        layp.addWidget(valuep)
+        grid.addWidget(labelp,0,0,1,1)
+        grid.addWidget(valuep,0,1,1,1)
         QtCore.QObject.connect(valuep,QtCore.SIGNAL("currentIndexChanged(int)"),self.setPreset)
         
         # image display
         self.im = QtSvg.QSvgWidget(":/ui/ParametersWindowFixed.svg")
         self.im.setMaximumWidth(200)
-        lay0.addWidget(self.im)
+        self.im.setMinimumHeight(120)
+        grid.addWidget(self.im,1,0,1,2)
         self.im.hide()
 
         # parameters
+        i = 2
         for param in self.wparams:
-            l = QtGui.QHBoxLayout()
-            lay0.addLayout(l)
             lab = QtGui.QLabel(translate("Arch",param).decode("utf8"))
-            l.addWidget(lab)
-            setattr(self,"val"+param,QtGui.QDoubleSpinBox())
+            setattr(self,"val"+param,ui.createWidget("Gui::InputField"))
             wid = getattr(self,"val"+param)
-            wid.setDecimals(d)
-            wid.setMaximum(99999.99)
             if param == "Width":
-                wid.setValue(self.Width)
+                wid.setText(self.FORMAT % self.Width)
             elif param == "Height":
-                wid.setValue(self.Height)
+                wid.setText(self.FORMAT % self.Height)
             else:
-                wid.setValue(self.Thickness)
+                wid.setText(self.FORMAT % self.Thickness)
                 setattr(self,param,self.Thickness)
-            l.addWidget(wid)
-            l.setEnabled(False)
-            QtCore.QObject.connect(getattr(self,"val"+param),QtCore.SIGNAL("valueChanged(double)"),self.setParams)
-
+            grid.addWidget(lab,i,0,1,1)
+            grid.addWidget(wid,i,1,1,1)
+            i += 1
+            FreeCAD.wid = wid
+            exec("""def valueChanged(d):
+                setArchWindowParamFunction('"""+param+"""',d)""")
+            QtCore.QObject.connect(getattr(self,"val"+param),QtCore.SIGNAL("valueChanged(double)"),valueChanged)
         return w
         
-    def setParams(self,d):
-        for param in self.wparams:
-            setattr(self,param,float(getattr(self,"val"+param).value()))
+    def setParams(self,param,d):
+        setattr(self,param,d)
         self.tracker.length(self.Width)
         self.tracker.height(self.Height)
         self.tracker.width(self.W1)
@@ -555,8 +566,8 @@ class _CommandWindow:
             else:
                 self.im.load(":/ui/ParametersWindowDouble.svg")
             self.im.show()
-            for param in self.wparams:
-                getattr(self,"val"+param).setEnabled(True)
+            #for param in self.wparams:
+            #    getattr(self,"val"+param).setEnabled(True)
         else:
             FreeCADGui.Snapper.setSelectMode(True)
             self.tracker.off()
@@ -569,21 +580,14 @@ class _Window(ArchComponent.Component):
     "The Window object"
     def __init__(self,obj):
         ArchComponent.Component.__init__(self,obj)
-        obj.addProperty("App::PropertyStringList","WindowParts","Arch",
-                        translate("Arch","the components of this window"))
-        obj.addProperty("App::PropertyLength","HoleDepth","Arch",
-                        translate("Arch","The depth of the hole that this window makes in its host object. Keep 0 for automatic."))
-        obj.addProperty("Part::PropertyPartShape","Subvolume","Arch",
-                        translate("Arch","an optional volume to be subtracted from hosts of this window"))
-        obj.addProperty("App::PropertyLength","Width","Arch",
-                        translate("Arch","The width of this window (for preset windows only)"))
-        obj.addProperty("App::PropertyLength","Height","Arch",
-                        translate("Arch","The height of this window (for preset windows only)"))
-        obj.addProperty("App::PropertyVector","Normal","Arch",
-                        translate("Arch","The normal direction of this window"))
+        obj.addProperty("App::PropertyStringList","WindowParts","Arch",translate("Arch","the components of this window"))
+        obj.addProperty("App::PropertyLength","HoleDepth","Arch",translate("Arch","The depth of the hole that this window makes in its host object. Keep 0 for automatic."))
+        obj.addProperty("Part::PropertyPartShape","Subvolume","Arch",translate("Arch","an optional volume to be subtracted from hosts of this window"))
+        obj.addProperty("App::PropertyLength","Width","Arch",translate("Arch","The width of this window (for preset windows only)"))
+        obj.addProperty("App::PropertyLength","Height","Arch",translate("Arch","The height of this window (for preset windows only)"))
+        obj.addProperty("App::PropertyVector","Normal","Arch",translate("Arch","The normal direction of this window"))
         obj.addProperty("App::PropertyInteger","Preset","Arch","")
-        obj.addProperty("App::PropertyEnumeration","Role","Arch",
-                        translate("Arch","The role of this window"))
+        obj.addProperty("App::PropertyEnumeration","Role","Arch",translate("Arch","The role of this window"))
         obj.setEditorMode("Preset",2)
 
         self.Type = "Window"
@@ -603,9 +607,9 @@ class _Window(ArchComponent.Component):
                 if obj.Base:
                     try:
                         if prop == "Height":
-                            obj.Base.setDatum(16,obj.Height)
+                            obj.Base.setDatum(16,obj.Height.Value)
                         elif prop == "Width":
-                            obj.Base.setDatum(17,obj.Width)
+                            obj.Base.setDatum(17,obj.Width.Value)
                     except:
                         # restoring constraints when loading a file fails
                         # because of load order, but it doesn't harm...
@@ -686,8 +690,8 @@ class _Window(ArchComponent.Component):
             base = obj.Base
         width = 0
         if hasattr(obj,"HoleDepth"):
-            if obj.HoleDepth:
-                width = obj.HoleDepth
+            if obj.HoleDepth.Value:
+                width = obj.HoleDepth.Value
         if not width:
             if base:
                 b = base.Shape.BoundBox
@@ -698,8 +702,8 @@ class _Window(ArchComponent.Component):
                 if orig.Base:
                     base = orig.Base
                 if hasattr(orig,"HoleDepth"):
-                    if orig.HoleDepth:
-                        width = orig.HoleDepth
+                    if orig.HoleDepth.Value:
+                        width = orig.HoleDepth.Value
                 if not width:
                     if base:
                         b = base.Shape.BoundBox
@@ -803,6 +807,8 @@ class _ArchWindowTaskPanel:
     def __init__(self):
 
         self.obj = None
+        self.DECIMALS = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
+        self.FORMAT = "%." + str(self.DECIMALS) + "f mm"
         self.form = QtGui.QWidget()
         self.form.setObjectName("TaskPanel")
         self.grid = QtGui.QGridLayout(self.form)
@@ -849,6 +855,7 @@ class _ArchWindowTaskPanel:
 
         # add new
 
+        ui = FreeCADGui.UiLoader()
         self.newtitle = QtGui.QLabel(self.form)
         self.new1 = QtGui.QLabel(self.form)
         self.new2 = QtGui.QLabel(self.form)
@@ -858,8 +865,8 @@ class _ArchWindowTaskPanel:
         self.field1 = QtGui.QLineEdit(self.form)
         self.field2 = QtGui.QComboBox(self.form)
         self.field3 = QtGui.QLineEdit(self.form)
-        self.field4 = QtGui.QLineEdit(self.form)
-        self.field5 = QtGui.QLineEdit(self.form)    
+        self.field4 = ui.createWidget("Gui::InputField")
+        self.field5 = ui.createWidget("Gui::InputField")   
         self.createButton = QtGui.QPushButton(self.form)
         self.createButton.setObjectName("createButton")
         self.createButton.setIcon(QtGui.QIcon(":/icons/Arch_Add.svg"))
@@ -1015,6 +1022,8 @@ class _ArchWindowTaskPanel:
                                 f.setCurrentIndex(WindowPartTypes.index(t))
                             else:
                                 f.setCurrentIndex(0)
+                        elif i in [3,4]:
+                            f.setProperty("text",self.FORMAT % float(t))
                         else:
                             f.setText(t)
 
@@ -1032,7 +1041,7 @@ class _ArchWindowTaskPanel:
                     # if type was not specified or is invalid, we set a default
                     t = WindowPartTypes[0]
             else:
-                t = str(getattr(self,"field"+str(i+1)).text())
+                t = str(getattr(self,"field"+str(i+1)).property("text"))
                 if t in WindowPartTypes:
                     t = t + "_" # avoiding part names similar to types
             if t == "":
@@ -1096,5 +1105,6 @@ class _ArchWindowTaskPanel:
         self.new5.setText(QtGui.QApplication.translate("Arch", "Z offset", None, QtGui.QApplication.UnicodeUTF8))
         for i in range(len(WindowPartTypes)):
             self.field2.setItemText(i, QtGui.QApplication.translate("Arch", WindowPartTypes[i], None, QtGui.QApplication.UnicodeUTF8))
-        
-FreeCADGui.addCommand('Arch_Window',_CommandWindow())
+
+if FreeCAD.GuiUp:        
+    FreeCADGui.addCommand('Arch_Window',_CommandWindow())

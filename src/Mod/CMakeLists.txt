@@ -131,6 +131,7 @@ endif(FREECAD_BUILD_JTREADER)
 
 #End inter-module dependencies
 
+
 if(FREECAD_BUILD_POINTS)
   add_subdirectory(Points)
 endif(FREECAD_BUILD_POINTS)
@@ -230,7 +231,7 @@ if(FREECAD_BUILD_ASSEMBLY)
 endif(FREECAD_BUILD_ASSEMBLY)
 
 if(FREECAD_BUILD_CAM)
-#    add_subdirectory(Cam)
+    add_subdirectory(Cam)
 endif(FREECAD_BUILD_CAM)
 
 
@@ -240,7 +241,7 @@ endif(FREECAD_BUILD_FEM)
 
 
 if(FREECAD_BUILD_SANDBOX)
-#    add_subdirectory(Sandbox)
+    add_subdirectory(Sandbox)
 endif(FREECAD_BUILD_SANDBOX)
 
 

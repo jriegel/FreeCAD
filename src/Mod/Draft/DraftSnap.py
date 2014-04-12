@@ -262,7 +262,9 @@ class Snapper:
                 # active snapping
                 comp = self.snapInfo['Component']
 
-                if (Draft.getType(obj) == "Wall") and not oldActive:
+                archSnap = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Arch").GetBool("ArchSnapToBase",True)
+
+                if (Draft.getType(obj) == "Wall") and (not oldActive) and archSnap:
                     # special snapping for wall: only to its base shape (except when CTRL is pressed)
                     edges = []
                     for o in [obj]+obj.Additions:
@@ -276,7 +278,7 @@ class Snapper:
                         snaps.extend(self.snapToIntersection(edge))
                         snaps.extend(self.snapToElines(edge,eline))
                         
-                elif (Draft.getType(obj) == "Structure") and not oldActive:
+                elif (Draft.getType(obj) == "Structure") and (not oldActive) and archSnap:
                     # special snapping for struct: only to its base point (except when CTRL is pressed)
                     if obj.Base:
                         for edge in obj.Base.Shape.Edges:
@@ -287,7 +289,7 @@ class Snapper:
                             snaps.extend(self.snapToElines(edge,eline))
                     else:
                         b = obj.Placement.Base
-                        snaps.append([b,'endpoint',b])
+                        snaps.append([b,'endpoint',self.toWP(b)])
 
                 elif obj.isDerivedFrom("Part::Feature"):
                     if Draft.getType(obj) == "Polygon":
@@ -325,14 +327,19 @@ class Snapper:
                     # for dimensions we snap to their 2 points:
                     if obj.ViewObject:
                         if hasattr(obj.ViewObject.Proxy,"p2") and hasattr(obj.ViewObject.Proxy,"p3"):
-                            snaps.append([obj.ViewObject.Proxy.p2,'endpoint',obj.ViewObject.Proxy.p2])
-                            snaps.append([obj.ViewObject.Proxy.p3,'endpoint',obj.ViewObject.Proxy.p3])
+                            snaps.append([obj.ViewObject.Proxy.p2,'endpoint',self.toWP(obj.ViewObject.Proxy.p2)])
+                            snaps.append([obj.ViewObject.Proxy.p3,'endpoint',self.toWP(obj.ViewObject.Proxy.p3)])
                     #for pt in [obj.Start,obj.End,obj.Dimline]:
-                    #    snaps.append([pt,'endpoint',pt])
+                    #    snaps.append([pt,'endpoint',self.toWP(pt)])
+
+                elif Draft.getType(obj) == "Axis":
+                    for edge in obj.Shape.Edges:
+                        snaps.extend(self.snapToEndpoints(edge))
                         
                 elif Draft.getType(obj) == "Mesh":
                     # for meshes we only snap to vertices
                     snaps.extend(self.snapToEndpoints(obj.Mesh))
+
                 elif Draft.getType(obj) == "Points":
                     # for points we only snap to points
                     snaps.extend(self.snapToEndpoints(obj.Points))
@@ -393,6 +400,13 @@ class Snapper:
                 
             # return the final point
             return fp
+
+    def toWP(self,point):
+        "projects the given point on the working plane, if needed"
+        if self.isEnabled("WorkingPlane"):
+            if hasattr(FreeCAD,"DraftWorkingPlane"):
+                return FreeCAD.DraftWorkingPlane.projectPoint(point)
+        return point
 
     def getApparentPoint(self,x,y):
         "returns a 3D point, projected on the current working plane"
@@ -592,16 +606,16 @@ class Snapper:
         if self.isEnabled("endpoint"):
             if hasattr(shape,"Vertexes"):
                 for v in shape.Vertexes:
-                    snaps.append([v.Point,'endpoint',v.Point])
+                    snaps.append([v.Point,'endpoint',self.toWP(v.Point)])
             elif hasattr(shape,"Point"):
-                snaps.append([shape.Point,'endpoint',shape.Point])
+                snaps.append([shape.Point,'endpoint',self.toWP(shape.Point)])
             elif hasattr(shape,"Points"):
                 if len(shape.Points) and hasattr(shape.Points[0],"Vector"):
                     for v in shape.Points:
-                        snaps.append([v.Vector,'endpoint',v.Vector])
+                        snaps.append([v.Vector,'endpoint',self.toWP(v.Vector)])
                 else:
                     for v in shape.Points:
-                        snaps.append([v,'endpoint',v])
+                        snaps.append([v,'endpoint',self.toWP(v)])
         return snaps
 
     def snapToMidpoint(self,shape):
@@ -611,7 +625,7 @@ class Snapper:
             if isinstance(shape,Part.Edge):
                 mp = DraftGeomUtils.findMidpoint(shape)
                 if mp:
-                    snaps.append([mp,'midpoint',mp])
+                    snaps.append([mp,'midpoint',self.toWP(mp)])
         return snaps
 
     def snapToPerpendicular(self,shape,last):
@@ -634,7 +648,7 @@ class Snapper:
                             return snaps
                     else:
                         return snaps
-                    snaps.append([np,'perpendicular',np])
+                    snaps.append([np,'perpendicular',self.toWP(np)])
         return snaps
 
     def snapToOrtho(self,shape,last,constrain):
@@ -651,7 +665,7 @@ class Snapper:
                                 pt = DraftGeomUtils.findIntersection(tmpEdge,shape,True,True)
                                 if pt:
                                     for p in pt:
-                                        snaps.append([p,'ortho',p])
+                                        snaps.append([p,'ortho',self.toWP(p)])
         return snaps
 
     def snapToExtOrtho(self,last,constrain,eline):
@@ -694,7 +708,7 @@ class Snapper:
                 pts = DraftGeomUtils.findIntersection(e1,e2,True,True)
                 if pts:
                     for p in pts:
-                        snaps.append([p,'intersection',p])
+                        snaps.append([p,'intersection',self.toWP(p)])
         return snaps
             
     
@@ -707,7 +721,7 @@ class Snapper:
             for i in [0,30,45,60,90,120,135,150,180,210,225,240,270,300,315,330]:
                 ang = math.radians(i)
                 cur = Vector(math.sin(ang)*rad+pos.x,math.cos(ang)*rad+pos.y,pos.z)
-                snaps.append([cur,'angle',cur])
+                snaps.append([cur,'angle',self.toWP(cur)])
         return snaps
 
     def snapToCenter(self,shape):
@@ -719,7 +733,7 @@ class Snapper:
             for i in [15,37.5,52.5,75,105,127.5,142.5,165,195,217.5,232.5,255,285,307.5,322.5,345]:
                 ang = math.radians(i)
                 cur = Vector(math.sin(ang)*rad+pos.x,math.cos(ang)*rad+pos.y,pos.z)
-                snaps.append([cur,'center',pos])
+                snaps.append([cur,'center',self.toWP(pos)])
         return snaps
 
     def snapToIntersection(self,shape):
@@ -737,7 +751,7 @@ class Snapper:
                                 pt = DraftGeomUtils.findIntersection(e,shape)
                                 if pt:
                                     for p in pt:
-                                        snaps.append([p,'intersection',p])
+                                        snaps.append([p,'intersection',self.toWP(p)])
         return snaps
         
     def snapToPolygon(self,obj):
@@ -749,8 +763,8 @@ class Snapper:
             p2 = edge.Vertexes[-1].Point
             v1 = p1.add((p2-p1).scale(.25,.25,.25))
             v2 = p1.add((p2-p1).scale(.75,.75,.75))
-            snaps.append([v1,'center',c])
-            snaps.append([v2,'center',c])
+            snaps.append([v1,'center',self.toWP(c)])
+            snaps.append([v2,'center',self.toWP(c)])
         return snaps
 
     def snapToVertex(self,info,active=False):
@@ -1066,22 +1080,24 @@ class Snapper:
                 self.toolbar.addWidget(b)
                 self.toolbarButtons.append(b)
                 QtCore.QObject.connect(b,QtCore.SIGNAL("toggled(bool)"),self.saveSnapModes)
-        # adding dimensions button
-        self.dimbutton = QtGui.QPushButton(None)
-        self.dimbutton.setIcon(QtGui.QIcon(":/icons/Snap_Dimensions.svg"))
-        self.dimbutton.setIconSize(QtCore.QSize(16, 16))
-        self.dimbutton.setMaximumSize(QtCore.QSize(26,26))
-        self.dimbutton.setToolTip(c)
-        self.dimbutton.setObjectName("SnapButtonDimensions")
-        self.dimbutton.setCheckable(True)
-        self.dimbutton.setChecked(True)
-        self.toolbar.addWidget(self.dimbutton)
-        QtCore.QObject.connect(self.dimbutton,QtCore.SIGNAL("toggled(bool)"),self.saveSnapModes)
+        # adding non-snap button
+        for n in ["Dimensions","WorkingPlane"]:
+            b = QtGui.QPushButton(None)
+            b.setIcon(QtGui.QIcon(":/icons/Snap_"+n+".svg"))
+            b.setIconSize(QtCore.QSize(16, 16))
+            b.setMaximumSize(QtCore.QSize(26,26))
+            b.setToolTip(n)
+            b.setObjectName("SnapButton"+n)
+            b.setCheckable(True)
+            b.setChecked(True)
+            self.toolbar.addWidget(b)
+            QtCore.QObject.connect(b,QtCore.SIGNAL("toggled(bool)"),self.saveSnapModes)
+            self.toolbarButtons.append(b)
         # restoring states 
-        t = Draft.getParam("snapModes","1111111111011")
+        t = Draft.getParam("snapModes","11111111110111")
         if t:
             c = 0
-            for b in [self.masterbutton]+self.toolbarButtons+[self.dimbutton]:
+            for b in [self.masterbutton]+self.toolbarButtons:
                 if len(t) > c:
                     b.setChecked(bool(int(t[c])))
                     c += 1
@@ -1091,7 +1107,7 @@ class Snapper:
     def saveSnapModes(self):
         "saves the snap modes for next sessions"
         t = ''
-        for b in [self.masterbutton]+self.toolbarButtons+[self.dimbutton]:
+        for b in [self.masterbutton]+self.toolbarButtons:
             t += str(int(b.isChecked()))
         Draft.setParam("snapModes",t)
 
@@ -1121,7 +1137,7 @@ class Snapper:
 
     def isEnabled(self,but):
         "returns true if the given button is turned on"
-        for b in self.toolbarButtons+[self.dimbutton]:
+        for b in self.toolbarButtons:
             if str(b.objectName()) == "SnapButton" + but:
                 return (b.isEnabled() and b.isChecked())
         return False

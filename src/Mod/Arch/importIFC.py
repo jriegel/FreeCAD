@@ -32,7 +32,7 @@ __url__ = "http://www.freecadweb.org"
 subtractiveTypes = ["IfcOpeningElement"] # elements that must be subtracted from their parents
 SCHEMA = "http://www.steptools.com/support/stdev_docs/express/ifc2x3/ifc2x3_tc1.exp"
 MAKETEMPFILES = False # if True, shapes are passed from ifcopenshell to freecad through temp files
-ADDPLACEMENT = False # if True, placements get computed (only for newer ifcopenshell)
+ADDPLACEMENT = True # if True, placements get computed (only for newer ifcopenshell)
 # end config
 
 if open.__module__ == '__builtin__':
@@ -106,11 +106,11 @@ def read(filename):
         # use the IfcOpenShell parser
         
         # check for IFcOpenShellVersion
-        global IOC_ADVANCED
+        global IFCOPENSHELL5
         if hasattr(IfcImport,"IfcFile"):
-            IOC_ADVANCED = True
+            IFCOPENSHELL5 = True
         else:
-            IOC_ADVANCED = False
+            IFCOPENSHELL5 = False
         
         # preparing IfcOpenShell
         if DEBUG: global ifcObjects,ifcParents
@@ -122,8 +122,10 @@ def read(filename):
         else:
             SKIP.append("IfcOpeningElement")
         useShapes = False
-        if IOC_ADVANCED:
+        if IFCOPENSHELL5:
             useShapes = True
+            if hasattr(IfcImport,"clean"):
+                IfcImport.clean()
         elif hasattr(IfcImport,"USE_BREP_DATA"):
             IfcImport.Settings(IfcImport.USE_BREP_DATA,True)
             useShapes = True
@@ -131,7 +133,7 @@ def read(filename):
             if DEBUG: print "Warning: IfcOpenShell version very old, unable to handle Brep data"
 
         # opening file
-        if IOC_ADVANCED:
+        if IFCOPENSHELL5:
             global ifc
             ifc = IfcImport.open(filename)
             objects = ifc.by_type("IfcProduct")
@@ -149,7 +151,7 @@ def read(filename):
         # processing geometry
         idx = 0
         while True:
-            if IOC_ADVANCED:
+            if IFCOPENSHELL5:
                 obj = objects[idx]
                 idx += 1
                 objid = int(str(obj).split("=")[0].strip("#"))
@@ -265,7 +267,7 @@ def read(filename):
                 ifcObjects[objid] = nobj
                 processedIds.append(objid)
             
-            if IOC_ADVANCED:
+            if IFCOPENSHELL5:
                 if idx >= len(objects):
                     break
             else:
@@ -297,7 +299,7 @@ def read(filename):
                             parent = ifcObjects[grandparent_id]
             else:
                 # creating parent if needed
-                if IOC_ADVANCED:
+                if IFCOPENSHELL5:
                     parent_ifcobj = ifc.by_id(parent_id)
                     parentid = int(str(obj).split("=")[0].strip("#"))
                     parentname = obj.get_argument(obj.get_argument_index("Name"))
@@ -327,7 +329,7 @@ def read(filename):
                     if DEBUG: print "Fixme: skipping unhandled parent: ", parentid, " ", parenttype
                     parent = None
                 # registering object number and parent
-                if not IOC_ADVANCED:
+                if not IFCOPENSHELL5:
                     if parent_ifcobj.parent_id > 0:
                             ifcParents[parentid] = [parent_ifcobj.parent_id,True]
                             parents_temp[parentid] = [parent_ifcobj.parent_id,True]
@@ -343,7 +345,7 @@ def read(filename):
                     else:
                         if DEBUG: print "removing ",ifcObjects[id].Name, " from ",parent.Name
                         ArchCommands.removeComponents(ifcObjects[id],parent)
-        if not IOC_ADVANCED:
+        if not IFCOPENSHELL5:
             IfcImport.CleanUp()
         
     else:
@@ -353,7 +355,8 @@ def read(filename):
         schema=getSchema()
         if schema:
             if DEBUG: print "opening",filename,"..."
-            ifc = ifcReader.IfcDocument(filename,schema=schema,debug=DEBUG)
+            ifcReader.DEBUG = DEBUG
+            ifc = ifcReader.IfcDocument(filename,schema=schema)
         else:
             FreeCAD.Console.PrintWarning(translate("Arch","IFC Schema not found, IFC import disabled.\n"))
             return None
@@ -419,8 +422,6 @@ def makeWall(entity,shape=None,name="Wall"):
                 body.Mesh = shape
             wall = Arch.makeWall(body,name=name)
             wall.Label = name
-            if IOC_ADVANCED and ADDPLACEMENT:
-                wall.Placement = getPlacement(getAttr(entity,"ObjectPlacement"))
             if DEBUG: print "made wall object ",entity,":",wall
             return wall
             
@@ -467,7 +468,7 @@ def makeWindow(entity,shape=None,name="Window"):
                 window = Arch.makeWindow(name=name)
                 window.Shape = shape
                 window.Label = name
-                if IOC_ADVANCED and ADDPLACEMENT:
+                if IFCOPENSHELL5 and ADDPLACEMENT:
                     window.Placement = getPlacement(getAttr(entity,"ObjectPlacement"))
                 if DEBUG: print "made window object  ",entity,":",window
                 return window
@@ -516,9 +517,6 @@ def makeStructure(entity,shape=None,ifctype=None,name="Structure"):
                 structure.Role = "Slab"
             elif ifctype == "IfcFooting":
                 structure.Role = "Foundation"
-            print "current placement: ",shape.Placement
-            if IOC_ADVANCED and ADDPLACEMENT:
-                structure.Placement = getPlacement(getAttr(entity,"ObjectPlacement"))
             if DEBUG: print "made structure object  ",entity,":",structure," (type: ",ifctype,")"
             return structure
             
@@ -602,7 +600,7 @@ def makeRoof(entity,shape=None,name="Roof"):
 
 def getMesh(obj):
     "gets mesh and placement from an IfcOpenShell object"
-    if IOC_ADVANCED:
+    if IFCOPENSHELL5:
         return None,None
         print "fixme: mesh data not yet supported" # TODO implement this with OCC tessellate
     import Mesh
@@ -634,7 +632,7 @@ def getShape(obj,objid):
     import Part
     sh=Part.Shape()
     brep_data = None
-    if IOC_ADVANCED:
+    if IFCOPENSHELL5:
         try:
             brep_data = IfcImport.create_shape(obj)
         except:
@@ -656,6 +654,9 @@ def getShape(obj,objid):
         except:
             print "Error: malformed shape"
             return None
+        else:
+            if IFCOPENSHELL5 and ADDPLACEMENT:
+                sh.Placement = getPlacement(getAttr(obj,"ObjectPlacement"))
     if not sh.Solids:
         # try to extract a solid shape
         if sh.Faces:
@@ -670,7 +671,7 @@ def getShape(obj,objid):
                 if DEBUG: print "failed to retrieve solid from object ",objid
         else:
             if DEBUG: print "object ", objid, " doesn't contain any geometry"
-    if not IOC_ADVANCED:
+    if not IFCOPENSHELL5:
         m = obj.matrix
         mat = FreeCAD.Matrix(m[0], m[3], m[6], m[9],
                              m[1], m[4], m[7], m[10],
@@ -687,7 +688,7 @@ def getPlacement(entity):
     if DEBUG: print "    getting placement ",entity
     if not entity: 
         return None
-    if IOC_ADVANCED:
+    if IFCOPENSHELL5:
         if isinstance(entity,int):
             entity = ifc.by_id(entity)
         entitytype = str(entity).split("=")[1].split("(")[0].upper()
@@ -720,7 +721,7 @@ def getPlacement(entity):
     
 def getAttr(entity,attr):
     "returns the given attribute from the given entity"
-    if IOC_ADVANCED:
+    if IFCOPENSHELL5:
         if isinstance(entity,int):
             entity = ifc.by_id(entity)
         i = entity.get_argument_index(attr)
@@ -731,7 +732,7 @@ def getAttr(entity,attr):
 def getVector(entity):
     "returns a vector from the given entity"
     if DEBUG: print "    getting point from ",entity
-    if IOC_ADVANCED:
+    if IFCOPENSHELL5:
         if isinstance(entity,int):
             entity = ifc.by_id(entity)
         entitytype = str(entity).split("=")[1].split("(")[0].upper()
@@ -896,6 +897,8 @@ def export(exportList,filename):
     ifcWriter.PRECISION = Draft.precision()
     p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Arch")
     scaling = p.GetFloat("IfcScalingFactor",1.0)
+    exporttxt = p.GetBool("IfcExportList",False)
+    forcebrep = p.GetBool("ifcExportAsBrep",False)
     application = "FreeCAD"
     ver = FreeCAD.Version()
     version = ver[0]+"."+ver[1]+" build"+ver[2]
@@ -903,6 +906,7 @@ def export(exportList,filename):
     company = FreeCAD.ActiveDocument.Company
     project = FreeCAD.ActiveDocument.Name
     ifc = ifcWriter.IfcDocument(filename,project,owner,company,application,version)
+    txt = []
 
     # get all children and reorder list to get buildings and floors processed first
     objectslist = Draft.getGroupContents(exportList,walls=True,addgroups=True)
@@ -927,13 +931,29 @@ def export(exportList,filename):
         otype = Draft.getType(obj)
         name = str(obj.Label)
         parent = Arch.getHost(obj)
-        gdata = Arch.getExtrusionData(obj,scaling)
+        gdata = None
+        if not forcebrep:
+            gdata = Arch.getExtrusionData(obj,scaling)
+            if DEBUG: print "extrusion data for ",obj.Label," : ",gdata
         if not gdata:
             fdata = Arch.getBrepFacesData(obj,scaling)
+            if DEBUG: print "brep data for ",obj.Label," : ",fdata
             if not fdata:
                 if obj.isDerivedFrom("Part::Feature"):
                     print "IFC export: error retrieving the shape of object ", obj.Name
                     continue
+
+        spacer = ""
+        for i in range(30-len(obj.Name)):
+            spacer += " "
+        if otype in ["Structure","Window"]:
+            if hasattr(obj,"Role"):
+                tp = obj.Role
+            else:
+                tp = otype
+        else:
+            tp = otype
+        txt.append(obj.Name + spacer + tp)
                     
         if otype == "Building":
             ifc.addBuilding( name=name )
@@ -963,6 +983,7 @@ def export(exportList,filename):
                 elif obj.Role == "Foundation":
                     role = "IfcFooting"
             if gdata:
+                #ifc.addStructure( role, ifc.addExtrudedPolyline(gdata[0],gdata[1]), storey=parent, name=name )
                 if FreeCAD.Vector(gdata[1]).getAngle(FreeCAD.Vector(0,0,1)) < .01:
                     # Workaround for non-Z extrusions, apparently not supported by ifc++ TODO: fix this
                     ifc.addStructure( role, ifc.addExtrudedPolyline(gdata[0],gdata[1]), storey=parent, name=name )
@@ -995,3 +1016,41 @@ def export(exportList,filename):
             print "IFC export: object type ", otype, " is not supported yet."
             
     ifc.write()
+
+    if exporttxt:
+        import time, os
+        txtstring = "List of objects exported by FreeCAD in file\n"
+        txtstring += filename + "\n"
+        txtstring += "On " + time.ctime() + "\n"
+        txtstring += "\n"
+        txtstring += str(len(txt)) + " objects exported:\n"
+        txtstring += "\n"
+        txtstring += "Nr      Name                          Type\n"
+        txtstring += "\n"
+        for i in range(len(txt)):
+            idx = str(i+1)
+            sp = ""
+            for j in range(8-len(idx)):
+                sp += " "
+            txtstring += idx + sp + txt[i] + "\n"
+        txtfile = os.path.splitext(filename)[0]+".txt"
+        f = pyopen(txtfile,"wb")
+        f.write(txtstring)
+        f.close()
+
+
+def explore(filename=None):
+    "explore the contents of an ifc file in a Qt dialog"
+    if not filename:
+        from PySide import QtGui
+        filename = QtGui.QFileDialog.getOpenFileName(QtGui.qApp.activeWindow(),'IFC files','*.ifc')
+        if filename:
+            filename = filename[0]
+    if filename:
+        import ifcReader
+        getConfig()
+        schema=getSchema()
+        ifcReader.DEBUG = DEBUG
+        d = ifcReader.explorer(filename,schema)
+        d.show()
+        return d

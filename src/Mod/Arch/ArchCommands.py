@@ -21,10 +21,15 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,Draft,ArchComponent,DraftVecUtils
+import FreeCAD,Draft,ArchComponent,DraftVecUtils
 from FreeCAD import Vector
-from PySide import QtCore
-from DraftTools import translate
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtGui,QtCore
+    from DraftTools import translate
+else:
+    def translate(ctxt,txt):
+        return txt
 
 __title__="FreeCAD Arch Commands"
 __author__ = "Yorik van Havre"
@@ -76,7 +81,7 @@ def addComponents(objectsList,host):
             if not o in c:
                 c.append(o)
         host.Group = c
-    elif hostType in ["Wall","Structure","Window","Roof"]:
+    elif hostType in ["Wall","Structure","Window","Roof","Stairs","StructuralSystem"]:
         import DraftGeomUtils
         a = host.Additions
         if hasattr(host,"Axes"):
@@ -117,7 +122,7 @@ def removeComponents(objectsList,host=None):
     if not isinstance(objectsList,list):
         objectsList = [objectsList]
     if host:
-        if Draft.getType(host) in ["Wall","Structure"]:
+        if Draft.getType(host) in ["Wall","Structure","Window","Roof","Stairs","StructuralSystem"]:
             if hasattr(host,"Tool"):
                 if objectsList[0] == host.Tool:
                     host.Tool = None
@@ -320,6 +325,8 @@ def closeHole(shape):
 def getCutVolume(cutplane,shapes):
     """getCutVolume(cutplane,shapes): returns a cut face and a cut volume
     from the given shapes and the given cutting plane"""
+    if not shapes:
+        return None,None,None
     import Part
     if not isinstance(shapes,list):
         shapes = [shapes]
@@ -647,8 +654,8 @@ def getBrepFacesData(obj,scale=1):
     of solids inside the object. Scale can indicate a scaling factor"""
     if hasattr(obj,"Shape"):
         if obj.Shape:
-            if obj.Shape.isValid():
-                if not obj.Shape.isNull():
+            if not obj.Shape.isNull():
+                if obj.Shape.isValid():
                     sols = []
                     for sol in obj.Shape.Solids:
                         s = []
@@ -693,6 +700,122 @@ def pruneIncluded(objectslist):
         if toplevel:
             newlist.append(obj)
     return newlist
+
+class _SurveyObserver:
+    "an observer for the survey() function"
+    def __init__(self,callback):
+        self.callback = callback
+        self.cancellable = False
+        self.selection = []
+        self.labels = []
+        
+    def addSelection(self,document, object, element, position):
+        self.cancellable = False
+        self.callback(True)
+
+    def clearSelection(self,document):
+        if self.cancellable:
+            self.callback(True)
+        else:
+            self.cancellable = True
+
+def survey(callback=False):
+    """survey(): starts survey mode, where you can click edges and faces to get their lengths or area.
+    Clicking on no object (on an empty area) stops survey mode."""
+    if not callback:
+        if hasattr(FreeCAD,"SurveyObserver"):
+            for label in FreeCAD.SurveyObserver.labels:
+                FreeCAD.ActiveDocument.removeObject(label)
+            FreeCADGui.Selection.removeObserver(FreeCAD.SurveyObserver)
+            del FreeCAD.SurveyObserver
+            if FreeCAD.GuiUp:
+                if hasattr(FreeCADGui,"draftToolBar"):
+                    FreeCADGui.draftToolBar.offUi()
+        else:
+            FreeCAD.SurveyObserver = _SurveyObserver(callback=survey)
+            FreeCADGui.Selection.addObserver(FreeCAD.SurveyObserver)
+            if FreeCAD.GuiUp:
+                if hasattr(FreeCADGui,"draftToolBar"):
+                    FreeCADGui.draftToolBar.selectUi(callback=survey)
+    else:
+        sel = FreeCADGui.Selection.getSelectionEx()
+        if not sel:
+            if hasattr(FreeCAD,"SurveyObserver"):
+                for label in FreeCAD.SurveyObserver.labels:
+                    FreeCAD.ActiveDocument.removeObject(label)
+                FreeCADGui.Selection.removeObserver(FreeCAD.SurveyObserver)
+                del FreeCAD.SurveyObserver
+                if FreeCAD.GuiUp:
+                    if hasattr(FreeCADGui,"draftToolBar"):
+                        FreeCADGui.draftToolBar.offUi()
+        else:
+            if hasattr(FreeCAD,"SurveyObserver"):
+                basesel = FreeCAD.SurveyObserver.selection
+                newsels = []
+                for o in sel:
+                    found = False
+                    for eo in basesel:
+                        if o.ObjectName == eo.ObjectName:
+                            if o.SubElementNames == eo.SubElementNames:
+                                found = True
+                    if not found:
+                        newsels.append(o)
+                if newsels:
+                    from pivy import coin
+                    pr = Draft.getParam("dimPrecision",2)
+                    for o in newsels:
+                        if o.Object.isDerivedFrom("Part::Feature"):
+                            n = o.Object.Label
+                            if not o.HasSubObjects:
+                                # entire object
+                                anno = FreeCAD.ActiveDocument.addObject("App::AnnotationLabel","surveyLabel")
+                                anno.BasePosition = o.Object.Shape.CenterOfMass
+                                FreeCAD.SurveyObserver.labels.append(anno.Name)
+                                t = ""
+                                if o.Object.Shape.Solids:
+                                    t = str(round(o.Object.Shape.Volume,pr))
+                                    anno.LabelText = "v " + t
+                                    FreeCAD.Console.PrintMessage("Object: " + n + ", Element: Whole, Volume: " + t + "\n")
+                                elif o.Object.Shape.Faces:
+                                    t = str(round(o.Object.Shape.Area,pr))
+                                    anno.LabelText = "a " + t
+                                    FreeCAD.Console.PrintMessage("Object: " + n + ", Element: Whole, Area: " + t + "\n")
+                                else:
+                                    t = str(round(o.Object.Shape.Length,pr))
+                                    anno.LabelText = "l " + t
+                                    FreeCAD.Console.PrintMessage("Object: " + n + ", Element: Whole, Length: " + t + "\n")
+                                if FreeCAD.GuiUp and t:
+                                    QtGui.qApp.clipboard().setText(t)
+                            else:
+                                # single element(s)
+                                for el in o.SubElementNames:
+                                    e = getattr(o.Object.Shape,el)
+                                    anno = FreeCAD.ActiveDocument.addObject("App::AnnotationLabel","surveyLabel")
+                                    if "Vertex" in el:
+                                        anno.BasePosition = e.Point
+                                    else:
+                                        anno.BasePosition = e.CenterOfMass
+                                    FreeCAD.SurveyObserver.labels.append(anno.Name)
+                                    t = ""
+                                    if "Face" in el:
+                                        t = str(round(e.Area,pr))
+                                        anno.LabelText = "a " + t
+                                        FreeCAD.Console.PrintMessage("Object: " + n + ", Element: " + el + ", Area: "+ t  + "\n")
+                                    elif "Edge" in el:
+                                        t = str(round(e.Length,pr))
+                                        anno.LabelText = "l " + t
+                                        FreeCAD.Console.PrintMessage("Object: " + n + ", Element: " + el + ", Length: " + t + "\n")
+                                    elif "Vertex" in el:
+                                        t = str(round(e.Z,pr))
+                                        anno.LabelText = "z " + t
+                                        FreeCAD.Console.PrintMessage("Object: " + n + ", Element: " + el + ", Zcoord: " + t + "\n")
+                                    if FreeCAD.GuiUp and t:
+                                        QtGui.qApp.clipboard().setText(t)
+
+                    FreeCAD.SurveyObserver.selection.extend(newsels)
+
+
+
     
 # command definitions ###############################################
                        
@@ -752,7 +875,7 @@ class _CommandRemove:
             FreeCADGui.doCommand("Arch.removeSpaceBoundaries( FreeCAD.ActiveDocument."+sel[-1].Name+", FreeCADGui.Selection.getSelection() )")
         else:
             FreeCAD.ActiveDocument.openTransaction(str(translate("Arch","Ungrouping")))
-            if (Draft.getType(sel[-1]) in ["Wall","Structure"]) and (len(sel) > 1):
+            if (Draft.getType(sel[-1]) in ["Wall","Structure","Stairs","Roof","Window"]) and (len(sel) > 1):
                 host = sel.pop()
                 ss = "["
                 for o in sel:
@@ -764,7 +887,7 @@ class _CommandRemove:
                 FreeCADGui.doCommand("Arch.removeComponents("+ss+",FreeCAD.ActiveDocument."+host.Name+")")
             else:
                 FreeCADGui.doCommand("import Arch")
-                FreeCADGui.doCommand("Arch.removeComponents(Arch.ActiveDocument."+sel[-1].Name+")")
+                FreeCADGui.doCommand("Arch.removeComponents(FreeCAD.ActiveDocument."+sel[-1].Name+")")
         FreeCAD.ActiveDocument.commitTransaction()
         FreeCAD.ActiveDocument.recompute()
 
@@ -920,6 +1043,32 @@ class _CommandCheck:
                 FreeCADGui.Selection.addSelection(i[0])
 
 
+class _CommandIfcExplorer:
+    "the Arch Ifc Explorer command definition"
+    def GetResources(self):
+        return {'Pixmap'  : 'IFC',
+                'MenuText': QtCore.QT_TRANSLATE_NOOP("Arch_IfcExplorer","Ifc Explorer"),
+                'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Check","Explore the contents of an Ifc file")}
+
+    def Activated(self):
+        if hasattr(self,"dialog"):
+            del self.dialog
+        import importIFC
+        self.dialog = importIFC.explore()
+
+
+class _CommandSurvey:
+    "the Arch Survey command definition"
+    def GetResources(self):
+        return {'Pixmap'  : 'Arch_Survey',
+                'MenuText': QtCore.QT_TRANSLATE_NOOP("Arch_Survey","Survey"),
+                'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Survey","Starts survey")}
+        
+    def Activated(self):
+        FreeCADGui.doCommand("import Arch")
+        FreeCADGui.doCommand("Arch.survey()")
+
+
 class _CommandFixture:
     # OBSOLETE - To be removed
     "the Arch Fixture command definition"
@@ -945,12 +1094,15 @@ class _CommandFixture:
         FreeCAD.ActiveDocument.recompute()
 
 
-FreeCADGui.addCommand('Arch_Add',_CommandAdd())
-FreeCADGui.addCommand('Arch_Remove',_CommandRemove())
-FreeCADGui.addCommand('Arch_SplitMesh',_CommandSplitMesh())
-FreeCADGui.addCommand('Arch_MeshToShape',_CommandMeshToShape())
-FreeCADGui.addCommand('Arch_SelectNonSolidMeshes',_CommandSelectNonSolidMeshes())
-FreeCADGui.addCommand('Arch_RemoveShape',_CommandRemoveShape())
-FreeCADGui.addCommand('Arch_CloseHoles',_CommandCloseHoles())
-FreeCADGui.addCommand('Arch_Check',_CommandCheck())
-#FreeCADGui.addCommand('Arch_Fixture',_CommandFixture())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('Arch_Add',_CommandAdd())
+    FreeCADGui.addCommand('Arch_Remove',_CommandRemove())
+    FreeCADGui.addCommand('Arch_SplitMesh',_CommandSplitMesh())
+    FreeCADGui.addCommand('Arch_MeshToShape',_CommandMeshToShape())
+    FreeCADGui.addCommand('Arch_SelectNonSolidMeshes',_CommandSelectNonSolidMeshes())
+    FreeCADGui.addCommand('Arch_RemoveShape',_CommandRemoveShape())
+    FreeCADGui.addCommand('Arch_CloseHoles',_CommandCloseHoles())
+    FreeCADGui.addCommand('Arch_Check',_CommandCheck())
+    FreeCADGui.addCommand('Arch_IfcExplorer',_CommandIfcExplorer())
+    FreeCADGui.addCommand('Arch_Survey',_CommandSurvey())
+    #FreeCADGui.addCommand('Arch_Fixture',_CommandFixture())

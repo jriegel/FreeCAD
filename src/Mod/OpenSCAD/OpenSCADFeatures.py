@@ -292,6 +292,31 @@ class RefineShape:
             sh=fp.Base.Shape.removeSplitter()
             fp.Shape=sh
 
+class IncreaseTolerance:
+    '''increase the tolerance of every vertex
+    in the current implementation its' placement is linked'''
+    def __init__(self,obj,child,tolerance=0):
+        obj.addProperty("App::PropertyLink","Base","Base",
+                        "The base object that wire must be extracted")
+        obj.addProperty("App::PropertyDistance","Tolerance","Base","Tolerance")
+        obj.Base = child
+        obj.Tolerance = tolerance
+        obj.Proxy = self
+    def onChanged(self, fp, prop):
+        if prop in ["Tolerance"]:
+            self.createGeometry(fp)
+    def execute(self, fp):
+        self.createGeometry(fp)
+
+    def createGeometry(self,fp):
+        if fp.Base:
+            sh=fp.Base.Shape.copy()
+            for vertex in sh.Vertexes:
+                vertex.Tolerance = max(vertex.Tolerance,fp.Tolerance.Value)
+            fp.Shape = sh
+            fp.Placement = sh.Placement
+
+
 class GetWire:
     '''return the first wire from a given shape'''
     def __init__(self, obj,child=None):
@@ -306,6 +331,7 @@ class GetWire:
 
     def execute(self, fp):
         if fp.Base:
+            import Part
             #fp.Shape=fp.Base.Shape.Wires[0]
             fp.Shape=Part.Wire(fp.Base.Shape.Wires[0]) # works with 0.13 stable
             #sh = fp.Base.Shape.Wires[0].copy; sh.transformSahpe(fp.Base.Shape.Placement.toMatrix()); fp.Shape = sh #untested
@@ -340,14 +366,16 @@ class Frustum:
             faces=[]
             for ir,r in enumerate((fp.Radius1,fp.Radius2)):
                 angle = (math.pi*2)/fp.FacesNumber
-                pts = [FreeCAD.Vector(r,0,ir*fp.Height)]
+                pts = [FreeCAD.Vector(r.Value,0,ir*fp.Height.Value)]
                 for i in range(fp.FacesNumber-1):
                     ang = (i+1)*angle
-                    pts.append(FreeCAD.Vector(\
-                        r*math.cos(ang),r*math.sin(ang),ir*fp.Height))
+                    pts.append(FreeCAD.Vector(r.Value*math.cos(ang),\
+                            r.Value*math.sin(ang),ir*fp.Height.Value))
                 pts.append(pts[0])
                 shape = Part.makePolygon(pts)
                 face = Part.Face(shape)
+                if ir==1: #top face
+                    face.reverse()
                 wires.append(shape)
                 faces.append(face)
             #shellperi=Part.makeRuledSurface(*wires)
@@ -390,16 +418,16 @@ class Twist:
             #faceb=fp.Base.Shape.removeSplitter().Faces[0]
                 faceu=faceb.copy()
                 facetransform=FreeCAD.Matrix()
-                facetransform.rotateZ(math.radians(fp.Angle))
-                facetransform.move(FreeCAD.Vector(0,0,fp.Height))
+                facetransform.rotateZ(math.radians(fp.Angle.Value))
+                facetransform.move(FreeCAD.Vector(0,0,fp.Height.Value))
                 faceu.transformShape(facetransform)
-                step = 2 + int(fp.Angle // 90) #resolution in z direction
-                zinc = fp.Height/(step-1.0)
-                angleinc = math.radians(fp.Angle)/(step-1.0)
+                step = 2 + int(fp.Angle.Value // 90) #resolution in z direction
+                zinc = fp.Height.Value/(step-1.0)
+                angleinc = math.radians(fp.Angle.Value)/(step-1.0)
                 spine = Part.makePolygon([(0,0,i*zinc) \
                         for i in range(step)])
                 auxspine = Part.makePolygon([(math.cos(i*angleinc),\
-                        math.sin(i*angleinc),i*fp.Height/(step-1)) \
+                        math.sin(i*angleinc),i*fp.Height.Value/(step-1)) \
                         for i in range(step)])
                 faces=[faceb,faceu]
                 for wire in faceb.Wires:
@@ -438,12 +466,36 @@ class OffsetShape:
 
     def onChanged(self, fp, prop):
         pass
-        #if prop in ["Offset"]:
-        #    self.createGeometry(fp)
+        if prop in ["Offset"]:
+            self.createGeometry(fp)
 
     def createGeometry(self,fp):
         if fp.Base and fp.Offset:
-            fp.Shape=fp.Base.Shape.makeOffsetShape(self.Offset,1e-6)
+            fp.Shape=fp.Base.Shape.makeOffsetShape(fp.Offset.Value,1e-6)
+
+class CGALFeature:
+    def __init__(self,obj,opname=None,children=None,arguments=None):
+        obj.addProperty("App::PropertyLinkList",'Children','OpenSCAD',"Base Objects")
+        obj.addProperty("App::PropertyString",'Arguments','OpenSCAD',"Arguments")
+        obj.addProperty("App::PropertyString",'Operation','OpenSCAD',"Operation")
+        obj.Proxy = self
+        if opname:
+            obj.Operation = opname
+        if children:
+            obj.Children = children
+        if arguments:
+            obj.Arguments = arguments
+
+    def execute(self,fp):
+        #arguments are ignored
+        maxmeshpoints = None #TBD: add as property
+        import Part,OpenSCADUtils
+        shape = OpenSCADUtils.process_ObjectsViaOpenSCADShape(fp.Document,fp.Children,\
+                fp.Operation, maxmeshpoints=maxmeshpoints)
+        if shape:
+            fp.Shape = shape
+        else:
+            raise ValueError
 
 def makeSurfaceVolume(filename):
     import FreeCAD,Part
@@ -475,4 +527,4 @@ def makeSurfaceVolume(filename):
     f4=Part.Face(Part.Wire([plane.Edges[3],l2.Edges[0],s.uIso(1).toShape(),l4.Edges[0]]))
     f5=s.toShape().Faces[0]
     solid=Part.Solid(Part.Shell([f0,f1,f2,f3,f4,f5]))
-    return solid,(len(coords[0])-1)/2.0,(len(choords)-1)/2.0
+    return solid,(len(coords[0])-1)/2.0,(len(coords)-1)/2.0

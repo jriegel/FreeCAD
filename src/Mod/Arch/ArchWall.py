@@ -21,10 +21,15 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,Draft,ArchComponent,DraftVecUtils,ArchCommands,math
+import FreeCAD,Draft,ArchComponent,DraftVecUtils,ArchCommands,math
 from FreeCAD import Vector
-from PySide import QtCore, QtGui
-from DraftTools import translate
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui
+    from DraftTools import translate
+else:
+    def translate(ctxt,txt):
+        return txt
 
 __title__="FreeCAD Wall"
 __author__ = "Yorik van Havre"
@@ -38,7 +43,10 @@ def makeWall(baseobj=None,length=None,width=None,height=None,align="Center",face
     p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Arch")
     obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython",name)
     _Wall(obj)
-    _ViewProviderWall(obj.ViewObject)
+    if FreeCAD.GuiUp:
+        _ViewProviderWall(obj.ViewObject)
+        obj.ViewObject.ShapeColor = ArchCommands.getDefaultColor("Wall")
+
     if baseobj:
         obj.Base = baseobj
     if face:
@@ -54,10 +62,9 @@ def makeWall(baseobj=None,length=None,width=None,height=None,align="Center",face
     else:
         obj.Height = p.GetFloat("WallHeight",3000)
     obj.Align = align
-    if obj.Base:
+    if obj.Base and FreeCAD.GuiUp:
         if Draft.getType(obj.Base) != "Space":
             obj.Base.ViewObject.hide()
-    obj.ViewObject.ShapeColor = ArchCommands.getDefaultColor("Wall")
     return obj
 
 def joinWalls(walls,delete=False):
@@ -149,6 +156,8 @@ class _CommandWall:
         self.Height = p.GetFloat("WallHeight",3000)
         self.JOIN_WALLS_SKETCHES = p.GetBool("joinWallSketches",False)
         self.AUTOJOIN = p.GetBool("autoJoinWalls",True)
+        self.DECIMALS = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
+        self.FORMAT = "%." + str(self.DECIMALS) + "f mm"
         sel = FreeCADGui.Selection.getSelectionEx()
         done = False
         self.existing = []
@@ -195,6 +204,8 @@ class _CommandWall:
             return
         self.points.append(point)
         if len(self.points) == 1:
+            self.tracker.width(self.Width)
+            self.tracker.height(self.Height)
             self.tracker.on()
             FreeCADGui.Snapper.getPoint(last=self.points[0],callback=self.getPoint,movecallback=self.update,extradlg=self.taskbox())
         elif len(self.points) == 2:
@@ -239,67 +250,66 @@ class _CommandWall:
 
     def update(self,point,info):
         "this function is called by the Snapper when the mouse is moved"
-        b = self.points[0]
-        n = FreeCAD.DraftWorkingPlane.axis
-        bv = point.sub(b)
-        dv = bv.cross(n)
-        dv = DraftVecUtils.scaleTo(dv,self.Width/2)
-        if self.Align == "Center":
-            self.tracker.update([b,point])
-        elif self.Align == "Left":
-            self.tracker.update([b.add(dv),point.add(dv)])
-        else:
-            dv = dv.negative()
-            self.tracker.update([b.add(dv),point.add(dv)])
-        if self.Length:
-            self.Length.setValue(bv.Length)
+        if FreeCADGui.Control.activeDialog():
+            b = self.points[0]
+            n = FreeCAD.DraftWorkingPlane.axis
+            bv = point.sub(b)
+            dv = bv.cross(n)
+            dv = DraftVecUtils.scaleTo(dv,self.Width/2)
+            if self.Align == "Center":
+                self.tracker.update([b,point])
+            elif self.Align == "Left":
+                self.tracker.update([b.add(dv),point.add(dv)])
+            else:
+                dv = dv.negative()
+                self.tracker.update([b.add(dv),point.add(dv)])
+            if self.Length:
+                self.Length.setText(self.FORMAT % bv.Length)
 
     def taskbox(self):
         "sets up a taskbox widget"
-        d = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
         w = QtGui.QWidget()
+        ui = FreeCADGui.UiLoader()
         w.setWindowTitle(translate("Arch","Wall options").decode("utf8"))
-        lay0 = QtGui.QVBoxLayout(w)
+        grid = QtGui.QGridLayout(w)
         
-        lay5 = QtGui.QHBoxLayout()
-        lay0.addLayout(lay5)
         label5 = QtGui.QLabel(translate("Arch","Length").decode("utf8"))
-        lay5.addWidget(label5)
-        self.Length = QtGui.QDoubleSpinBox()
-        self.Length.setDecimals(d)
-        self.Length.setValue(0.00)
-        lay5.addWidget(self.Length)
+        self.Length = ui.createWidget("Gui::InputField")
+        self.Length.setText("0.00 mm")
+        grid.addWidget(label5,0,0,1,1)
+        grid.addWidget(self.Length,0,1,1,1)
         
-        lay1 = QtGui.QHBoxLayout()
-        lay0.addLayout(lay1)
         label1 = QtGui.QLabel(translate("Arch","Width").decode("utf8"))
-        lay1.addWidget(label1)
-        value1 = QtGui.QDoubleSpinBox()
-        value1.setDecimals(d)
-        value1.setValue(self.Width)
-        lay1.addWidget(value1)
+        value1 = ui.createWidget("Gui::InputField")
+        value1.setText(self.FORMAT % self.Width)
+        grid.addWidget(label1,1,0,1,1)
+        grid.addWidget(value1,1,1,1,1)
         
-        lay2 = QtGui.QHBoxLayout()
-        lay0.addLayout(lay2)
         label2 = QtGui.QLabel(translate("Arch","Height").decode("utf8"))
-        lay2.addWidget(label2)
-        value2 = QtGui.QDoubleSpinBox()
-        value2.setDecimals(d)
-        value2.setValue(self.Height)
-        lay2.addWidget(value2)
+        value2 = ui.createWidget("Gui::InputField")
+        value2.setText(self.FORMAT % self.Height)
+        grid.addWidget(label2,2,0,1,1)
+        grid.addWidget(value2,2,1,1,1)
         
-        lay3 = QtGui.QHBoxLayout()
-        lay0.addLayout(lay3)
         label3 = QtGui.QLabel(translate("Arch","Alignment").decode("utf8"))
-        lay3.addWidget(label3)
         value3 = QtGui.QComboBox()
         items = ["Center","Left","Right"]
         value3.addItems(items)
         value3.setCurrentIndex(items.index(self.Align))
-        lay3.addWidget(value3)
+        grid.addWidget(label3,3,0,1,1)
+        grid.addWidget(value3,3,1,1,1)
         
-        value4 = QtGui.QCheckBox(translate("Arch","Continue").decode("utf8"))
-        lay0.addWidget(value4)
+        label4 = QtGui.QLabel(translate("Arch","Con&tinue").decode("utf8"))
+        value4 = QtGui.QCheckBox()
+        value4.setObjectName("ContinueCmd")
+        value4.setLayoutDirection(QtCore.Qt.RightToLeft)
+        label4.setBuddy(value4)
+        if hasattr(FreeCADGui,"draftToolBar"):
+            value4.setChecked(FreeCADGui.draftToolBar.continueMode)
+            self.continueCmd = FreeCADGui.draftToolBar.continueMode
+        grid.addWidget(label4,4,0,1,1)
+        grid.addWidget(value4,4,1,1,1)
+
         QtCore.QObject.connect(value1,QtCore.SIGNAL("valueChanged(double)"),self.setWidth)
         QtCore.QObject.connect(value2,QtCore.SIGNAL("valueChanged(double)"),self.setHeight)
         QtCore.QObject.connect(value3,QtCore.SIGNAL("currentIndexChanged(int)"),self.setAlign)
@@ -319,6 +329,8 @@ class _CommandWall:
 
     def setContinue(self,i):
         self.continueCmd = bool(i)
+        if hasattr(FreeCADGui,"draftToolBar"):
+            FreeCADGui.draftToolBar.continueMode = bool(i)
 
 
 class _CommandMergeWalls:
@@ -370,22 +382,14 @@ class _Wall(ArchComponent.Component):
     "The Wall object"
     def __init__(self,obj):
         ArchComponent.Component.__init__(self,obj)
-        obj.addProperty("App::PropertyLength","Length","Arch",
-                        str(translate("Arch","The length of this wall. Not used if this wall is based on an underlying object")))
-        obj.addProperty("App::PropertyLength","Width","Arch",
-                        str(translate("Arch","The width of this wall. Not used if this wall is based on a face")))
-        obj.addProperty("App::PropertyLength","Height","Arch",
-                        str(translate("Arch","The height of this wall. Keep 0 for automatic. Not used if this wall is based on a solid")))
-        obj.addProperty("App::PropertyEnumeration","Align","Arch",
-                        str(translate("Arch","The alignment of this wall on its base object, if applicable")))
-        obj.addProperty("App::PropertyVector","Normal","Arch",
-                        str(translate("Arch","The normal extrusion direction of this object (keep (0,0,0) for automatic normal)")))
-        obj.addProperty("App::PropertyBool","ForceWire","Arch",
-                        str(translate("Arch","If True, if this wall is based on a face, it will use its border wire as trace, and disconsider the face.")))
-        obj.addProperty("App::PropertyInteger","Face","Arch",
-                        str(translate("Arch","The face number of the base object used to build this wall")))
-        obj.addProperty("App::PropertyLength","Offset","Arch",
-                        str(translate("Arch","The offset between this wall and its baseline (only for left and right alignments)")))
+        obj.addProperty("App::PropertyLength","Length","Arch",translate("Arch","The length of this wall. Not used if this wall is based on an underlying object"))
+        obj.addProperty("App::PropertyLength","Width","Arch",translate("Arch","The width of this wall. Not used if this wall is based on a face"))
+        obj.addProperty("App::PropertyLength","Height","Arch",translate("Arch","The height of this wall. Keep 0 for automatic. Not used if this wall is based on a solid"))
+        obj.addProperty("App::PropertyEnumeration","Align","Arch",translate("Arch","The alignment of this wall on its base object, if applicable"))
+        obj.addProperty("App::PropertyVector","Normal","Arch",translate("Arch","The normal extrusion direction of this object (keep (0,0,0) for automatic normal)"))
+        obj.addProperty("App::PropertyBool","ForceWire","Arch",translate("Arch","If True, if this wall is based on a face, it will use its border wire as trace, and disconsider the face."))
+        obj.addProperty("App::PropertyInteger","Face","Arch",translate("Arch","The face number of the base object used to build this wall"))
+        obj.addProperty("App::PropertyLength","Offset","Arch",translate("Arch","The offset between this wall and its baseline (only for left and right alignments)"))
         obj.Align = ['Left','Right','Center']
         obj.ForceWire = False
         self.Type = "Wall"
@@ -504,21 +508,21 @@ class _Wall(ArchComponent.Component):
         "returns normal,width,height values from this wall"
         length = 1
         if hasattr(obj,"Length"):
-            if obj.Length:
-                length = obj.Length
+            if obj.Length.Value:
+                length = obj.Length.Value
         width = 1
         if hasattr(obj,"Width"):
-            if obj.Width:
-                width = obj.Width
+            if obj.Width.Value:
+                width = obj.Width.Value
         height = 1
         if hasattr(obj,"Height"):
-            if obj.Height:
-                height = obj.Height
+            if obj.Height.Value:
+                height = obj.Height.Value
             else:
                 for p in obj.InList:
                     if Draft.getType(p) == "Floor":
-                        if p.Height:
-                            height = p.Height
+                        if p.Height.Value:
+                            height = p.Height.Value
         normal = None
         if hasattr(obj,"Normal"):
             if obj.Normal == Vector(0,0,0):
@@ -541,8 +545,8 @@ class _Wall(ArchComponent.Component):
         if obj.Align == "Left":
             dvec.multiply(width)
             if hasattr(obj,"Offset"):
-                if obj.Offset:
-                    dvec2 = DraftVecUtils.scaleTo(dvec,obj.Offset)
+                if obj.Offset.Value:
+                    dvec2 = DraftVecUtils.scaleTo(dvec,obj.Offset.Value)
                     wire = DraftGeomUtils.offsetWire(wire,dvec2)
             w2 = DraftGeomUtils.offsetWire(wire,dvec)
             w1 = Part.Wire(DraftGeomUtils.sortEdges(wire.Edges))
@@ -551,8 +555,8 @@ class _Wall(ArchComponent.Component):
             dvec.multiply(width)
             dvec = dvec.negative()
             if hasattr(obj,"Offset"):
-                if obj.Offset:
-                    dvec2 = DraftVecUtils.scaleTo(dvec,obj.Offset)
+                if obj.Offset.Value:
+                    dvec2 = DraftVecUtils.scaleTo(dvec,obj.Offset.Value)
                     wire = DraftGeomUtils.offsetWire(wire,dvec2)
             w2 = DraftGeomUtils.offsetWire(wire,dvec)
             w1 = Part.Wire(DraftGeomUtils.sortEdges(wire.Edges))
@@ -600,5 +604,6 @@ class _ViewProviderWall(ArchComponent.ViewProviderComponent):
         self.Object = vobj.Object
         return
 
-FreeCADGui.addCommand('Arch_Wall',_CommandWall())
-FreeCADGui.addCommand('Arch_MergeWalls',_CommandMergeWalls())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('Arch_Wall',_CommandWall())
+    FreeCADGui.addCommand('Arch_MergeWalls',_CommandMergeWalls())

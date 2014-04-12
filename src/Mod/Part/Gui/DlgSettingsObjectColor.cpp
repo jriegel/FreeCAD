@@ -53,28 +53,24 @@ DlgSettingsObjectColor::~DlgSettingsObjectColor()
 
 void DlgSettingsObjectColor::saveSettings()
 {
-    CursorTextColor->onSave();
-    EditedEdgeColor->onSave();
-    EditedVertexColor->onSave();
-    ConstructionColor->onSave();
-    FullyConstrainedColor->onSave();
-    BoundingBoxColor->onSave();
+    // Part
     DefaultShapeColor->onSave();
     DefaultShapeLineColor->onSave();
     DefaultShapeLineWidth->onSave();
+    DefaultShapeVertexColor->onSave();
+    DefaultShapeVertexWidth->onSave();
+    BoundingBoxColor->onSave();
 }
 
 void DlgSettingsObjectColor::loadSettings()
 {
-    CursorTextColor->onRestore();
-    EditedEdgeColor->onRestore();
-    EditedVertexColor->onRestore();
-    ConstructionColor->onRestore();
-    FullyConstrainedColor->onRestore();
-    BoundingBoxColor->onRestore();
+    // Part
     DefaultShapeColor->onRestore();
     DefaultShapeLineColor->onRestore();
     DefaultShapeLineWidth->onRestore();
+    DefaultShapeVertexColor->onRestore();
+    DefaultShapeVertexWidth->onRestore();
+    BoundingBoxColor->onRestore();
 }
 
 /**

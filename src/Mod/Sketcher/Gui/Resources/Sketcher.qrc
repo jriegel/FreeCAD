@@ -51,7 +51,9 @@
         <file>icons/Sketcher_ConstrainParallel.svg</file>
         <file>icons/Sketcher_ConstrainVertical.svg</file>
         <file>icons/Sketcher_CreateArc.svg</file>
+        <file>icons/Sketcher_Create3PointArc.svg</file>
         <file>icons/Sketcher_CreateCircle.svg</file>
+        <file>icons/Sketcher_Create3PointCircle.svg</file>
         <file>icons/Sketcher_CreateLine.svg</file>
         <file>icons/Sketcher_CreatePoint.svg</file>
         <file>icons/Sketcher_CreatePolyline.svg</file>

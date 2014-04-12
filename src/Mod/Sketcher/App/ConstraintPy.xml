@@ -35,5 +35,11 @@
       <Parameter Name="Value" Type="Float"/>
     </Attribute>
 
+    <Attribute Name="Name" ReadOnly="false">
+      <Documentation>
+        <UserDocu>Name of the constraint</UserDocu>
+      </Documentation>
+      <Parameter Name="Name" Type="String"/>
+    </Attribute>
   </PythonExport>
 </GenerateModel>

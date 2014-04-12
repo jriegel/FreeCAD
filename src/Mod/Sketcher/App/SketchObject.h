@@ -72,6 +72,8 @@ public:
     int delConstraint(int ConstrId);
     int delConstraintOnPoint(int GeoId, PointPos PosId, bool onlyCoincident=true);
     int delConstraintOnPoint(int VertexId, bool onlyCoincident=true);
+    /// Deletes all constraints referencing an external geometry
+    int delConstraintsToExternal();
     /// transfers all contraints of a point to a new point
     int transferConstraints(int fromGeoId, PointPos fromPosId, int toGeoId, PointPos toPosId);
     /// add an external geometry reference
@@ -128,7 +130,7 @@ public:
 
     /// retrieves for a Vertex number the corresponding GeoId and PosId
     void getGeoVertexIndex(int VertexId, int &GeoId, PointPos &PosId) const;
-    int getHighestVertexIndex(void) const { return VertexId2GeoId.size() - 1; }
+    int getHighestVertexIndex(void) const { return VertexId2GeoId.size() - 1; } // Most recently created
     int getHighestCurveIndex(void) const { return Geometry.getSize() - 1; }
     void rebuildVertexIndex(void);
 
@@ -136,6 +138,7 @@ public:
     void getCoincidentPoints(int GeoId, PointPos PosId, std::vector<int> &GeoIdList,
                              std::vector<PointPos> &PosIdList);
     void getCoincidentPoints(int VertexId, std::vector<int> &GeoIdList, std::vector<PointPos> &PosIdList);
+    bool arePointsCoincident(int GeoId1, PointPos PosId1, int GeoId2, PointPos PosId2);
 
     /// generates a warning message about constraint conflicts and appends it to the given message
     static void appendConflictMsg(const std::vector<int> &conflicting, std::string &msg);

@@ -21,9 +21,14 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,Draft,ArchCommands,ArchFloor
-from PySide import QtCore
-from DraftTools import translate
+import FreeCAD,Draft,ArchCommands,ArchFloor
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui
+    from DraftTools import translate
+else:
+    def translate(ctxt,txt):
+        return txt
 
 __title__="FreeCAD Site"
 __author__ = "Yorik van Havre"
@@ -80,14 +85,10 @@ class _Site(ArchFloor._Floor):
     "The Site object"
     def __init__(self,obj):
         ArchFloor._Floor.__init__(self,obj)
-        obj.addProperty("App::PropertyLink","Terrain","Arch",
-                        translate("Arch","The terrain of this site"))
-        obj.addProperty("App::PropertyString","Address","Arch",
-                        translate("Arch","The address of this site"))
-        obj.addProperty("App::PropertyString","Coordinates","Arch",
-                        translate("Arch","The geographic coordinates of this site"))
-        obj.addProperty("App::PropertyString","Url","Arch",
-                        translate("Arch","An url that shows this site in a mapping website"))
+        obj.addProperty("App::PropertyLink","Terrain","Arch",translate("Arch","The terrain of this site"))
+        obj.addProperty("App::PropertyString","Address","Arch",translate("Arch","The address of this site"))
+        obj.addProperty("App::PropertyString","Coordinates","Arch",translate("Arch","The geographic coordinates of this site"))
+        obj.addProperty("App::PropertyString","Url","Arch",translate("Arch","An url that shows this site in a mapping website"))
         self.Type = "Site"
         obj.setEditorMode('Height',2)
                 
@@ -103,5 +104,5 @@ class _ViewProviderSite(ArchFloor._ViewProviderFloor):
     def claimChildren(self):
         return self.Object.Group+[self.Object.Terrain]
 
-
-FreeCADGui.addCommand('Arch_Site',_CommandSite())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('Arch_Site',_CommandSite())

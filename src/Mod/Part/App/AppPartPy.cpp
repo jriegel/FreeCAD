@@ -326,45 +326,59 @@ show(PyObject *self, PyObject *args)
 static PyObject * makeWireString(PyObject *self, PyObject *args)
 {
     PyObject *intext;
-    const char* dir;                      
+    const char* dir;
     const char* fontfile;
-    float height;
-    int track = 0;
+    const char* fontspec;
+    bool useFontSpec = false;
+    double height;
+    double track = 0;
 
     Py_UNICODE *unichars;
     Py_ssize_t pysize;
    
     PyObject *CharList;
    
-    if (!PyArg_ParseTuple(args, "Ossf|i", &intext, 
-                                          &dir,
-                                          &fontfile,
-                                          &height,
-                                          &track))  {
-        Base::Console().Message("** makeWireString bad args.\n");                                           
-        return NULL;
-    }
-
+    if (PyArg_ParseTuple(args, "Ossd|d", &intext,                               // compatibility with old version
+                                         &dir,
+                                         &fontfile,
+                                         &height,
+                                         &track))  {
+            useFontSpec = false; }
+    else { 
+        PyErr_Clear();
+        if (PyArg_ParseTuple(args, "Osd|d", &intext, 
+                                            &fontspec,
+                                            &height,
+                                            &track))  {
+            useFontSpec = true; }
+        else {
+            Base::Console().Message("** makeWireString bad args.\n");
+            return NULL; }
+    }            
+ 
     if (PyString_Check(intext)) {
         PyObject *p = Base::PyAsUnicodeObject(PyString_AsString(intext));    
         if (!p) {
             Base::Console().Message("** makeWireString can't convert PyString.\n");
             return NULL;
         }
-        pysize = PyUnicode_GetSize(p);    
+        pysize = PyUnicode_GetSize(p);
         unichars = PyUnicode_AS_UNICODE(p);
     }
-    else if (PyUnicode_Check(intext)) {        
-        pysize = PyUnicode_GetSize(intext);   
+    else if (PyUnicode_Check(intext)) {
+        pysize = PyUnicode_GetSize(intext);
         unichars = PyUnicode_AS_UNICODE(intext);
     }
     else {
-        Base::Console().Message("** makeWireString bad text parameter.\n");                                           
+        Base::Console().Message("** makeWireString bad text parameter.\n");
         return NULL;
     }
 
-    try {        
-        CharList = FT2FC(unichars,pysize,dir,fontfile,height,track);         // get list of wire chars
+    try {
+        if (useFontSpec) {
+            CharList = FT2FC(unichars,pysize,fontspec,height,track); }
+        else {
+            CharList = FT2FC(unichars,pysize,dir,fontfile,height,track); }
     }
     catch (Standard_DomainError) {                                      // Standard_DomainError is OCC error.
         PyErr_SetString(PyExc_Exception, "makeWireString failed - Standard_DomainError");

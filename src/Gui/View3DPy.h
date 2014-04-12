@@ -58,6 +58,8 @@ public:
     Py::Object viewPosition(const Py::Tuple&);
     Py::Object viewRotateLeft(const Py::Tuple&);
     Py::Object viewRotateRight(const Py::Tuple&);
+    Py::Object zoomIn(const Py::Tuple&);
+    Py::Object zoomOut(const Py::Tuple&);
     Py::Object startAnimating(const Py::Tuple&);
     Py::Object stopAnimating(const Py::Tuple&);
     Py::Object setAnimationEnabled(const Py::Tuple&);
@@ -73,6 +75,7 @@ public:
     Py::Object getViewDirection(const Py::Tuple&);
     Py::Object setCamera(const Py::Tuple&);
     Py::Object setCameraOrientation(const Py::Tuple&);
+    Py::Object getCameraOrientation(const Py::Tuple&);
     Py::Object getCameraType(const Py::Tuple&);
     Py::Object setCameraType(const Py::Tuple&);
     Py::Object getCameraNode(const Py::Tuple&);
@@ -96,11 +99,14 @@ public:
     Py::Object setNavigationType(const Py::Tuple&);
     Py::Object setAxisCross(const Py::Tuple&);
     Py::Object hasAxisCross(const Py::Tuple&);
+    Py::Object addDraggerCallback(const Py::Tuple&);
+    Py::Object removeDraggerCallback(const Py::Tuple&);
 
 private:
     static void eventCallback(void * ud, SoEventCallback * n);
     static void eventCallbackPivy(void * ud, SoEventCallback * n);
     static void eventCallbackPivyEx(void * ud, SoEventCallback * n);
+    static void draggerCallback(void * ud, SoDragger* dragger);
 
 private:
     typedef PyObject* (*method_varargs_handler)(PyObject *_self, PyObject *_args);

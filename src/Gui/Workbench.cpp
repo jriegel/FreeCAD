@@ -56,7 +56,7 @@ using namespace Gui;
     The idea behind this concept is that the user should see only the functions that are required for the task that he is doing at this moment and not to show dozens of unneeded functions which the user never uses.
 
     \section stepbystep Step by step
-    Here follows a short description of how an own workbench can be added to a module.
+    Here follows a short description of how your own workbench can be added to a module.
 
     \subsection newClass Inherit either from Workbench or StdWorkbench
     First you have to subclass either \ref Gui::Workbench "Workbench" or \ref Gui::StdWorkbench "StdWorkbench" and reimplement the methods \ref Gui::Workbench::setupMenuBar() "setupMenuBar()", \ref Gui::Workbench::setupToolBars() "setupToolBars()", \ref Gui::Workbench::setupCommandBars() "setupCommandBars()" and \ref Gui::Workbench::setupDockWindows() "setupDockWindows()".
@@ -399,24 +399,27 @@ void StdWorkbench::setupContextMenu(const char* recipient, MenuItem* item) const
                   << "Std_ViewRear" << "Std_ViewBottom" << "Std_ViewLeft"
                   << "Separator" << "Std_ViewRotateLeft" << "Std_ViewRotateRight";
 
-	MenuItem *measure = new MenuItem();
-	measure->setCommand("Measure");
-	*measure << "View_Measure_Toggle_All" << "View_Measure_Clear_All";
+        MenuItem *measure = new MenuItem();
+        measure->setCommand("Measure");
+        *measure << "View_Measure_Toggle_All" << "View_Measure_Clear_All";
 
         *item << "Std_ViewFitAll" << "Std_ViewFitSelection" << "Std_DrawStyle" << StdViews << measure
               << "Separator" << "Std_ViewDockUndockFullscreen";
 
-        if (Gui::Selection().countObjectsOfType(App::DocumentObject::getClassTypeId()) > 0 )
+        if (Gui::Selection().countObjectsOfType(App::DocumentObject::getClassTypeId()) > 0) {
             *item << "Separator" << "Std_SetAppearance" << "Std_ToggleVisibility"
                   << "Std_ToggleSelectability" << "Std_TreeSelection" 
                   << "Std_RandomColor" << "Separator" << "Std_Delete";
+            }
     }
     else if (strcmp(recipient,"Tree") == 0)
     {
-        if (Gui::Selection().countObjectsOfType(App::DocumentObject::getClassTypeId()) > 0 )
+        if (Gui::Selection().countObjectsOfType(App::DocumentObject::getClassTypeId()) > 0) {
             *item << "Std_ToggleVisibility" << "Std_ShowSelection" << "Std_HideSelection"
                   << "Std_ToggleSelectability" << "Separator" << "Std_SetAppearance"
-                  << "Std_RandomColor" << "Separator" << "Std_Delete";
+                  << "Std_RandomColor" << "Std_Cut" << "Std_Copy" << "Std_Paste"
+                  << "Separator" << "Std_Delete";
+        }
     }
 }
 

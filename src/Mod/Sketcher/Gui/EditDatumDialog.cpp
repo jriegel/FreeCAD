@@ -45,6 +45,8 @@
 
 using namespace SketcherGui;
 
+/* TRANSLATOR SketcherGui::EditDatumDialog */
+
 EditDatumDialog::EditDatumDialog(ViewProviderSketch* vp, int ConstrNbr) : ConstrNbr(ConstrNbr)
 {
     sketch = vp->getSketchObject();
@@ -91,12 +93,23 @@ void EditDatumDialog::exec(bool atCursor)
         double datum = Constr->Value;
         Base::Quantity init_val;
 
-        if (Constr->Type == Sketcher::Angle){
+        if (Constr->Type == Sketcher::Angle) {
             datum = Base::toDegrees<double>(datum);
+            dlg.setWindowTitle(tr("Insert angle"));
             init_val.setUnit(Base::Unit::Angle);
+            ui_ins_datum.label->setText(tr("Angle:"));
             ui_ins_datum.labelEdit->setParamGrpPath(QByteArray("User parameter:BaseApp/History/SketcherAngle"));
-        }else{
+        }
+        else if (Constr->Type == Sketcher::Radius) {
+            dlg.setWindowTitle(tr("Insert radius"));
             init_val.setUnit(Base::Unit::Length);
+            ui_ins_datum.label->setText(tr("Radius:"));
+            ui_ins_datum.labelEdit->setParamGrpPath(QByteArray("User parameter:BaseApp/History/SketcherLength"));
+        }
+        else {
+            dlg.setWindowTitle(tr("Insert length"));
+            init_val.setUnit(Base::Unit::Length);
+            ui_ins_datum.label->setText(tr("Length:"));
             ui_ins_datum.labelEdit->setParamGrpPath(QByteArray("User parameter:BaseApp/History/SketcherLength"));
         }
 
@@ -124,13 +137,7 @@ void EditDatumDialog::exec(bool atCursor)
                 // save the value for the history 
                 ui_ins_datum.labelEdit->pushToHistory();
 
-                double newDatum;
-                if (Constr->Type == Sketcher::Angle)
-                    newDatum = Base::toRadians<double>(newQuant.getValue());
-                else 
-                    newDatum = newQuant.getValue();
-
-
+                double newDatum = newQuant.getValue();
                 if (Constr->Type == Sketcher::Angle ||
                     ((Constr->Type == Sketcher::DistanceX || Constr->Type == Sketcher::DistanceY) &&
                      Constr->FirstPos == Sketcher::none || Constr->Second != Sketcher::Constraint::GeoUndef)) {
@@ -143,9 +150,9 @@ void EditDatumDialog::exec(bool atCursor)
 
                 try {
                     Gui::Command::openCommand("Modify sketch constraints");
-                    Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.setDatum(%i,%f)",
+                    Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.setDatum(%i,App.Units.Quantity('%f %s'))",
                                 sketch->getNameInDocument(),
-                                ConstrNbr, newDatum);
+                                ConstrNbr, newDatum, (const char*)newQuant.getUnit().getString().toUtf8());
                     Gui::Command::commitCommand();
                     Gui::Command::updateActive();
                 }

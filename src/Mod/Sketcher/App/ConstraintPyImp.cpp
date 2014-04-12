@@ -366,6 +366,16 @@ Py::Float ConstraintPy::getValue(void) const
     return Py::Float(this->getConstraintPtr()->Value);
 }
 
+Py::String ConstraintPy::getName(void) const
+{
+    return Py::String(this->getConstraintPtr()->Name);
+}
+
+void  ConstraintPy::setName(Py::String arg)
+{
+    this->getConstraintPtr()->Name = arg;
+}
+
 PyObject *ConstraintPy::getCustomAttributes(const char* /*attr*/) const
 {
     return 0;

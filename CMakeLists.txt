@@ -92,6 +92,7 @@ MESSAGE(STATUS "includedir: ${CMAKE_INSTALL_INCLUDEDIR}")
 # == Win32 is default behaviour use the LibPack copied in Source tree ==========
 if(MSVC)
     OPTION(FREECAD_LIBPACK_USE "Use the LibPack to Build FreeCAD (only Win32 so far)." ON)
+    OPTION(FREECAD_LIBPACK_USEPYSIDE "Use PySide in LibPack rather to PyQt and Swig." ON)
     set(FREECAD_LIBPACK_DIR ${CMAKE_SOURCE_DIR} CACHE PATH  "Directory of the FreeCAD LibPack")
 else(MSVC)
     OPTION(FREECAD_LIBPACK_USE "Use the LibPack to Build FreeCAD (only Win32 so far)." OFF)
@@ -154,6 +155,139 @@ if (FREECAD_BUILD_DEBIAN)
     set(FREECAD_USE_EXTERNAL_ZIPIOS ON)
     set(FREECAD_USE_EXTERNAL_PIVY ON)
 endif (FREECAD_BUILD_DEBIAN)
+
+# ==============================================================================
+#inter-module dependencies
+
+#took these from Mod/Complete/App/AppComplete.cpp. appears to be working.
+if(FREECAD_BUILD_COMPLETE)
+  set(FREECAD_BUILD_MESH ON)
+  set(FREECAD_BUILD_POINTS ON)
+  set(FREECAD_BUILD_DRAWING ON)
+  set(FREECAD_BUILD_RAYTRACING ON)
+  set(FREECAD_BUILD_PART_DESIGN ON)
+  set(FREECAD_BUILD_IMAGE ON)
+  set(FREECAD_BUILD_DRAFT ON)
+endif(FREECAD_BUILD_COMPLETE)
+
+#inferred from .py files. appears to be working.
+if(FREECAD_BUILD_ARCH)
+  set(FREECAD_BUILD_PART ON)
+  set(FREECAD_BUILD_MESH ON)
+  set(FREECAD_BUILD_DRAFT ON)
+endif(FREECAD_BUILD_ARCH)
+
+#inferred from .py files. appears to be working.
+if(FREECAD_BUILD_OPENSCAD)
+  set(FREECAD_BUILD_MESH_PART ON)
+  set(FREECAD_BUILD_DRAFT ON)
+endif(FREECAD_BUILD_OPENSCAD)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_INSPECTION)
+  set(FREECAD_BUILD_MESH ON)
+  set(FREECAD_BUILD_POINTS ON)
+  set(FREECAD_BUILD_PART ON)
+endif(FREECAD_BUILD_INSPECTION)
+
+#inferred from .py files. appears to be working.
+if(FREECAD_BUILD_SHIP)
+  set(FREECAD_BUILD_PART ON)
+  set(FREECAD_BUILD_PLOT ON)
+  set(FREECAD_BUILD_IMAGE ON)
+endif(FREECAD_BUILD_SHIP)
+
+#inferred from .py files. appears to be working.
+if(FREECAD_BUILD_SPREADSHEET)
+  set(FREECAD_BUILD_DRAFT ON)
+endif(FREECAD_BUILD_SPREADSHEET)
+
+#this has been tested. appears to be working.
+if(FREECAD_BUILD_DRAFT)
+  set(FREECAD_BUILD_SKETCHER ON)
+endif(FREECAD_BUILD_DRAFT)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_PART_DESIGN)
+  set(FREECAD_BUILD_SKETCHER ON)
+endif(FREECAD_BUILD_PART_DESIGN)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_REVERSEENGINEERING)
+  set(FREECAD_BUILD_PART ON)
+  set(FREECAD_BUILD_MESH ON)
+endif(FREECAD_BUILD_REVERSEENGINEERING)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_MESH_PART)
+  set(FREECAD_BUILD_PART ON)
+  set(FREECAD_BUILD_MESH ON)
+  set(FREECAD_BUILD_SMESH ON)
+endif(FREECAD_BUILD_MESH_PART)
+
+#inferred from cmakelists.txt. build errors. obsolete?
+if(FREECAD_BUILD_CAM)
+  set(FREECAD_BUILD_PART ON)
+  set(FREECAD_BUILD_MESH ON)
+endif(FREECAD_BUILD_CAM)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_RAYTRACING)
+  set(FREECAD_BUILD_PART ON)
+endif(FREECAD_BUILD_RAYTRACING)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_DRAWING)
+  set(FREECAD_BUILD_PART ON)
+endif(FREECAD_BUILD_DRAWING)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_ROBOT)
+  set(FREECAD_BUILD_PART ON)
+endif(FREECAD_BUILD_ROBOT)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_SKETCHER)
+  set(FREECAD_BUILD_PART ON)
+endif(FREECAD_BUILD_SKETCHER)
+
+#inferred from .py files. built, but not sure how to test.
+if(FREECAD_BUILD_IDF)
+  set(FREECAD_BUILD_PART ON)
+endif(FREECAD_BUILD_IDF)
+
+#inferred from cmakelists.txt. built, but not sure how to test.
+if(FREECAD_BUILD_IMPORT)
+  set(FREECAD_BUILD_PART ON)
+endif(FREECAD_BUILD_IMPORT)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_FEM)
+  set(FREECAD_BUILD_PART ON)
+  set(FREECAD_BUILD_SMESH ON)
+endif(FREECAD_BUILD_FEM)
+
+#inferred from cmakelists.txt. appears to be working.
+if(FREECAD_BUILD_SANDBOX)
+  set(FREECAD_BUILD_PART ON)
+  set(FREECAD_BUILD_MESH ON)
+endif(FREECAD_BUILD_SANDBOX)
+
+#inferred from header includes. not tested.
+if(FREECAD_BUILD_JTREADER)
+  set(FREECAD_BUILD_MESH ON)
+endif(FREECAD_BUILD_JTREADER)
+
+#leaving test module for someone else.
+#image has none. as far as I can tell.
+#mesh has none. as far as I can tell.
+#part has none. as far as I can tell.
+#material has none. as far as I can tell.
+#web has none. as far as I can tell.
+#start has none. as far as I can tell.
+#assembly has none. as far as I can tell.
+#plot has none. as far as I can tell.
+#points has none. as far as I can tell
 
 # ==============================================================================
 
@@ -514,7 +648,7 @@ ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
 
 IF(MSVC)
 	# set default compiler settings
-	#SET (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GF /GY")
+	SET (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHa")
 	SET (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFC_DEBUG")
 	# set default libs
 	SET (CMAKE_C_STANDARD_LIBRARIES "kernel32.lib user32.lib gdi32.lib winspool.lib SHFolder.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib ")

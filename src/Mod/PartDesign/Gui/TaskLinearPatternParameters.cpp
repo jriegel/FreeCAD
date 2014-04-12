@@ -33,6 +33,7 @@
 #include "TaskMultiTransformParameters.h"
 #include "Workbench.h"
 #include "ReferenceSelection.h"
+#include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Gui/Application.h>
@@ -140,6 +141,7 @@ void TaskLinearPatternParameters::setupUI()
     ui->checkReverse->setEnabled(true);
     ui->spinLength->setEnabled(true);
     ui->spinOccurrences->setEnabled(true);
+    ui->spinLength->setDecimals(Base::UnitsApi::getDecimals());
     updateUI();
 }
 
@@ -458,6 +460,7 @@ TaskDlgLinearPatternParameters::TaskDlgLinearPatternParameters(ViewProviderLinea
 
     Content.push_back(parameter);
 }
+
 //==== calls from the TaskView ===============================================================
 
 bool TaskDlgLinearPatternParameters::accept()
@@ -475,7 +478,19 @@ bool TaskDlgLinearPatternParameters::accept()
         linearpatternParameter->getDirection(obj, directions);
         std::string direction = getPythonStr(obj, directions);
         if (!direction.empty()) {
-            Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = %s", name.c_str(), direction.c_str());
+            App::DocumentObject* sketch = 0;
+            if (direction == "H_Axis" || direction == "V_Axis" ||
+                (direction.size() > 4 && direction.substr(0,4) == "Axis"))
+                sketch = linearpatternParameter->getSketchObject();
+            else
+                sketch = linearpatternParameter->getSupportObject();
+
+            if (sketch) {
+                QString buf = QString::fromLatin1("(App.ActiveDocument.%1,[\"%2\"])");
+                buf = buf.arg(QString::fromLatin1(sketch->getNameInDocument()));
+                buf = buf.arg(QString::fromLatin1(direction.c_str()));
+                Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = %s", name.c_str(), buf.toStdString().c_str());
+            }
         } else
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = None", name.c_str());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Reversed = %u",name.c_str(),linearpatternParameter->getReverse());

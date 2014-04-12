@@ -67,7 +67,7 @@ class DrawSketchHandler;
 /** The Sketch ViewProvider
   * This class handles mainly the drawing and editing of the sketch.
   * It draws the geometry and the constraints applied to the sketch.
-  * It uses the class DrawSketchHandler to facilitade the creation
+  * It uses the class DrawSketchHandler to facilitate the creation
   * of new geometry while editing.
   */
 class SketcherGuiExport ViewProviderSketch : public PartGui::ViewProvider2DObject, public Gui::SelectionObserver
@@ -106,6 +106,8 @@ public:
     void activateHandler(DrawSketchHandler *newHandler);
     /// removes the active handler
     void purgeHandler(void);
+    /// set the pick style of the sketch coordinate axes
+    void setAxisPickStyle(bool on);
     //@}
 
     /** @name modus handling */
@@ -114,7 +116,7 @@ public:
     enum SketchMode{
         STATUS_NONE,              /**< enum value View provider is in neutral. */
         STATUS_SELECT_Point,      /**< enum value a point was selected. */
-        STATUS_SELECT_Edge,       /**< enum value a edge was selected. */
+        STATUS_SELECT_Edge,       /**< enum value an edge was selected. */
         STATUS_SELECT_Constraint, /**< enum value a constraint was selected. */
         STATUS_SELECT_Cross,      /**< enum value the base coordinate system was selected. */
         STATUS_SKETCH_DragPoint,  /**< enum value while dragging a point. */
@@ -201,6 +203,7 @@ protected:
     virtual void unsetEdit(int ModNum);
     virtual void setEditViewer(Gui::View3DInventorViewer*, int ModNum);
     virtual void unsetEditViewer(Gui::View3DInventorViewer*);
+    void deactivateHandler();
     /// set up and solve the sketch
     void solveSketch(void);
     /// helper to detect whether the picked point lies on the sketch

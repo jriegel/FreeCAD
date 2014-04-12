@@ -20,7 +20,7 @@
  *                                                                         *
  ***************************************************************************/
 
-
+ 
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <TopoDS_Shape.hxx>
@@ -50,6 +50,8 @@
 #include "Geometry.h"
 #include "DatumFeature.h"
 
+#include <App/FeaturePythonPyImp.h>
+#include "Part2DObjectPy.h"
 
 using namespace Part;
 
@@ -375,7 +377,14 @@ namespace App {
   PROPERTY_SOURCE_TEMPLATE(Part::Part2DObjectPython, Part::Part2DObject)
   template<> const char* Part::Part2DObjectPython::getViewProviderName(void) const {
     return "PartGui::ViewProvider2DObjectPython";
-}
+  }
+  template<> PyObject* Part::Part2DObjectPython::getPyObject(void) {
+        if (PythonObject.is(Py::_None())) {
+            // ref counter is set to 1
+            PythonObject = Py::Object(new FeaturePythonPyT<Part::Part2DObjectPy>(this),true);
+        }
+        return Py::new_reference_to(PythonObject);
+  }
 /// @endcond
 
 // explicit template instantiation

@@ -1093,6 +1093,7 @@ void CmdPartDesignPad::activated(int iMsg)
 
     // specific parameters for Pad
     doCommand(Doc,"App.activeDocument().%s.Length = 10.0",FeatName.c_str());
+    updateActive();
 
     finishSketchBased(this, sketch, FeatName);
     adjustCameraPosition();

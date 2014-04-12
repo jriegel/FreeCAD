@@ -32,6 +32,8 @@
 #include <Base/GeometryPyCXX.h>
 #include <Base/VectorPy.h>
 #include <Base/AxisPy.h>
+#include <Base/Tools.h>
+#include <Base/QuantityPy.h>
 #include <App/Document.h>
 #include <App/Plane.h>
 
@@ -149,6 +151,28 @@ PyObject* SketchObjectPy::delConstraint(PyObject *args)
     Py_Return;
 }
 
+PyObject* SketchObjectPy::renameConstraint(PyObject *args)
+{
+    int Index;
+    char* Name;
+    if (!PyArg_ParseTuple(args, "is", &Index, &Name))
+        return 0;
+
+    if (this->getSketchObjectPtr()->Constraints.getSize() <= Index) {
+        std::stringstream str;
+        str << "Not able to rename a constraint with the given index: " << Index;
+        PyErr_SetString(PyExc_IndexError, str.str().c_str());
+        return 0;
+    }
+
+    Constraint* copy = this->getSketchObjectPtr()->Constraints[Index]->clone();
+    copy->Name = Name;
+    this->getSketchObjectPtr()->Constraints.set1Value(Index, copy);
+    delete copy;
+
+    Py_Return;
+}
+
 PyObject* SketchObjectPy::addExternal(PyObject *args)
 {
     char *ObjectName;
@@ -220,8 +244,22 @@ PyObject* SketchObjectPy::setDatum(PyObject *args)
 {
     double Datum;
     int    Index;
-    if (!PyArg_ParseTuple(args, "id", &Index, &Datum))
-        return 0;
+    PyObject* object;
+    Base::Quantity Quantity;
+    if (PyArg_ParseTuple(args,"iO!", &Index, &(Base::QuantityPy::Type), &object)) {
+        Quantity = *(static_cast<Base::QuantityPy*>(object)->getQuantityPtr());
+        if (Quantity.getUnit() == Base::Unit::Angle)
+            //Datum = Quantity.getValueAs(Base::Quantity::Radian);
+            Datum = Base::toRadians<double>(Quantity.getValue());
+        else
+            Datum = Quantity.getValue();
+    }
+    else {
+        PyErr_Clear();
+        if (!PyArg_ParseTuple(args, "id", &Index, &Datum))
+            return 0;
+        Quantity.setValue(Datum);
+    }
 
     int err=this->getSketchObjectPtr()->setDatum(Index, Datum);
     if (err) {
@@ -231,7 +269,7 @@ PyObject* SketchObjectPy::setDatum(PyObject *args)
         else if (err == -3)
             str << "Cannot set the datum because the sketch contains conflicting constraints";
         else if (err == -2)
-            str << "Datum " << Datum << " for the constraint with index " << Index << " is invalid";
+            str << "Datum " << (const char*)Quantity.getUserString().toUtf8() << " for the constraint with index " << Index << " is invalid";
         else if (err == -4)
             str << "Negative datum values are not valid for the constraint with index " << Index;
         else if (err == -5)
@@ -239,7 +277,7 @@ PyObject* SketchObjectPy::setDatum(PyObject *args)
         else if (err == -6)
             str << "Cannot set the datum because of invalid geometry";
         else
-            str << "Unexpected problem at setting datum " << Datum << " for the constraint with index " << Index;
+            str << "Unexpected problem at setting datum " << (const char*)Quantity.getUserString().toUtf8() << " for the constraint with index " << Index;
         PyErr_SetString(PyExc_ValueError, str.str().c_str());
         return 0;
     }

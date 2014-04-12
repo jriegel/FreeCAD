@@ -41,6 +41,7 @@
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeSolid.hxx>
 #include <BRepBuilderAPI_Sewing.hxx>
+#include <Geom_Conic.hxx>
 #include <ShapeBuild_ReShape.hxx>
 #include <ShapeFix_Face.hxx>
 #include <TopTools_ListOfShape.hxx>
@@ -566,6 +567,29 @@ FaceTypedCylinder& ModelRefine::getCylinderObject()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// TODO: change this version after occ fix. Freecad Mantis 1450
+#if OCC_VERSION_HEX <= 0x070000
+void collectConicEdges(const TopoDS_Shell &shell, TopTools_IndexedMapOfShape &map)
+{
+  TopTools_IndexedMapOfShape edges;
+  TopExp::MapShapes(shell, TopAbs_EDGE, edges);
+  
+  for (int index = 1; index <= edges.Extent(); ++index)
+  {
+    const TopoDS_Edge &currentEdge = TopoDS::Edge(edges.FindKey(index));
+    if (currentEdge.IsNull())
+      continue;
+    TopLoc_Location location;
+    Standard_Real first, last;
+    const Handle_Geom_Curve &curve = BRep_Tool::Curve(currentEdge, location, first, last);
+    if (curve.IsNull())
+      continue;
+    if (curve->IsKind(STANDARD_TYPE(Geom_Conic)))
+      map.Add(currentEdge);
+  }
+}
+#endif
+
 FaceUniter::FaceUniter(const TopoDS_Shell &shellIn) : modifiedSignal(false)
 {
     workShell = shellIn;
@@ -671,8 +695,14 @@ bool FaceUniter::process()
             for(sewIt = facesToSew.begin(); sewIt != facesToSew.end(); ++sewIt)
                 builder.Add(workShell, *sewIt);
         }
-
-        BRepLib_FuseEdges edgeFuse(workShell, Standard_True);
+        
+        BRepLib_FuseEdges edgeFuse(workShell);
+// TODO: change this version after occ fix. Freecad Mantis 1450
+#if OCC_VERSION_HEX <= 0x070000
+        TopTools_IndexedMapOfShape map;
+        collectConicEdges(workShell, map);
+        edgeFuse.AvoidEdges(map);
+#endif
         TopTools_DataMapOfShapeShape affectedFaces;
         edgeFuse.Faces(affectedFaces);
         TopTools_DataMapIteratorOfDataMapOfShapeShape mapIt;

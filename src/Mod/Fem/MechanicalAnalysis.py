@@ -20,13 +20,15 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD, Fem, FemLib
-import os,sys,string,math,shutil,glob,subprocess,tempfile
+import FreeCAD, Fem, FemLib, CalculixLib
+import os,sys,string,math,shutil,glob,subprocess,tempfile,time
 
 if FreeCAD.GuiUp:
     import FreeCADGui,FemGui
     from FreeCAD import Vector
     from PySide import QtCore, QtGui
+    from PySide.QtCore import Qt
+    from PySide.QtGui import QApplication, QCursor
     from pivy import coin
     from FreeCADGui import PySideUic as uic
 
@@ -188,7 +190,7 @@ class _ViewProviderFemAnalysis:
   
     def doubleClicked(self,vobj):
         import FemGui
-        if FemGui.getActiveAnalysis() == None:
+        if not FemGui.getActiveAnalysis() == self.Object:
             if FreeCADGui.activeWorkbench().name() != 'FemWorkbench':
                 FreeCADGui.activateWorkbench("FemWorkbench")
             FemGui.setActiveAnalysis(self.Object)
@@ -215,27 +217,86 @@ class _JobControlTaskPanel:
         # for the subcomponents, such as additions, subtractions.
         # the categories are shown only if they are not empty.
         form_class, base_class = uic.loadUiType(FreeCAD.getHomePath() + "Mod/Fem/MechanicalAnalysis.ui")
+        
+        self.CalculixBinary = FreeCAD.getHomePath() +'bin/ccx.exe'
+        self.TempDir = FreeCAD.ActiveDocument.TransientDir.replace('\\','/') + '/FemAnl_'+ object.Uid[-4:]
+        if not os.path.isdir(self.TempDir):
+            os.mkdir(self.TempDir)
 
         self.obj = object
         self.formUi = form_class()
         self.form = QtGui.QWidget()
         self.formUi.setupUi(self.form)
-        self.params = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Machining_Distortion")
-
+        #self.params = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Fem")
+        self.Calculix = QtCore.QProcess()
+        self.Timer = QtCore.QTimer()
+        self.Timer.start(300)
+        
+        self.OutStr = ''
+        
         #Connect Signals and Slots
         QtCore.QObject.connect(self.formUi.toolButton_chooseOutputDir, QtCore.SIGNAL("clicked()"), self.chooseOutputDir)
         QtCore.QObject.connect(self.formUi.pushButton_generate, QtCore.SIGNAL("clicked()"), self.run)
 
+        QtCore.QObject.connect(self.Calculix, QtCore.SIGNAL("started()"), self.calculixStarted)
+        QtCore.QObject.connect(self.Calculix, QtCore.SIGNAL("finished(int)"), self.calculixFinished)
+
+        QtCore.QObject.connect(self.Timer, QtCore.SIGNAL("timeout()"), self.UpdateText)
+        
         self.update()
         
 
+    def UpdateText(self):
+        if(self.Calculix.state() == QtCore.QProcess.ProcessState.Running):
+            out = self.Calculix.readAllStandardOutput()
+            #print out
+            if out:
+                self.OutStr = self.OutStr + unicode(out).replace('\n','<br>')
+                self.formUi.textEdit_Output.setText(self.OutStr)
+            self.formUi.label_Time.setText('Time: {0:4.1f}: '.format(time.time() - self.Start) )
 
+    def calculixError(self,error):
+        print "Error()",error
+        
+    def calculixStarted(self):
+        print "calculixStarted()"
+        print self.Calculix.state()
+        self.formUi.pushButton_generate.setText("Break Calculix")
+        
+        
+    def calculixFinished(self,exitCode):
+        print "calculixFinished()",exitCode
+        print self.Calculix.state()
+        out = self.Calculix.readAllStandardOutput()
+        print out
+        if out:
+            self.OutStr = self.OutStr + unicode(out).replace('\n','<br>')
+            self.formUi.textEdit_Output.setText(self.OutStr)
+
+        self.Timer.stop()
+        
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + '<font color="#00FF00">Calculix done!</font><br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
+
+        self.formUi.pushButton_generate.setText("Re-run Calculix")
+        print "Loading results...."
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + 'Loading result sets...<br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
+        self.formUi.label_Time.setText('Time: {0:4.1f}: '.format(time.time() - self.Start) )
+
+        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        CalculixLib.importFrd(self.Basename + '.frd',FemGui.getActiveAnalysis() )
+        QApplication.restoreOverrideCursor()
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + '<font color="#00FF00">Loading results done!</font><br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
+        self.formUi.label_Time.setText('Time: {0:4.1f}: '.format(time.time() - self.Start) )
+        
     def getStandardButtons(self):
         return int(QtGui.QDialogButtonBox.Close)
     
     def update(self):
         'fills the widgets'
-        self.formUi.lineEdit_outputDir.setText(self.params.GetString("JobDir",'/'))
+        self.formUi.lineEdit_outputDir.setText(tempfile.gettempdir())
         return 
                 
     def accept(self):
@@ -253,8 +314,14 @@ class _JobControlTaskPanel:
             self.formUi.lineEdit_outputDir.setText(dirname)
         
     def run(self):
-        dirName = self.formUi.lineEdit_outputDir.text()
+        self.Start = time.time()
         
+        #dirName = self.formUi.lineEdit_outputDir.text()
+        dirName = self.TempDir
+        print 'run() dir:',dirName
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + 'Check dependencies...<br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
+        self.formUi.label_Time.setText('Time: {0:4.1f}: '.format(time.time() - self.Start) )
         MeshObject = None
         if FemGui.getActiveAnalysis():
             for i in FemGui.getActiveAnalysis().Member:
@@ -293,13 +360,101 @@ class _JobControlTaskPanel:
             QtGui.QMessageBox.critical(None, "Missing prerequisit","No force-constraint nodes defined in the Analysis")
             return
         
+        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
         
-        filename_without_suffix = MeshObject.Name
-        #current_file_name
+        self.Basename = self.TempDir + '/' + MeshObject.Name
+        filename = self.Basename + '.inp'
+
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + self.Basename + '<br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
         
-        #young_modulus = float(matmap['FEM_youngsmodulus'])
-        #poisson_ratio = float(matmap['FEM_poissonratio'])
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + 'Write mesh...<br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
+
+        MeshObject.FemMesh.writeABAQUS(filename)
+        # reopen file with "append" and add the analysis definition
+        inpfile = open(filename,'a')
+        inpfile.write('\n\n')
         
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + 'Write loads & Co...<br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
+        
+        # write the fixed node set
+        NodeSetName = FixedObject.Name 
+        inpfile.write('*NSET,NSET=' + NodeSetName + '\n')
+        for o,f in FixedObject.References:
+            fo = o.Shape.getElement(f)
+            n = MeshObject.FemMesh.getNodesByFace(fo)
+            for i in n:
+                inpfile.write( str(i)+',\n')
+        inpfile.write('\n\n')
+        
+        # write the load node set 
+        NodeSetNameForce = ForceObject.Name 
+        inpfile.write('*NSET,NSET=' + NodeSetNameForce + '\n')
+        NbrForceNods = 0
+        for o,f in ForceObject.References:
+            fo = o.Shape.getElement(f)
+            n = MeshObject.FemMesh.getNodesByFace(fo)
+            for i in n:
+                inpfile.write( str(i)+',\n')
+                NbrForceNods = NbrForceNods + 1
+        inpfile.write('\n\n')
+        
+        # get the material properties
+        YM = FreeCAD.Units.Quantity(MathObject.Material['Mechanical_youngsmodulus'])
+        if YM.Unit.Type == '':
+            print 'Material "Mechanical_youngsmodulus" has no Unit, asuming kPa!'
+            YM = FreeCAD.Units.Quantity(YM.Value, FreeCAD.Units.Unit('Pa') )
+        
+        print YM
+        
+        PR = float( MathObject.Material['FEM_poissonratio'] )
+        print PR
+        
+        # now open again and write the setup:
+        inpfile.write('*MATERIAL, Name='+matmap['General_name'] + '\n')
+        inpfile.write('*ELASTIC \n')
+        inpfile.write('{0:.3f}, '.format(YM.Value) )
+        inpfile.write('{0:.3f}\n'.format(PR) )
+        inpfile.write('*SOLID SECTION, Elset=Eall, Material='+matmap['General_name'] + '\n')
+        inpfile.write('*INITIAL CONDITIONS, TYPE=STRESS, USER\n')
+        inpfile.write('*STEP\n')
+        inpfile.write('*STATIC\n')
+        inpfile.write('*BOUNDARY\n')
+        inpfile.write(NodeSetName + ',1,3,0.0\n')
+        #inpfile.write('*DLOAD\n')
+        #inpfile.write('Eall,NEWTON\n')
+        
+        Force = (ForceObject.Force * 1000.0) / NbrForceNods
+        vec = ForceObject.NormalDirection
+        inpfile.write('*CLOAD\n')
+        inpfile.write(NodeSetNameForce + ',1,' + `vec.x * Force` + '\n')
+        inpfile.write(NodeSetNameForce + ',2,' + `vec.y * Force` + '\n')
+        inpfile.write(NodeSetNameForce + ',3,' + `vec.z * Force` + '\n')
+
+        inpfile.write('*NODE FILE\n')
+        inpfile.write('U\n')
+        inpfile.write('*EL FILE\n')
+        inpfile.write('S, E\n')
+        inpfile.write('*NODE PRINT , NSET=Nall \n')
+        inpfile.write('U \n')
+        inpfile.write('*EL PRINT , ELSET=Eall \n')
+        inpfile.write('S \n')
+        inpfile.write('*END STEP \n')
+        
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + self.CalculixBinary + '<br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
+        
+        self.OutStr = self.OutStr + '<font color="#0000FF">{0:4.1f}:</font> '.format(time.time() - self.Start) + 'Run Calculix...<br>'
+        self.formUi.textEdit_Output.setText(self.OutStr)
+
+        # run Claculix
+        print 'run Calclulix at:', self.CalculixBinary , '  with: ', self.Basename
+        self.Calculix.start(self.CalculixBinary, ['-i',self.Basename])
+        
+        
+        QApplication.restoreOverrideCursor()
     
 class _ResultControlTaskPanel:
     '''The control for the displacement post-processing'''

@@ -33,6 +33,7 @@
 #include "TaskMultiTransformParameters.h"
 #include "Workbench.h"
 #include "ReferenceSelection.h"
+#include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Gui/Application.h>
@@ -139,6 +140,7 @@ void TaskPolarPatternParameters::setupUI()
     ui->checkReverse->setEnabled(true);
     ui->spinAngle->setEnabled(true);
     ui->spinOccurrences->setEnabled(true);
+    ui->spinAngle->setDecimals(Base::UnitsApi::getDecimals());
     updateUI();
 }
 
@@ -394,12 +396,20 @@ bool TaskDlgPolarPatternParameters::accept()
             return false;
 
         TaskPolarPatternParameters* polarpatternParameter = static_cast<TaskPolarPatternParameters*>(parameter);
-        std::vector<std::string> axes;
-        App::DocumentObject* obj;
-        polarpatternParameter->getAxis(obj, axes);
-        std::string axis = getPythonStr(obj, axes);
-        if (!axis.empty()) {            
-            Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Axis = %s", name.c_str(), axis.c_str());
+        std::string axis = polarpatternParameter->getAxis();
+        if (!axis.empty()) {
+            App::DocumentObject* sketch = 0;
+            if (axis == "N_Axis")
+                sketch = polarpatternParameter->getSketchObject();
+            else
+                sketch = polarpatternParameter->getSupportObject();
+
+            if (sketch) {
+                QString buf = QString::fromLatin1("(App.ActiveDocument.%1,[\"%2\"])");
+                buf = buf.arg(QString::fromLatin1(sketch->getNameInDocument()));
+                buf = buf.arg(QString::fromLatin1(axis.c_str()));
+                Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Axis = %s", name.c_str(), buf.toStdString().c_str());
+            }
         } else
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Axis = None", name.c_str());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Reversed = %u",name.c_str(),polarpatternParameter->getReverse());

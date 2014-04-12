@@ -21,11 +21,16 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,Draft,math,DraftVecUtils,ArchCommands
+import FreeCAD,Draft,math,DraftVecUtils,ArchCommands
 from FreeCAD import Vector
-from PySide import QtCore, QtGui
-from pivy import coin
-from DraftTools import translate
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui
+    from DraftTools import translate
+    from pivy import coin
+else:
+    def translate(ctxt,txt):
+        return txt
 
 __title__="FreeCAD Axis System"
 __author__ = "Yorik van Havre"
@@ -112,7 +117,7 @@ class _ViewProviderAxis:
     "A View Provider for the Axis object"
 
     def __init__(self,vobj):
-        vobj.addProperty("App::PropertyLength","BubbleSize","Arch", translate("Arch","The size of the axis bubbles"))
+        vobj.addProperty("App::PropertyFloat","BubbleSize","Arch", translate("Arch","The size of the axis bubbles"))
         vobj.addProperty("App::PropertyEnumeration","NumberingStyle","Arch", translate("Arch","The numbering style"))
         vobj.addProperty("App::PropertyEnumeration","DrawStyle","Base","")
         vobj.addProperty("App::PropertyFloat","LineWidth","Base","")
@@ -411,9 +416,10 @@ class _AxisTaskPanel:
         TaskPanel.setWindowTitle(QtGui.QApplication.translate("Arch", "Axes", None, QtGui.QApplication.UnicodeUTF8))
         self.delButton.setText(QtGui.QApplication.translate("Arch", "Remove", None, QtGui.QApplication.UnicodeUTF8))
         self.addButton.setText(QtGui.QApplication.translate("Arch", "Add", None, QtGui.QApplication.UnicodeUTF8))
-        self.title.setText(QtGui.QApplication.translate("Arch", "Distances and angles between axes", None, QtGui.QApplication.UnicodeUTF8))
+        self.title.setText(QtGui.QApplication.translate("Arch", "Distances (mm) and angles (deg) between axes", None, QtGui.QApplication.UnicodeUTF8))
         self.tree.setHeaderLabels([QtGui.QApplication.translate("Arch", "Axis", None, QtGui.QApplication.UnicodeUTF8),
                                    QtGui.QApplication.translate("Arch", "Distance", None, QtGui.QApplication.UnicodeUTF8),
                                    QtGui.QApplication.translate("Arch", "Angle", None, QtGui.QApplication.UnicodeUTF8)])
-          
-FreeCADGui.addCommand('Arch_Axis',_CommandAxis())
+ 
+if FreeCAD.GuiUp:          
+    FreeCADGui.addCommand('Arch_Axis',_CommandAxis())

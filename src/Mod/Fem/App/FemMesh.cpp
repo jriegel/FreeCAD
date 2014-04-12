@@ -29,7 +29,10 @@
 # include <strstream>
 # include <Bnd_Box.hxx>
 # include <BRepBndLib.hxx>
-# include <BRepAlgo_NormalProjection.hxx>
+# include <BRepExtrema_DistShapeShape.hxx>
+# include <TopoDS_Vertex.hxx>
+# include <BRepBuilderAPI_MakeVertex.hxx>
+# include <gp_Pnt.hxx>
 #endif
 
 #include <Base/Writer.h>
@@ -326,6 +329,7 @@ SMESH_Mesh* FemMesh::getSMesh()
     return myMesh;
 }
 
+
 SMESH_Gen * FemMesh::getGenerator()
 {
     return myGen;
@@ -404,8 +408,37 @@ std::set<long> FemMesh::getSurfaceNodes(const TopoDS_Face &face)const
     std::set<long> result;
     const SMESHDS_Mesh* data = myMesh->GetMeshDS();
 
-    BRepAlgo_NormalProjection algo;
+    Bnd_Box box;
+    BRepBndLib::Add(face, box);
+    // limit where the mesh node belongs to the face:
+    double limit = box.SquareExtent()/10000.0;
+    box.Enlarge(limit);
 
+    // get the actuall transform of the FemMesh
+    const Base::Matrix4D Mtrx(getTransform());
+
+    SMDS_NodeIteratorPtr aNodeIter = myMesh->GetMeshDS()->nodesIterator();
+	for (int i=0;aNodeIter->more();i++) {
+		const SMDS_MeshNode* aNode = aNodeIter->next();
+        Base::Vector3d vec(aNode->X(),aNode->Y(),aNode->Z());
+        // Apply the matrix to hold the BoundBox in absolute space. 
+        vec = Mtrx * vec;
+
+        if(!box.IsOut(gp_Pnt(vec.x,vec.y,vec.z))){
+            // create a Vertex
+            BRepBuilderAPI_MakeVertex aBuilder(gp_Pnt(vec.x,vec.y,vec.z));
+            TopoDS_Shape s = aBuilder.Vertex();
+            // measure distance
+            BRepExtrema_DistShapeShape measure(face,s);
+            measure.Perform();
+            if (!measure.IsDone() || measure.NbSolution() < 1)
+                continue;
+            
+            if(measure.Value() < limit)         
+                result.insert(aNode->GetID());
+
+        }
+	}
 
     return result;
 }
@@ -466,17 +499,28 @@ void FemMesh::readNastran(const std::string &Filename)
 			//we have to take care of that
 			//At a first step we only extract Quadratic Tetrahedral Elements
 			std::getline(inputfile,line2);
-			element_id.push_back(atoi(line1.substr(8,16).c_str()));
+            unsigned int id = atoi(line1.substr(8,16).c_str());
+            int offset = 0;
+
+            if(id < 1000000)
+                offset = 0;
+            else if (id < 10000000)
+                offset = 1;
+            else if (id < 100000000)
+                offset = 2;
+            
+
+			element_id.push_back(id);
 			tetra_element.push_back(atoi(line1.substr(24,32).c_str()));
 			tetra_element.push_back(atoi(line1.substr(32,40).c_str()));
 			tetra_element.push_back(atoi(line1.substr(40,48).c_str()));
 			tetra_element.push_back(atoi(line1.substr(48,56).c_str()));
 			tetra_element.push_back(atoi(line1.substr(56,64).c_str()));
 			tetra_element.push_back(atoi(line1.substr(64,72).c_str()));
-			tetra_element.push_back(atoi(line2.substr(8,16).c_str()));
-			tetra_element.push_back(atoi(line2.substr(16,24).c_str()));
-			tetra_element.push_back(atoi(line2.substr(24,32).c_str()));
-			tetra_element.push_back(atoi(line2.substr(32,40).c_str()));
+			tetra_element.push_back(atoi(line2.substr(8+offset,16+offset).c_str()));
+			tetra_element.push_back(atoi(line2.substr(16+offset,24+offset).c_str()));
+			tetra_element.push_back(atoi(line2.substr(24+offset,32+offset).c_str()));
+			tetra_element.push_back(atoi(line2.substr(32+offset,40+offset).c_str()));
 
 			all_elements.push_back(tetra_element);
 		}

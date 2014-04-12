@@ -853,7 +853,7 @@ App::DocumentObjectExecReturn *Spiral::execute(void)
         BRepLib::BuildCurves3d(wire);
 
         Handle_Geom_Plane aPlane = new Geom_Plane(gp_Pnt(0.0,0.0,0.0), gp::DZ());
-        Standard_Real range = (myNumRot+1) * myGrowth + 1;
+        Standard_Real range = (myNumRot+1) * myGrowth + 1 + myRadius;
         BRepBuilderAPI_MakeFace mkFace(aPlane, -range, range, -range, range
 #if OCC_VERSION_HEX >= 0x060502
         , Precision::Confusion()
@@ -969,7 +969,7 @@ void Wedge::onChanged(const App::Property* prop)
     Part::Primitive::onChanged(prop);
 }
 
-App::PropertyFloatConstraint::Constraints Ellipse::angleRange = {0.0,360.0,1.0};
+App::PropertyQuantityConstraint::Constraints Ellipse::angleRange = {0.0,360.0,1.0};
 
 PROPERTY_SOURCE(Part::Ellipse, Part::Primitive)
 

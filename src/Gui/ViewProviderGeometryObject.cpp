@@ -24,6 +24,7 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <cfloat>
 # include <QAction>
 # include <QMenu>
 # include <Inventor/actions/SoSearchAction.h>
@@ -55,6 +56,7 @@
 #include <App/PropertyGeo.h>
 #include <App/GeoFeature.h>
 #include <Inventor/draggers/SoCenterballDragger.h>
+#include <Inventor/nodes/SoResetTransform.h>
 #if (COIN_MAJOR_VERSION > 2)
 #include <Inventor/nodes/SoDepthBuffer.h>
 #endif
@@ -161,20 +163,11 @@ void ViewProviderGeometryObject::attach(App::DocumentObject *pcObj)
 void ViewProviderGeometryObject::updateData(const App::Property* prop)
 {
     if (prop->isDerivedFrom(App::PropertyComplexGeoData::getClassTypeId())) {
+        // Note: When the placement of non-parametric objects changes there is currently no update
+        // of the bounding box information.
         Base::BoundBox3d box = static_cast<const App::PropertyComplexGeoData*>(prop)->getBoundingBox();
         pcBoundingBox->minBounds.setValue(box.MinX, box.MinY, box.MinZ);
         pcBoundingBox->maxBounds.setValue(box.MaxX, box.MaxY, box.MaxZ);
-        if (pcBoundSwitch) {
-            SoGroup* grp = static_cast<SoGroup*>(pcBoundSwitch->getChild(0));
-            SoTransform* trf = static_cast<SoTransform*>(grp->getChild(2));
-            SbMatrix m;
-            m.setTransform(pcTransform->translation.getValue(),
-                           pcTransform->rotation.getValue(),
-                           pcTransform->scaleFactor.getValue(),
-                           pcTransform->scaleOrientation.getValue(),
-                           pcTransform->center.getValue());
-            trf->setMatrix(m.inverse());
-        }
     }
     else if (prop->isDerivedFrom(App::PropertyPlacement::getClassTypeId()) &&
              strcmp(prop->getName(), "Placement") == 0) {
@@ -226,12 +219,17 @@ bool ViewProviderGeometryObject::setEdit(int ModNum)
         SoDragger* dragger = manip->getDragger();
         dragger->addStartCallback(dragStartCallback, this);
         dragger->addFinishCallback(dragFinishCallback, this);
+#if 1
+        dragger->addMotionCallback(dragMotionCallback, this);
+        dragger->setUserData(manip);
+#else
         // Attach a sensor to the transform manipulator and set it as its user
         // data to delete it when the view provider leaves the edit mode
         SoNodeSensor* sensor = new SoNodeSensor(sensorCallback, this);
         //sensor->setPriority(0);
         sensor->attach(manip);
         manip->setUserData(sensor);
+#endif
         return manip->replaceNode(path);
     }
     return false;
@@ -289,16 +287,20 @@ void ViewProviderGeometryObject::unsetEdit(int ModNum)
 
     // The manipulator has a sensor as user data and this sensor contains the view provider
     SoCenterballManip * manip = static_cast<SoCenterballManip*>(path->getTail());
+#if 0
     SoNodeSensor* sensor = reinterpret_cast<SoNodeSensor*>(manip->getUserData());
+#endif
     // #0000939: Pressing Escape while pivoting a box crashes
     // #0000942: Crash when 2xdouble-click on part
     SoDragger* dragger = manip->getDragger();
     if (dragger && dragger->getHandleEventAction())
         dragger->grabEventsCleanup();
 
+#if 0
     // detach sensor
     sensor->detach();
     delete sensor;
+#endif
 
     SoTransform* transform = this->pcTransform;
     manip->replaceManip(path, transform);
@@ -430,6 +432,63 @@ void ViewProviderGeometryObject::sensorCallback(void * data, SoSensor * s)
 #endif
 }
 
+void ViewProviderGeometryObject::dragMotionCallback(void * data, SoDragger * d)
+{
+    SoNode* node = reinterpret_cast<SoNode*>(d->getUserData());
+    if (node && node->getTypeId().isDerivedFrom(SoCenterballManip::getClassTypeId())) {
+        // apply the transformation data to the placement
+        SoCenterballManip* manip = static_cast<SoCenterballManip*>(node);
+        float q0, q1, q2, q3;
+        // See also SoTransformManip::valueChangedCB
+        // to get translation directly from dragger
+        SbVec3f move = manip->translation.getValue();
+        SbVec3f center = manip->center.getValue();
+        manip->rotation.getValue().getValue(q0, q1, q2, q3);
+
+        // get the placement
+        ViewProviderGeometryObject* view = reinterpret_cast<ViewProviderGeometryObject*>(data);
+        if (view && view->pcObject && view->pcObject->getTypeId().isDerivedFrom(App::GeoFeature::getClassTypeId())) {
+            App::GeoFeature* geometry = static_cast<App::GeoFeature*>(view->pcObject);
+            // Note: If R is the rotation, c the rotation center and t the translation
+            // vector then Inventor applies the following transformation: R*(x-c)+c+t
+            // In FreeCAD a placement only has a rotation and a translation part but
+            // no rotation center. This means that we must divide the transformation
+            // in a rotation and translation part.
+            // R * (x-c) + c + t = R * x - R * c + c + t
+            // The rotation part is R, the translation part t', however, is:
+            // t' = t + c - R * c
+            Base::Placement newPlm;
+            newPlm.setRotation(Base::Rotation(q0,q1,q2,q3));
+            Base::Vector3d t(move[0],move[1],move[2]);
+            Base::Vector3d c(center[0],center[1],center[2]);
+            t += c;
+            newPlm.getRotation().multVec(c,c);
+            t -= c;
+            newPlm.setPosition(t);
+
+            // #0001441: entering Transform mode degrades the Placemens rotation to single precision
+            Base::Placement oldPlm = geometry->Placement.getValue();
+            const Base::Vector3d& p1 = oldPlm.getPosition();
+            const Base::Vector3d& p2 = newPlm.getPosition();
+            if (fabs(p1.x-p2.x) < FLT_EPSILON &&
+                fabs(p1.y-p2.y) < FLT_EPSILON &&
+                fabs(p1.z-p2.z) < FLT_EPSILON) {
+                newPlm.setPosition(oldPlm.getPosition());
+            }
+
+            const Base::Rotation& r1 = oldPlm.getRotation();
+            const Base::Rotation& r2 = newPlm.getRotation();
+            if (fabs(r1[0]-r2[0]) < FLT_EPSILON &&
+                fabs(r1[1]-r2[1]) < FLT_EPSILON &&
+                fabs(r1[2]-r2[2]) < FLT_EPSILON &&
+                fabs(r1[3]-r2[3]) < FLT_EPSILON) {
+                newPlm.setRotation(oldPlm.getRotation());
+            }
+            geometry->Placement.setValue(newPlm);
+        }
+    }
+}
+
 void ViewProviderGeometryObject::dragStartCallback(void *data, SoDragger *)
 {
     // This is called when a manipulator is about to manipulating
@@ -495,7 +554,7 @@ void ViewProviderGeometryObject::showBoundingBox(bool show)
         color->rgb.setValue(r, g, b);
         pBoundingSep->addChild(color);
 
-        pBoundingSep->addChild(new SoTransform());
+        pBoundingSep->addChild(new SoResetTransform());
         pBoundingSep->addChild(pcBoundingBox);
         pcBoundingBox->coordsOn.setValue(false);
         pcBoundingBox->dimensionsOn.setValue(true);

@@ -51,6 +51,7 @@
 # include <Inventor/nodes/SoTranslation.h>
 # include <Inventor/nodes/SoText2.h>
 # include <Inventor/nodes/SoFont.h>
+# include <Inventor/nodes/SoPickStyle.h>
 # include <Inventor/sensors/SoIdleSensor.h>
 # include <Inventor/nodes/SoCamera.h>
 
@@ -88,6 +89,7 @@
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
 #include <Gui/DlgEditFileIncludeProptertyExternal.h>
+#include <Gui/SoFCBoundingBox.h>
 #include <Gui/SoFCUnifiedSelection.h>
 
 #include <Mod/Part/App/Geometry.h>
@@ -125,11 +127,12 @@ SbVec2s ViewProviderSketch::newCursorPos;
 //**************************************************************************
 // Edit data structure
 
-/// Data structure while edit the sketch
+/// Data structure while editing the sketch
 struct EditData {
     EditData():
     sketchHandler(0),
     editDatumDialog(false),
+    buttonPress(false),
     DragPoint(-1),
     DragCurve(-1),
     DragConstraint(-1),
@@ -146,12 +149,13 @@ struct EditData {
     PointsCoordinate(0),
     CurvesCoordinate(0),
     CurveSet(0), EditCurveSet(0), RootCrossSet(0),
-    PointSet(0)
+    PointSet(0), pickStyleAxes(0)
     {}
 
     // pointer to the active handler for new sketch objects
     DrawSketchHandler *sketchHandler;
     bool editDatumDialog;
+    bool buttonPress;
 
     // dragged point
     int DragPoint;
@@ -167,6 +171,7 @@ struct EditData {
     int PreselectConstraint;
     bool blockedPreselection;
     bool FullyConstrained;
+    bool visibleBeforeEdit;
 
     // instance of the solver
     Sketcher::Sketch ActSketch;
@@ -198,6 +203,7 @@ struct EditData {
     SoTranslation *textPos;
 
     SoGroup       *constrGroup;
+    SoPickStyle   *pickStyleAxes;
 };
 
 
@@ -241,6 +247,23 @@ ViewProviderSketch::ViewProviderSketch()
     xInit=0;
     yInit=0;
     relative=false;
+
+    unsigned long color;
+    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/View");
+
+    // edge color
+    App::Color edgeColor = LineColor.getValue();
+    color = (unsigned long)(edgeColor.getPackedValue());
+    color = hGrp->GetUnsigned("SketchEdgeColor", color);
+    edgeColor.setPackedValue((uint32_t)color);
+    LineColor.setValue(edgeColor);
+
+    // vertex color
+    App::Color vertexColor = PointColor.getValue();
+    color = (unsigned long)(vertexColor.getPackedValue());
+    color = hGrp->GetUnsigned("SketchVertexColor", color);
+    vertexColor.setPackedValue((uint32_t)color);
+    PointColor.setValue(vertexColor);
 }
 
 ViewProviderSketch::~ViewProviderSketch()
@@ -258,15 +281,21 @@ void ViewProviderSketch::activateHandler(DrawSketchHandler *newHandler)
     edit->sketchHandler->activated(this);
 }
 
-/// removes the active handler
-void ViewProviderSketch::purgeHandler(void)
+void ViewProviderSketch::deactivateHandler()
 {
     assert(edit);
     assert(edit->sketchHandler != 0);
+    edit->sketchHandler->deactivated(this);
     edit->sketchHandler->unsetCursor();
     delete(edit->sketchHandler);
     edit->sketchHandler = 0;
     Mode = STATUS_NONE;
+}
+
+/// removes the active handler
+void ViewProviderSketch::purgeHandler(void)
+{
+    deactivateHandler();
 
     // ensure that we are in sketch only selection mode
     Gui::MDIView *mdi = Gui::Application::Instance->activeDocument()->getActiveView();
@@ -275,6 +304,15 @@ void ViewProviderSketch::purgeHandler(void)
 
     SoNode* root = viewer->getSceneGraph();
     static_cast<Gui::SoFCUnifiedSelection*>(root)->selectionRole.setValue(FALSE);
+}
+
+void ViewProviderSketch::setAxisPickStyle(bool on)
+{
+    assert(edit);
+    if (on)
+        edit->pickStyleAxes->style = SoPickStyle::SHAPE;
+    else
+        edit->pickStyleAxes->style = SoPickStyle::UNPICKABLE;
 }
 
 // **********************************************************************************
@@ -321,6 +359,14 @@ bool ViewProviderSketch::keyPressed(bool pressed, int key)
                     Mode = STATUS_NONE;
                 }
                 return true;
+            }
+            if (edit) {
+                // #0001479: 'Escape' key dismissing dialog cancels Sketch editing
+                // If we receive a button release event but not a press event before
+                // then ignore this one.
+                if (!pressed && !edit->buttonPress)
+                    return true;
+                edit->buttonPress = pressed;
             }
             return false;
         }
@@ -511,7 +557,7 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                         //Base::Console().Log("Select Point:%d\n",this->DragPoint);
                         // Do selection
                         std::stringstream ss;
-                        ss << "Vertex" << edit->PreselectPoint;
+                        ss << "Vertex" << edit->PreselectPoint + 1;
 
                         if (Gui::Selection().isSelected(getSketchObject()->getDocument()->getName()
                            ,getSketchObject()->getNameInDocument(),ss.str().c_str()) ) {
@@ -536,9 +582,9 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                         //Base::Console().Log("Select Point:%d\n",this->DragPoint);
                         std::stringstream ss;
                         if (edit->PreselectCurve >= 0)
-                            ss << "Edge" << edit->PreselectCurve;
+                            ss << "Edge" << edit->PreselectCurve + 1;
                         else // external geometry
-                            ss << "ExternalEdge" << -edit->PreselectCurve - 3;
+                            ss << "ExternalEdge" << -edit->PreselectCurve - 2;
 
                         // If edge already selected move from selection
                         if (Gui::Selection().isSelected(getSketchObject()->getDocument()->getName()
@@ -594,7 +640,7 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                     if (pp) {
 
                         std::stringstream ss;
-                        ss << "Constraint" << edit->PreselectConstraint;
+                        ss << "Constraint" << edit->PreselectConstraint + 1;
 
                         // If the constraint already selected remove
                         if (Gui::Selection().isSelected(getSketchObject()->getDocument()->getName()
@@ -712,7 +758,9 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                             geom->setCommand("Sketcher geoms");
                             *geom << "Sketcher_CreatePoint"
                                   << "Sketcher_CreateArc"
+                                  << "Sketcher_Create3PointArc"
                                   << "Sketcher_CreateCircle"
+                                  << "Sketcher_Create3PointCircle"
                                   << "Sketcher_CreateLine"
                                   << "Sketcher_CreatePolyline"
                                   << "Sketcher_CreateRectangle"
@@ -768,8 +816,8 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                                     // If the object selected is of type edge
                                     if (it->size() > 4 && it->substr(0,4) == "Edge") {
                                         // Get the index of the object selected
-                                        int index=std::atoi(it->substr(4,4000).c_str());
-                                        if (edit->PreselectCurve == index)
+                                        int GeoId = std::atoi(it->substr(4,4000).c_str()) - 1;
+                                        if (edit->PreselectCurve == GeoId)
                                             rightClickOnSelectedLine = true;
                                     } else {
                                         // The selection is not exclusively edges
@@ -1221,18 +1269,19 @@ void ViewProviderSketch::onSelectionChanged(const Gui::SelectionChanges& msg)
                     if (msg.pSubName) {
                         std::string shapetype(msg.pSubName);
                         if (shapetype.size() > 4 && shapetype.substr(0,4) == "Edge") {
-                            int index=std::atoi(&shapetype[4]);
-                            edit->SelCurvSet.insert(index);
+                            int GeoId = std::atoi(&shapetype[4]) - 1;
+                            edit->SelCurvSet.insert(GeoId);
                             this->updateColor();
                         }
                         else if (shapetype.size() > 12 && shapetype.substr(0,12) == "ExternalEdge") {
-                            int index=std::atoi(&shapetype[12]);
-                            edit->SelCurvSet.insert(-index-3);
+                            int GeoId = std::atoi(&shapetype[12]) - 1;
+                            GeoId = -GeoId - 3;
+                            edit->SelCurvSet.insert(GeoId);
                             this->updateColor();
                         }
                         else if (shapetype.size() > 6 && shapetype.substr(0,6) == "Vertex") {
-                            int index=std::atoi(&shapetype[6]);
-                            addSelectPoint(index);
+                            int VtId = std::atoi(&shapetype[6]) - 1;
+                            addSelectPoint(VtId);
                             this->updateColor();
                         }
                         else if (shapetype == "RootPoint") {
@@ -1248,8 +1297,8 @@ void ViewProviderSketch::onSelectionChanged(const Gui::SelectionChanges& msg)
                             this->updateColor();
                         }
                         else if (shapetype.size() > 10 && shapetype.substr(0,10) == "Constraint") {
-                            int index=std::atoi(&shapetype[10]);
-                            edit->SelConstraintSet.insert(index);
+                            int ConstrId = std::atoi(&shapetype[10]) - 1;
+                            edit->SelConstraintSet.insert(ConstrId);
                             this->drawConstraintIcons();
                             this->updateColor();
                         }
@@ -1265,18 +1314,19 @@ void ViewProviderSketch::onSelectionChanged(const Gui::SelectionChanges& msg)
                     if (msg.pSubName) {
                         std::string shapetype(msg.pSubName);
                         if (shapetype.size() > 4 && shapetype.substr(0,4) == "Edge") {
-                            int index=std::atoi(&shapetype[4]);
-                            edit->SelCurvSet.erase(index);
+                            int GeoId = std::atoi(&shapetype[4]) - 1;
+                            edit->SelCurvSet.erase(GeoId);
                             this->updateColor();
                         }
                         else if (shapetype.size() > 12 && shapetype.substr(0,12) == "ExternalEdge") {
-                            int index=std::atoi(&shapetype[12]);
-                            edit->SelCurvSet.erase(-index-3);
+                            int GeoId = std::atoi(&shapetype[12]) - 1;
+                            GeoId = -GeoId - 3;
+                            edit->SelCurvSet.erase(GeoId);
                             this->updateColor();
                         }
                         else if (shapetype.size() > 6 && shapetype.substr(0,6) == "Vertex") {
-                            int index=std::atoi(&shapetype[6]);
-                            removeSelectPoint(index);
+                            int VtId = std::atoi(&shapetype[6]) - 1;
+                            removeSelectPoint(VtId);
                             this->updateColor();
                         }
                         else if (shapetype == "RootPoint") {
@@ -1292,8 +1342,8 @@ void ViewProviderSketch::onSelectionChanged(const Gui::SelectionChanges& msg)
                             this->updateColor();
                         }
                         else if (shapetype.size() > 10 && shapetype.substr(0,10) == "Constraint") {
-                            int index=std::atoi(&shapetype[10]);
-                            edit->SelConstraintSet.erase(index);
+                            int ConstrId = std::atoi(&shapetype[10]) - 1;
+                            edit->SelConstraintSet.erase(ConstrId);
                             this->drawConstraintIcons();
                             this->updateColor();
                         }
@@ -1377,7 +1427,7 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point, int &PtI
 
         if (PtIndex != -1 && PtIndex != edit->PreselectPoint) { // if a new point is hit
             std::stringstream ss;
-            ss << "Vertex" << PtIndex;
+            ss << "Vertex" << PtIndex + 1;
             bool accepted =
             Gui::Selection().setPreselect(getSketchObject()->getDocument()->getName()
                                          ,getSketchObject()->getNameInDocument()
@@ -1398,9 +1448,9 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point, int &PtI
         } else if (GeoIndex != -1 && GeoIndex != edit->PreselectCurve) {  // if a new curve is hit
             std::stringstream ss;
             if (GeoIndex >= 0)
-                ss << "Edge" << GeoIndex;
+                ss << "Edge" << GeoIndex + 1;
             else // external geometry
-                ss << "ExternalEdge" << -GeoIndex - 3; // convert index start from -3 to 0
+                ss << "ExternalEdge" << -GeoIndex - 2; // convert index start from -3 to 1
             bool accepted =
             Gui::Selection().setPreselect(getSketchObject()->getDocument()->getName()
                                          ,getSketchObject()->getNameInDocument()
@@ -1447,7 +1497,7 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point, int &PtI
             }
         } else if (ConstrIndex != -1 && ConstrIndex != edit->PreselectConstraint) { // if a constraint is hit
             std::stringstream ss;
-            ss << "Constraint" << ConstrIndex;
+            ss << "Constraint" << ConstrIndex + 1;
             bool accepted =
             Gui::Selection().setPreselect(getSketchObject()->getDocument()->getName()
                                          ,getSketchObject()->getNameInDocument()
@@ -1543,7 +1593,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
 
             if (polygon.Contains(Base::Vector2D(pnt0.x, pnt0.y))) {
                 std::stringstream ss;
-                ss << "Vertex" << VertexId;
+                ss << "Vertex" << VertexId + 1;
                 Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
             }
 
@@ -1560,19 +1610,19 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
             bool pnt2Inside = polygon.Contains(Base::Vector2D(pnt2.x, pnt2.y));
             if (pnt1Inside) {
                 std::stringstream ss;
-                ss << "Vertex" << VertexId - 1;
+                ss << "Vertex" << VertexId;
                 Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
             }
 
             if (pnt2Inside) {
                 std::stringstream ss;
-                ss << "Vertex" << VertexId;
+                ss << "Vertex" << VertexId + 1;
                 Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
             }
 
             if (pnt1Inside && pnt2Inside) {
                 std::stringstream ss;
-                ss << "Edge" << GeoId;
+                ss << "Edge" << GeoId + 1;
                 Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
             }
 
@@ -1587,7 +1637,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
 
             if (polygon.Contains(Base::Vector2D(pnt0.x, pnt0.y))) {
                 std::stringstream ss;
-                ss << "Vertex" << VertexId;
+                ss << "Vertex" << VertexId + 1;
                 Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
 
                 int countSegments = 12;
@@ -1614,7 +1664,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
                 if (bpolyInside) {
                     ss.clear();
                     ss.str("");
-                    ss << "Edge" << GeoId;
+                    ss << "Edge" << GeoId + 1;
                     Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(),ss.str().c_str());
                 }
             }
@@ -1638,20 +1688,20 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
             bool pnt0Inside = polygon.Contains(Base::Vector2D(pnt0.x, pnt0.y));
             if (pnt0Inside) {
                 std::stringstream ss;
-                ss << "Vertex" << VertexId - 2;
+                ss << "Vertex" << VertexId - 1;
                 Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
             }
 
             bool pnt1Inside = polygon.Contains(Base::Vector2D(pnt1.x, pnt1.y));
             if (pnt1Inside) {
                 std::stringstream ss;
-                ss << "Vertex" << VertexId - 1;
+                ss << "Vertex" << VertexId;
                 Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
             }
 
             if (polygon.Contains(Base::Vector2D(pnt2.x, pnt2.y))) {
                 std::stringstream ss;
-                ss << "Vertex" << VertexId;
+                ss << "Vertex" << VertexId + 1;
                 Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
             }
 
@@ -1685,7 +1735,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
 
                 if (bpolyInside) {
                     std::stringstream ss;
-                    ss << "Edge" << GeoId;
+                    ss << "Edge" << GeoId + 1;
                     Gui::Selection().addSelection(doc->getName(), sketchObject->getNameInDocument(), ss.str().c_str());
                 }
             }
@@ -2730,6 +2780,9 @@ void ViewProviderSketch::rebuildConstraintsVisual(void)
     edit->constrGroup->removeAllChildren();
     edit->vConstrType.clear();
 
+    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/View");
+    int fontSize = hGrp->GetInt("EditSketcherFontSize", 17);
+
     for (std::vector<Sketcher::Constraint *>::const_iterator it=constrlist.begin(); it != constrlist.end(); ++it) {
         // root separator for one constraint
         SoSeparator *sep = new SoSeparator();
@@ -2764,7 +2817,7 @@ void ViewProviderSketch::rebuildConstraintsVisual(void)
                 text->norm.setValue(norm);
                 text->string = "";
                 text->textColor = ConstrDimColor;
-                text->size.setValue(17);
+                text->size.setValue(fontSize);
                 text->useAntialiasing = false;
                 SoAnnotation *anno = new SoAnnotation();
                 anno->renderCaching = SoSeparator::OFF;
@@ -2936,6 +2989,7 @@ bool ViewProviderSketch::setEdit(int ModNum)
     edit = new EditData();
 
     createEditInventorNodes();
+    edit->visibleBeforeEdit = this->isVisible();
     this->hide(); // avoid that the wires interfere with the edit lines
 
     ShowGrid.setValue(true);
@@ -2963,10 +3017,18 @@ bool ViewProviderSketch::setEdit(int ModNum)
     color = (unsigned long)(FullyConstrainedColor.getPackedValue());
     color = hGrp->GetUnsigned("FullyConstrainedColor", color);
     FullyConstrainedColor.setPackedValue((uint32_t)color, transparency);
-    // constraints dimensions, icons and external geometry colors are hard coded
-    // ConstrDimColor;
-    // ConstrIcoColor;
-    // CurveExternalColor;
+    // set the constraint dimension color
+    color = (unsigned long)(ConstrDimColor.getPackedValue());
+    color = hGrp->GetUnsigned("ConstrainedDimColor", color);
+    ConstrDimColor.setPackedValue((uint32_t)color, transparency);
+    // set the constraint color
+    color = (unsigned long)(ConstrIcoColor.getPackedValue());
+    color = hGrp->GetUnsigned("ConstrainedIcoColor", color);
+    ConstrIcoColor.setPackedValue((uint32_t)color, transparency);
+    // set the external geometry color
+    color = (unsigned long)(CurveExternalColor.getPackedValue());
+    color = hGrp->GetUnsigned("ExternalColor", color);
+    CurveExternalColor.setPackedValue((uint32_t)color, transparency);
 
     // set the highlight color
     unsigned long highlight = (unsigned long)(PreselectColor.getPackedValue());
@@ -3137,7 +3199,10 @@ void ViewProviderSketch::createEditInventorNodes(void)
     curvesRoot->addChild(edit->CurveSet);
 
     // stuff for the RootCross lines +++++++++++++++++++++++++++++++++++++++
-    SoSeparator* crossRoot = new SoSeparator;
+    SoGroup* crossRoot = new Gui::SoSkipBoundingGroup;
+    edit->pickStyleAxes = new SoPickStyle();
+    edit->pickStyleAxes->style = SoPickStyle::SHAPE;
+    crossRoot->addChild(edit->pickStyleAxes);
     edit->EditRoot->addChild(crossRoot);
     MtlBind = new SoMaterialBinding;
     MtlBind->setName("RootCrossMaterialBinding");
@@ -3161,8 +3226,6 @@ void ViewProviderSketch::createEditInventorNodes(void)
 
     edit->RootCrossSet = new SoLineSet;
     edit->RootCrossSet->setName("RootCrossLineSet");
-    edit->RootCrossSet->numVertices.set1Value(0,2);
-    edit->RootCrossSet->numVertices.set1Value(1,2);
     crossRoot->addChild(edit->RootCrossSet);
 
     // stuff for the EditCurves +++++++++++++++++++++++++++++++++++++++
@@ -3237,25 +3300,29 @@ void ViewProviderSketch::unsetEdit(int ModNum)
     ShowGrid.setValue(false);
     TightGrid.setValue(true);
 
-    if (edit != NULL) {
-        edit->EditRoot->removeAllChildren();
-        pcRoot->removeChild(edit->EditRoot);
+    if (edit->sketchHandler)
+        deactivateHandler();
 
-        if (edit->sketchHandler)
-            purgeHandler();
+    edit->EditRoot->removeAllChildren();
+    pcRoot->removeChild(edit->EditRoot);
 
-        delete edit;
-        edit = 0;
-
+    if (edit->visibleBeforeEdit)
         this->show();
+    else
+        this->hide();
 
-        try {
-            // and update the sketch
-            getSketchObject()->getDocument()->recompute();
-        }
-        catch (...) {
-        }
+    delete edit;
+    edit = 0;
+
+    this->show();
+
+    try {
+        // and update the sketch
+        getSketchObject()->getDocument()->recompute();
     }
+    catch (...) {
+    }
+    
 
     // clear the selection and set the new/edited sketch(convenience)
     Gui::Selection().clearSelection();
@@ -3438,6 +3505,8 @@ bool ViewProviderSketch::onDelete(const std::vector<std::string> &subList)
 {
     if (edit) {
         std::vector<Gui::SelectionObject> selection = Gui::Selection().getSelectionEx();
+        if (selection.empty())
+            return false;
         const std::vector<std::string> &SubNames = selection[0].getSubNames();
 
         Gui::Selection().clearSelection();
@@ -3450,14 +3519,14 @@ bool ViewProviderSketch::onDelete(const std::vector<std::string> &subList)
         // go through the selected subelements
         for (std::vector<std::string>::const_iterator it=SubNames.begin(); it != SubNames.end(); ++it) {
             if (it->size() > 4 && it->substr(0,4) == "Edge") {
-                int GeoId = std::atoi(it->substr(4,4000).c_str());
+                int GeoId = std::atoi(it->substr(4,4000).c_str()) - 1;
                 delGeometries.insert(GeoId);
             } else if (it->size() > 12 && it->substr(0,12) == "ExternalEdge") {
-                int GeoId = std::atoi(it->substr(12,4000).c_str());
+                int GeoId = std::atoi(it->substr(12,4000).c_str()) - 1;
                 GeoId = -GeoId - 3;
                 delGeometries.insert(GeoId);
             } else if (it->size() > 6 && it->substr(0,6) == "Vertex") {
-                int VtId = std::atoi(it->substr(6,4000).c_str());
+                int VtId = std::atoi(it->substr(6,4000).c_str()) - 1;
                 int GeoId;
                 Sketcher::PointPos PosId;
                 getSketchObject()->getGeoVertexIndex(VtId, GeoId, PosId);
@@ -3469,7 +3538,7 @@ bool ViewProviderSketch::onDelete(const std::vector<std::string> &subList)
             } else if (*it == "RootPoint") {
                 delCoincidents.insert(-1);
             } else if (it->size() > 10 && it->substr(0,10) == "Constraint") {
-                int ConstrId = std::atoi(it->substr(10,4000).c_str());
+                int ConstrId = std::atoi(it->substr(10,4000).c_str()) - 1;
                 delConstraints.insert(ConstrId);
             }
         }

@@ -48,6 +48,11 @@ Sub-elements such as vertices, edges or faces are accessible as:
         <UserDocu>Export the content of this shape to a string in BREP format. BREP is a CasCade native format.</UserDocu>
       </Documentation>
     </Methode>
+    <Methode Name="dumpToString" Const="true">
+      <Documentation>
+        <UserDocu>Dump information about the shape to a string.</UserDocu>
+      </Documentation>
+    </Methode>
     <Methode Name="exportStl" Const="true">
       <Documentation>
         <UserDocu>Export the content of this shape to an STL mesh file.</UserDocu>
@@ -166,7 +171,8 @@ The plane is given with its base point and its normal direction.</UserDocu>
     </Methode>
     <Methode Name="transformGeometry" Const="true">
       <Documentation>
-        <UserDocu>Apply geometric transformation on a copy of the shape.
+        <UserDocu>Apply geometric transformation on this or a copy the shape.
+This method returns a new shape.
 The transformation to be applied is defined as a 4x4 matrix.
 The underlying geometry of the following shapes may change:
 - a curve which supports an edge of the shape, or
@@ -182,6 +188,8 @@ The transformation is applied to:
 
 Note: If you want to transform a shape without changing the
 underlying geometry then use the methods translate or rotate.
+
+transformGeometry(Matrix) -> Shape
 </UserDocu>
       </Documentation>
     </Methode>
@@ -189,7 +197,7 @@ underlying geometry then use the methods translate or rotate.
       <Documentation>
         <UserDocu>Apply transformation on a shape without changing
 the underlying geometry.
-transformShape(Matrix,[boolean copy=False])</UserDocu>
+transformShape(Matrix,[boolean copy=False]) -> None</UserDocu>
       </Documentation>
     </Methode>
     <Methode Name="translate">
@@ -228,7 +236,7 @@ which are to be removed. The remaining faces of the solid become the walls of
 the hollowed solid, their thickness defined at the time of construction.</UserDocu>
       </Documentation>
     </Methode>
-    <Methode Name="makeOffsetShape" Const="true">
+    <Methode Name="makeOffsetShape" Const="true"  Keyword="true">
       <Documentation> 
         <UserDocu>Offset a given shape</UserDocu>
       </Documentation>
@@ -367,6 +375,13 @@ Boolean indicates if the point lying directly on a face is considered to be insi
         <UserDocu>Removes redundant edges from the B-REP model</UserDocu>
       </Documentation>
     </Methode>
+	<Methode Name="distToShape" Const="true">
+      <Documentation>
+		<UserDocu>Find the minimum distance to another shape.
+distToShape(Shape s):  Returns a list of minimum distance and solution point pairs - [mindist, (pointonthis,supporttype,
+pointons,supporttype),(...),...]</UserDocu>
+	  </Documentation>
+	</Methode>
     <Methode Name="getElement" Const="true">
       <Documentation>
         <UserDocu>Returns a SubElement</UserDocu>

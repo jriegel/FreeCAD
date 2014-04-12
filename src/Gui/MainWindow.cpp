@@ -60,6 +60,7 @@
 #include <Base/Writer.h>
 #include <App/Application.h>
 #include <App/DocumentObject.h>
+#include <App/DocumentObjectGroup.h>
 
 #include "MainWindow.h"
 #include "Application.h"
@@ -406,7 +407,7 @@ MainWindow::MainWindow(QWidget * parent, Qt::WFlags f)
     // Python console
     PythonConsole* pcPython = new PythonConsole(this);
     pcPython->setWordWrapMode(QTextOption::NoWrap);
-    pcPython->setWindowIcon(Gui::BitmapFactory().pixmap("python_small"));
+    pcPython->setWindowIcon(Gui::BitmapFactory().pixmap("applications-python"));
     pcPython->setObjectName
         (QString::fromAscii(QT_TRANSLATE_NOOP("QDockWidget","Python console")));
     pDockMgr->registerDockWindow("Std_PythonView", pcPython);
@@ -1521,7 +1522,13 @@ void MainWindow::insertFromMimeData (const QMimeData * mimeData)
         std::istream in(0);
         in.rdbuf(&buf);
         MergeDocuments mimeView(doc);
-        mimeView.importObjects(in);
+        std::vector<App::DocumentObject*> newObj = mimeView.importObjects(in);
+        std::vector<App::DocumentObjectGroup*> grp = Gui::Selection().getObjectsOfType<App::DocumentObjectGroup>();
+        if (grp.size() == 1) {
+            Gui::Document* gui = Application::Instance->getDocument(doc);
+            if (gui)
+                gui->addRootObjectsToGroup(newObj, grp.front());
+        }
     }
     else if (mimeData->hasFormat(QLatin1String("application/x-documentobject-file"))) {
         QByteArray res = mimeData->data(QLatin1String("application/x-documentobject-file"));
@@ -1531,8 +1538,14 @@ void MainWindow::insertFromMimeData (const QMimeData * mimeData)
         Base::FileInfo fi((const char*)res);
         Base::ifstream str(fi, std::ios::in | std::ios::binary);
         MergeDocuments mimeView(doc);
-        mimeView.importObjects(str);
+        std::vector<App::DocumentObject*> newObj = mimeView.importObjects(str);
         str.close();
+        std::vector<App::DocumentObjectGroup*> grp = Gui::Selection().getObjectsOfType<App::DocumentObjectGroup>();
+        if (grp.size() == 1) {
+            Gui::Document* gui = Application::Instance->getDocument(doc);
+            if (gui)
+                gui->addRootObjectsToGroup(newObj, grp.front());
+        }
     }
     else if (mimeData->hasUrls()) {
         // load the files into the active document if there is one, otherwise let create one
@@ -1613,7 +1626,7 @@ void MainWindow::showMessage (const QString& message, int timeout)
 {
     QFontMetrics fm(statusBar()->font());
     QString msg = fm.elidedText(message, Qt::ElideMiddle, this->width()/2);
-#if QT_VERSION != 0x040801
+#if QT_VERSION <= 0x040600
     this->statusBar()->showMessage(msg, timeout);
 #else
     //#0000665: There is a crash under Ubuntu 12.04 (Qt 4.8.1)

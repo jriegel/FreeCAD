@@ -21,9 +21,14 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,Draft,ArchCommands, DraftVecUtils
-from PySide import QtCore
-from DraftTools import translate
+import FreeCAD,Draft,ArchCommands, DraftVecUtils
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui
+    from DraftTools import translate
+else:
+    def translate(ctxt,txt):
+        return txt
 
 __title__="FreeCAD Arch Floor"
 __author__ = "Yorik van Havre"
@@ -35,7 +40,8 @@ def makeFloor(objectslist=None,join=True,name=translate("Arch","Floor")):
     not be joined.'''
     obj = FreeCAD.ActiveDocument.addObject("App::DocumentObjectGroupPython",name)
     _Floor(obj)
-    _ViewProviderFloor(obj.ViewObject)
+    if FreeCAD.GuiUp:
+        _ViewProviderFloor(obj.ViewObject)
     if objectslist:
         obj.Group = objectslist
     return obj
@@ -76,10 +82,8 @@ class _CommandFloor:
 class _Floor:
     "The Floor object"
     def __init__(self,obj):
-        obj.addProperty("App::PropertyLength","Height","Arch",
-                        translate("Arch","The height of this floor"))
-        obj.addProperty("App::PropertyPlacement","Placement","Arch",
-                        translate("Arch","The placement of this group"))
+        obj.addProperty("App::PropertyLength","Height","Arch",translate("Arch","The height of this floor"))
+        obj.addProperty("App::PropertyPlacement","Placement","Arch",translate("Arch","The placement of this group"))
         self.Type = "Floor"
         obj.Proxy = self
         self.Object = obj
@@ -106,10 +110,11 @@ class _Floor:
                             o.Placement.move(delta)
                     self.OldPlacement = pl
         # adjust childrens heights
-        for o in obj.Group:
-            if Draft.getType(o) in ["Wall","Structure"]:
-                if not o.Height:
-                    o.Proxy.execute(o)
+        if obj.Height.Value:
+            for o in obj.Group:
+                if Draft.getType(o) in ["Wall","Structure"]:
+                    if not o.Height.Value:
+                        o.Proxy.execute(o)
         
     def addObject(self,child):
         if hasattr(self,"Object"):
@@ -146,5 +151,6 @@ class _ViewProviderFloor:
 
     def __setstate__(self,state):
         return None
-    
-FreeCADGui.addCommand('Arch_Floor',_CommandFloor())
+
+if FreeCAD.GuiUp: 
+    FreeCADGui.addCommand('Arch_Floor',_CommandFloor())

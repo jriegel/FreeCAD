@@ -61,7 +61,9 @@ icons/Constraint_PointOnObject.svg \
 		icons/Sketcher_ConstrainLock.svg \
 		icons/Sketcher_ConstrainVertical.svg \
 		icons/Sketcher_CreateArc.svg \
+        icons/Sketcher_Create3PointArc.svg \
 		icons/Sketcher_CreateCircle.svg \
+        icons/Sketcher_Create3PointCircle.svg \
 		icons/Sketcher_CreateLine.svg \
 		icons/Sketcher_CreatePoint.svg \
 		icons/Sketcher_CreatePolyline.svg \

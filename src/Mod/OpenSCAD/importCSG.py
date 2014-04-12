@@ -27,7 +27,7 @@
 #*                                                                         *
 #*                                                                         *
 #***************************************************************************
-__title__="FreeCAD OpenSCAD Workbench - CSG importer Version 0.06a"
+__title__="FreeCAD OpenSCAD Workbench - CSG importer"
 __author__ = "Keith Sloan <keith@sloan-home.co.uk>"
 __url__ = ["http://www.sloan-home.co.uk/ImportCSG"]
 
@@ -46,11 +46,8 @@ import ply.lex as lex
 import ply.yacc as yacc
 import Part
 
-from OpenSCADFeatures import RefineShape 
-#from OpenSCAD2Dgeom import *
+from OpenSCADFeatures import *
 from OpenSCADUtils import *
-isspecialorthogonaldeterminant = isspecialorthogonalpython
-from OpenSCADFeatures import Twist
 
 if open.__module__ == '__builtin__':
     pythonopen = open # to distinguish python built-in open function from the one declared here
@@ -336,6 +333,7 @@ def p_operation(p):
               | linear_extrude_with_twist
               | rotate_extrude_file
               | import_file1
+              | surface_action
               | projection_action
               | hull_action
               | minkowski_action
@@ -356,28 +354,53 @@ def placeholder(name,children,arguments):
     #don't hide the children
     return newobj
 
-def CGALorPlaceholder(name,children,arguments=[]):
-    '''Tries to perform a CGAL opertion by calling scad
-    if it fails it creates a placeholder object to continue parsing
-    '''
-    newobj = process_ObjectsViaOpenSCAD(doc,children,name)
-    if newobj is not None :
-        return newobj
-    else:
-        return placeholder(name,children,arguments)
+def CGALFeatureObj(name,children,arguments=[]):
+    myobj=doc.addObject("Part::FeaturePython",name)
+    CGALFeature(myobj,name,children,str(arguments))
+    if gui:
+        for subobj in children:
+            subobj.ViewObject.hide()
+        if FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
+            GetBool('useViewProviderTree'):
+            from OpenSCADFeatures import ViewProviderTree
+            ViewProviderTree(myobj.ViewObject)
+        else:
+            myobj.ViewObject.Proxy = 0
+    return myobj
+
+#def p_offset_action(p):
+#    'offset_action : offset LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE'
+#    if len(p[5]) == 0:
+#        mycut = placeholder('group',[],'{}')
+#    elif (len(p[5]) == 1 ): #single object
+#        subobj = p[5]
+#    else:
+#        subobj = fuse(p[6],"Offset Union")
+#    newobj=doc.addObject("Part::FeaturePython",'offset')
+#    OffsetShape(newobj,subobj,p[3]['delta'])
+#    if gui:
+#        if FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
+#            GetBool('useViewProviderTree'):
+#            from OpenSCADFeatures import ViewProviderTree
+#            ViewProviderTree(newobj.ViewObject)
+#        else:
+#            newobj.ViewObject.Proxy = 0
+#    return [newobj]
 
 def p_hull_action(p):
     'hull_action : hull LPAREN RPAREN OBRACE block_list EBRACE'
-    p[0] = [ CGALorPlaceholder(p[1],p[5]) ]
+    p[0] = [ CGALFeatureObj(p[1],p[5]) ]
 
 def p_minkowski_action(p):
     '''
     minkowski_action : minkowski LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE'''
-    p[0] = [ CGALorPlaceholder(p[1],p[6],p[3]) ]
+    p[0] = [ CGALFeatureObj(p[1],p[6],p[3]) ]
 
 def p_not_supported(p):
     '''
     not_supported : glide LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE
+                  | offset LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE
+                  | resize LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE
                   '''
     if gui and not FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
             GetBool('usePlaceholderForUnsupported'):
@@ -434,7 +457,9 @@ def fuse(lst,name):
     global doc
     if printverbose: print "Fuse"
     if printverbose: print lst
-    if len(lst) == 1:
+    if len(lst) == 0:
+        myfuse = placeholder('group',[],'{}')
+    elif len(lst) == 1:
        return lst[0]
     # Is this Multi Fuse
     elif len(lst) > 2:
@@ -468,7 +493,9 @@ def p_difference_action(p):
     if printverbose: print "difference"
     if printverbose: print len(p[5])
     if printverbose: print p[5]
-    if (len(p[5]) == 1 ): #single object
+    if (len(p[5]) == 0 ): #nochild
+        mycut = placeholder('group',[],'{}')
+    elif (len(p[5]) == 1 ): #single object
         p[0] = p[5]
     else:
 # Cut using Fuse    
@@ -499,7 +526,7 @@ def p_intersection_action(p):
        if gui:
            for subobj in mycommon.Shapes:
                subobj.ViewObject.hide()
-    else :
+    elif (len(p[5]) == 2):
        if printverbose: print "Single Common"
        mycommon = doc.addObject('Part::Common',p[1])
        mycommon.Base = p[5][0]
@@ -507,21 +534,16 @@ def p_intersection_action(p):
        if gui:
            mycommon.Base.ViewObject.hide()
            mycommon.Tool.ViewObject.hide()
-
+    elif (len(p[5]) == 1):
+        mycommon = p[5][0]
+    else : # 1 child
+        mycommon = placeholder('group',[],'{}')
     p[0] = [mycommon]
     if printverbose: print "End Intersection"
 
 def process_rotate_extrude(obj):
-    myrev = doc.addObject("Part::Revolution","RotateExtrude")
-    myrev.Source = obj
-    myrev.Axis = (0.00,1.00,0.00)
-    myrev.Base = (0.00,0.00,0.00)
-    myrev.Angle = 360.00
-    myrev.Placement=FreeCAD.Placement(FreeCAD.Vector(),FreeCAD.Rotation(0,0,90))
-    if gui:
-        obj.ViewObject.hide()
     newobj=doc.addObject("Part::FeaturePython",'RefineRotateExtrude')
-    RefineShape(newobj,myrev)
+    RefineShape(newobj,obj)
     if gui:
         if FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
             GetBool('useViewProviderTree'):
@@ -529,8 +551,16 @@ def process_rotate_extrude(obj):
             ViewProviderTree(newobj.ViewObject)
         else:
             newobj.ViewObject.Proxy = 0
-        myrev.ViewObject.hide()
-    return(newobj)
+        obj.ViewObject.hide()
+    myrev = doc.addObject("Part::Revolution","RotateExtrude")
+    myrev.Source = newobj
+    myrev.Axis = (0.00,1.00,0.00)
+    myrev.Base = (0.00,0.00,0.00)
+    myrev.Angle = 360.00
+    myrev.Placement=FreeCAD.Placement(FreeCAD.Vector(),FreeCAD.Rotation(0,0,90))
+    if gui:
+        newobj.ViewObject.hide()
+    return(myrev)
 
 def p_rotate_extrude_action(p): 
     'rotate_extrude_action : rotate_extrude LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE'
@@ -551,18 +581,9 @@ def p_rotate_extrude_file(p):
     if printverbose: print "End Rotate Extrude File"
 
 def process_linear_extrude(obj,h) :
-    mylinear = doc.addObject("Part::Extrusion","LinearExtrude")
-    mylinear.Base = obj
-    mylinear.Dir = (0,0,h)
-    mylinear.Placement=FreeCAD.Placement()
-    try: 
-        mylinear.Solid = True
-    except:
-        a = 1 # Any old null statement
-    if gui:
-        obj.ViewObject.hide()
+    #if gui:
     newobj=doc.addObject("Part::FeaturePython",'RefineLinearExtrude')
-    RefineShape(newobj,mylinear)
+    RefineShape(newobj,obj)#mylinear)
     if gui:
         if FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
             GetBool('useViewProviderTree'):
@@ -570,8 +591,19 @@ def process_linear_extrude(obj,h) :
             ViewProviderTree(newobj.ViewObject)
         else:
             newobj.ViewObject.Proxy = 0
-        mylinear.ViewObject.hide()
-    return(newobj)
+        obj.ViewObject.hide()
+        #mylinear.ViewObject.hide()
+    mylinear = doc.addObject("Part::Extrusion","LinearExtrude")
+    mylinear.Base = newobj #obj
+    mylinear.Dir = (0,0,h)
+    mylinear.Placement=FreeCAD.Placement()
+    try:
+        mylinear.Solid = True
+    except:
+        pass
+    if gui:
+        newobj.ViewObject.hide()
+    return(mylinear)
 
 def process_linear_extrude_with_twist(base,height,twist) :   
     newobj=doc.addObject("Part::FeaturePython",'twist_extrude')
@@ -616,6 +648,16 @@ def p_import_file1(p):
     p[0] = [process_import_file(filen,ext,p[3]['layer'])]
     if printverbose: print "End Import File"
 
+def p_surface_action(p):
+    'surface_action : surface LPAREN keywordargument_list RPAREN SEMICOL'
+    if printverbose: print "Surface"
+    obj = doc.addObject("Part::Feature",'surface')
+    obj.Shape,xoff,yoff=makeSurfaceVolume(p[3]['file'])
+    if p[3]['center']=='true' :
+        center(obj,xoff,yoff,0.0)
+    p[0] = [obj]
+    if printverbose: print "End surface"
+
 def process_import_file(fname,ext,layer):
     if printverbose: print "Importing : "+fname+"."+ext+" Layer : "+layer
     if ext.lower() in reverseimporttypes()['Mesh']:
@@ -627,27 +669,35 @@ def process_import_file(fname,ext,layer):
     return(obj)
 
 def process_mesh_file(fname,ext):
-    import Mesh
+    import Mesh,Part
     fullname = fname+'.'+ext
     filename = os.path.join(pathName,fullname)
-    mesh1 = doc.getObject(fname) #reuse imported object
+    objname = os.path.split(fname)[1]
+    mesh1 = doc.getObject(objname) #reuse imported object
     if not mesh1:
         Mesh.insert(filename)
-        mesh1=doc.getObject(fname)
-    if gui:
-        mesh1.ViewObject.hide()
-    sh=Part.Shape()
-    sh.makeShapeFromMesh(mesh1.Mesh.Topology,0.1)
-    solid = Part.Solid(sh)
-    obj=doc.addObject('Part::Feature',"Mesh")
-    #ImportObject(obj,mesh1) #This object is not mutable from the GUI
-    #ViewProviderTree(obj.ViewObject)
-    solid=solid.removeSplitter()
-    if solid.Volume < 0:
-        #sh.reverse()
-        #sh = sh.copy()
-        solid.complement()
-    obj.Shape=solid#.removeSplitter()
+        mesh1=doc.getObject(objname)
+    if mesh1 is not None:
+        if gui:
+            mesh1.ViewObject.hide()
+        sh=Part.Shape()
+        sh.makeShapeFromMesh(mesh1.Mesh.Topology,0.1)
+        solid = Part.Solid(sh)
+        obj=doc.addObject('Part::Feature',"Mesh")
+        #ImportObject(obj,mesh1) #This object is not mutable from the GUI
+        #ViewProviderTree(obj.ViewObject)
+        solid=solid.removeSplitter()
+        if solid.Volume < 0:
+            #sh.reverse()
+            #sh = sh.copy()
+            solid.complement()
+        obj.Shape=solid#.removeSplitter()
+    else: #mesh1 is None
+        FreeCAD.Console.PrintError('Mesh not imported %s.%s %s\n' % \
+                (objname,ext,filename))
+        import Part
+        obj=doc.addObject('Part::Feature',"FailedMeshImport")
+        obj.Shape=Part.Compound([])
     return(obj)
 
 def processDXF(fname,layer):
@@ -660,12 +710,10 @@ def processDXF(fname,layer):
     if printverbose: print "PathName : "+pathName
     dxfname = fname+'.dxf'
     filename = os.path.join(pathName,dxfname)
+    shortname = os.path.split(fname)[1]
     if printverbose: print "DXF Full path : "+filename
     face = importDXFface(filename,layer,doc)
-    #obj=doc.addObject("Part::FeaturePython",'import_dxf_%s_%s'%(objname,layera))
-    obj=doc.addObject('Part::Feature',layer or "dxf")
-    #ImportObject(obj,groupobj[0]) #This object is not mutable from the GUI
-    #ViewProviderTree(obj.ViewObject)
+    obj=doc.addObject('Part::Feature','dxf_%s_%s' % (shortname,layer or "all"))
     obj.Shape=face
     if printverbose: print "DXF Diagnostics"
     if printverbose: print obj.Shape.ShapeType
@@ -683,32 +731,53 @@ def p_multmatrix_action(p):
     transform_matrix = FreeCAD.Matrix()
     if printverbose: print "Multmatrix"
     if printverbose: print p[3]
-    transform_matrix.A11 = round(float(p[3][0][0]),12)
-    transform_matrix.A12 = round(float(p[3][0][1]),12)
-    transform_matrix.A13 = round(float(p[3][0][2]),12)
-    transform_matrix.A14 = round(float(p[3][0][3]),12)
-    transform_matrix.A21 = round(float(p[3][1][0]),12)
-    transform_matrix.A22 = round(float(p[3][1][1]),12)
-    transform_matrix.A23 = round(float(p[3][1][2]),12)
-    transform_matrix.A24 = round(float(p[3][1][3]),12)
-    transform_matrix.A31 = round(float(p[3][2][0]),12)
-    transform_matrix.A32 = round(float(p[3][2][1]),12)
-    transform_matrix.A33 = round(float(p[3][2][2]),12)
-    transform_matrix.A34 = round(float(p[3][2][3]),12)
+    m1l=sum(p[3],[])
+    if any('x' in me for me in m1l): #hexfloats
+        m1l=[float.fromhex(me) for me in m1l]
+        matrixisrounded=False
+    elif max((len(me) for me in m1l)) >= 14: #might have double precision
+        m1l=[float(me) for me in m1l] # assume precise output
+        m1l=[(0 if (abs(me) < 1e-15) else me) for me in m1l]
+        matrixisrounded=False
+    else: #trucanted numbers
+        m1l=[round(float(me),12) for me in m1l] #round
+        matrixisrounded=True
+    transform_matrix = FreeCAD.Matrix(*tuple(m1l))
     if printverbose: print transform_matrix
     if printverbose: print "Apply Multmatrix"
 #   If more than one object on the stack for multmatrix fuse first
-    if (len(p[6]) > 1) :
+    if (len(p[6]) == 0) :
+        part = placeholder('group',[],'{}')
+    elif (len(p[6]) > 1) :
         part = fuse(p[6],"Matrix Union")
-    else :                   
+    else :
         part = p[6][0]
-#    part = new_part.transformGeometry(transform_matrix)
-#    part = new_part.copy()
-#    part.transformShape(transform_matrix)
-    if (isspecialorthogonaldeterminant(fcsubmatrix(transform_matrix))) :
-       if printverbose: print "Orthogonal"
-       part.Placement=FreeCAD.Placement(transform_matrix).multiply(part.Placement)
-       new_part = part
+    if (isspecialorthogonalpython(fcsubmatrix(transform_matrix))) :
+        if printverbose: print "special orthogonal"
+        if matrixisrounded:
+            if printverbose: print "rotation rounded"
+            plm=FreeCAD.Placement(transform_matrix)
+            plm=FreeCAD.Placement(plm.Base,roundrotation(plm.Rotation))
+            part.Placement=plm.multiply(part.Placement)
+        else:
+            part.Placement=FreeCAD.Placement(transform_matrix).multiply(\
+                    part.Placement)
+        new_part = part
+    elif isrotoinversionpython(fcsubmatrix(transform_matrix)):
+        if printverbose: print "orthogonal and inversion"
+        cmat,axisvec = decomposerotoinversion(transform_matrix)
+        new_part=doc.addObject("Part::Mirroring",'mirr_%s'%part.Name)
+        new_part.Source=part
+        new_part.Normal=axisvec
+        if matrixisrounded:
+            if printverbose: print "rotation rounded"
+            plm=FreeCAD.Placement(cmat)
+            new_part.Placement=FreeCAD.Placement(plm.Base,roundrotation(plm.Rotation))
+        else:
+            new_part.Placement=FreeCAD.Placement(cmat)
+        new_part.Label="mirrored %s" % part.Label
+        if gui:
+            part.ViewObject.hide()
     elif FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
         GetBool('useMultmatrixFeature'):
         from OpenSCADFeatures import MatrixTransform
@@ -792,50 +861,67 @@ def p_cylinder_action(p):
     r1 = float(p[3]['r1'])
     r2 = float(p[3]['r2'])
     n = int(p[3]['$fn'])
+    fnmax = FreeCAD.ParamGet(\
+        "User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
+        GetInt('useMaxFN')
     if printverbose: print p[3]
-    if ( r1 == r2 and r1 > 0):
-        if printverbose: print "Make Cylinder"
-        fnmax = FreeCAD.ParamGet(\
-            "User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
-            GetInt('useMaxFN')
-        if n < 3 or fnmax != 0 and n >= fnmax:
-            mycyl=doc.addObject("Part::Cylinder",p[1])
-            mycyl.Height = h
-            mycyl.Radius = r1
-        else :
-            if printverbose: print "Make Prism"
-            if False: #user Draft Polygon
-                mycyl=doc.addObject("Part::Extrusion","prism")
-                mycyl.Dir = (0,0,h)
-                try :
-                    import Draft
-                    mycyl.Base = Draft.makePolygon(n,r1)
-                except :
-                    # If Draft can't import (probably due to lack of Pivy on Mac and
-                    # Linux builds of FreeCAD), this is a fallback.
-                    # or old level of FreeCAD
-                    if printverbose: print "Draft makePolygon Failed, falling back on manual polygon"
-                    mycyl.Base = myPolygon(n,r1)
-                    # mycyl.Solid = True
+    if h > 0:
+        if ( r1 == r2 and r1 > 0):
+            if printverbose: print "Make Cylinder"
+            if n < 3 or fnmax != 0 and n > fnmax:
+                mycyl=doc.addObject("Part::Cylinder",p[1])
+                mycyl.Height = h
+                mycyl.Radius = r1
+            else :
+                if printverbose: print "Make Prism"
+                if False: #user Draft Polygon
+                    mycyl=doc.addObject("Part::Extrusion","prism")
+                    mycyl.Dir = (0,0,h)
+                    try :
+                        import Draft
+                        mycyl.Base = Draft.makePolygon(n,r1)
+                    except :
+                        # If Draft can't import (probably due to lack of Pivy on Mac and
+                        # Linux builds of FreeCAD), this is a fallback.
+                        # or old level of FreeCAD
+                        if printverbose: print "Draft makePolygon Failed, falling back on manual polygon"
+                        mycyl.Base = myPolygon(n,r1)
+                        # mycyl.Solid = True
 
-                else :
-                    pass
+                    else :
+                        pass
+                    if gui:
+                        mycyl.Base.ViewObject.hide()
+                else: #Use Part::Prism primitive
+                    mycyl=doc.addObject("Part::Prism","prism")
+                    mycyl.Polygon = n
+                    mycyl.Circumradius  = r1
+                    mycyl.Height  = h
+
+        elif (r1 != r2):
+            if n < 3 or fnmax != 0 and n > fnmax:
+                if printverbose: print "Make Cone"
+                mycyl=doc.addObject("Part::Cone",p[1])
+                mycyl.Height = h
+                mycyl.Radius1 = r1
+                mycyl.Radius2 = r2
+            else:
+                if printverbose: print "Make Frustum"
+                mycyl=doc.addObject("Part::FeaturePython",'frustum')
+                Frustum(mycyl,r1,r2,n,h)
                 if gui:
-                    mycyl.Base.ViewObject.hide()
-            else: #Use Part::Prism primitive
-                mycyl=doc.addObject("Part::Prism","prism")
-                mycyl.Polygon = n
-                mycyl.Circumradius  = r1
-                mycyl.Height  = h
-
-    elif (r1 != r2):
-        if printverbose: print "Make Cone"
-        mycyl=doc.addObject("Part::Cone",p[1])
-        mycyl.Height = h
-        mycyl.Radius1 = r1
-        mycyl.Radius2 = r2
-    else: # r1 == r2 == 0
-    	FreeCAD.Console.PrintWarning('cylinder with radius zero\n')
+                    if FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
+                        GetBool('useViewProviderTree'):
+                        from OpenSCADFeatures import ViewProviderTree
+                        ViewProviderTree(mycyl.ViewObject)
+                    else:
+                        mycyl.ViewObject.Proxy = 0
+        else: # r1 == r2 == 0
+            FreeCAD.Console.PrintWarning('cylinder with radius zero\n')
+            mycyl=doc.addObject("Part::Feature","emptycyl")
+            mycyl.Shape = Part.Compound([])
+    else: # h == 0
+        FreeCAD.Console.PrintWarning('cylinder with height <= zero\n')
         mycyl=doc.addObject("Part::Feature","emptycyl")
         mycyl.Shape = Part.Compound([])
     if printverbose: print "Center = ",tocenter
@@ -864,12 +950,12 @@ def p_cube_action(p):
     l,w,h = [float(str1) for str1 in p[3]['size']]
     if (l > 0 and w > 0 and h >0):
         if printverbose: print "cube : ",p[3]
-	mycube=doc.addObject('Part::Box',p[1])
-	mycube.Length=l
-	mycube.Width=w
-	mycube.Height=h
+        mycube=doc.addObject('Part::Box',p[1])
+        mycube.Length=l
+        mycube.Width=w
+        mycube.Height=h
     else:
-    	FreeCAD.Console.PrintWarning('cube with radius zero\n')
+        FreeCAD.Console.PrintWarning('cube with radius zero\n')
         mycube=doc.addObject("Part::Feature","emptycube")
         mycube.Shape = Part.Compound([])
     if p[3]['center']=='true' :
@@ -889,11 +975,21 @@ def p_circle_action(p) :
     # in the modules preferences
     import Draft
     if n == 0 or fnmax != 0 and n >= fnmax:
-       mycircle = Draft.makeCircle(r)
-       #mycircle = doc.addObject('Part::Circle',p[1])
-       #mycircle.Radius = r
+        mycircle = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython",'circle')
+        Draft._Circle(mycircle)
+        mycircle.Radius = r
+        #mycircle = Draft.makeCircle(r) # would call doc.recompute
+        #mycircle = doc.addObject('Part::Circle',p[1]) #would not create a face
+        #mycircle.Radius = r
     else :
-       mycircle = Draft.makePolygon(n,r)
+        #mycircle = Draft.makePolygon(n,r) # would call doc.recompute
+        mycircle = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython",'polygon')
+        Draft._Polygon(mycricle)
+        mycircle.FacesNumber = n
+        mycircle.Radius = r
+        mycircle.DrawMode = "inscribed"
+    if gui:
+        Draft._ViewProviderDraft(mycircle.ViewObject)
     if printverbose: print "Push Circle"
     p[0] = [mycircle]
 
@@ -963,7 +1059,8 @@ def make_face(v1,v2,v3):
     return face
 
 def p_polyhedron_action(p) :
-    'polyhedron_action : polyhedron LPAREN points EQ OSQUARE points_list_3d ESQUARE COMMA triangles EQ OSQUARE points_list_3d ESQUARE COMMA keywordargument_list RPAREN SEMICOL'
+    '''polyhedron_action : polyhedron LPAREN points EQ OSQUARE points_list_3d ESQUARE COMMA faces EQ OSQUARE points_list_3d ESQUARE COMMA keywordargument_list RPAREN SEMICOL
+                      | polyhedron LPAREN points EQ OSQUARE points_list_3d ESQUARE COMMA triangles EQ OSQUARE points_list_3d ESQUARE COMMA keywordargument_list RPAREN SEMICOL'''
     if printverbose: print "Polyhedron Points"
     v = []
     for i in p[6] :

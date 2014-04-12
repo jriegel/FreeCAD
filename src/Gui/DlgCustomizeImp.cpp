@@ -22,6 +22,11 @@
 
 
 #include "PreCompiled.h"
+#ifndef _PreComp_
+# include <QEvent>
+# include <QGridLayout>
+# include <QPushButton>
+#endif
 
 #include "DlgCustomizeImp.h"
 #include "MainWindow.h"

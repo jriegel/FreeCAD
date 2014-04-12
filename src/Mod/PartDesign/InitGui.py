@@ -73,6 +73,7 @@ class PartDesignWorkbench ( Workbench ):
                 from FeatureHole import HoleGui
                 import PartDesignGui
                 import PartDesign
+                import InvoluteGearFeature
         def GetClassName(self):
                 return "PartDesignGui::Workbench"
 

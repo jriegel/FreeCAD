@@ -155,19 +155,26 @@ void InputField::newInput(const QString & text)
     res.getUserString(dFactor,actUnitStr);
     // calculate the number shown 
     actUnitValue = res.getValue()/dFactor; 
-    // signaling 
+    // signaling
     valueChanged(res);
-
+    valueChanged(res.getValue());
 }
 
 void InputField::pushToHistory(const QString &valueq)
 {
-    std::string value;
+    QString val;
     if(valueq.isEmpty())
-        value = this->text().toUtf8().constData();
+        val = this->text();
     else
-        value = valueq.toUtf8().constData();
+        val = valueq;
+
+    // check if already in:
+    std::vector<QString> hist = InputField::getHistory();
+    for(std::vector<QString>::const_iterator it = hist.begin();it!=hist.end();++it)
+        if( *it == val)
+            return;
     
+    std::string value(val.toUtf8());
     if(_handle.isValid()){
         char hist1[21];
         char hist0[21];
@@ -200,6 +207,14 @@ std::vector<QString> InputField::getHistory(void)
     }
     return res;
 }
+
+void InputField::setToLastUsedValue(void)
+{
+     std::vector<QString> hist = getHistory();
+     if(hist.size()>0)
+         this->setValue(Base::Quantity::parse(hist[0]));
+}
+
 
 void InputField::pushToSavedValues(const QString &valueq)
 {
@@ -314,6 +329,17 @@ void InputField::setMinimum(double m)
     Minimum = m;
 }
 
+void InputField::setUnitText(QString str)
+{
+    Base::Quantity quant = Base::Quantity::parse(str);
+    setUnit(quant.getUnit());
+}
+  
+QString InputField::getUnitText(void)
+{
+    return actUnitStr;
+}
+
 // get the value of the minimum property
 int InputField::historySize(void)const
 {
@@ -340,21 +366,35 @@ void InputField::selectNumber(void)
 
 }
 
-void InputField::wheelEvent ( QWheelEvent * event )
+void InputField::keyPressEvent(QKeyEvent *event)
 {
-     int numDegrees = event->delta() / 8;
-     int numSteps = numDegrees / 15;
+    switch (event->key()) {
+    case Qt::Key_Up:
+        {
+            double val = actUnitValue + StepSize;
+            this->setText( QString::fromUtf8("%L1 %2").arg(val).arg(actUnitStr));
+            event->accept();
+        }
+        break;
+    case Qt::Key_Down:
+        {
+            double val = actUnitValue - StepSize;
+            this->setText( QString::fromUtf8("%L1 %2").arg(val).arg(actUnitStr));
+            event->accept();
+        }
+        break;
+    default:
+        QLineEdit::keyPressEvent(event);
+        break;
+    }
+}
 
-     double val = actUnitValue + numSteps;
-
-     this->setText( QString::fromUtf8("%1 %2").arg(val).arg(actUnitStr));
-
-     //if (event->orientation() == Qt::Horizontal) {
-     //    scrollHorizontally(numSteps);
-     //} else {
-     //    scrollVertically(numSteps);
-     //}
-     event->accept();
+void InputField::wheelEvent (QWheelEvent * event)
+{
+    double step = event->delta() > 0 ? StepSize : -StepSize;
+    double val = actUnitValue + step;
+    this->setText( QString::fromUtf8("%L1 %2").arg(val).arg(actUnitStr));
+    event->accept();
 }
 // --------------------------------------------------------------------
 

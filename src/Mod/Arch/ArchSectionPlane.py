@@ -21,11 +21,16 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,ArchComponent,WorkingPlane,math,Draft,ArchCommands,DraftVecUtils
+import FreeCAD,ArchComponent,WorkingPlane,math,Draft,ArchCommands,DraftVecUtils
 from FreeCAD import Vector
-from PySide import QtCore
-from pivy import coin
-from DraftTools import translate
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui
+    from DraftTools import translate
+    from pivy import coin
+else:
+    def translate(ctxt,txt):
+        return txt
 
 def makeSectionPlane(objectslist=None,name=translate("Arch","Section")):
     """makeSectionPlane([objectslist]) : Creates a Section plane objects including the
@@ -81,7 +86,7 @@ class _CommandSectionPlane:
         FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Section Plane"))
         FreeCADGui.doCommand("import Arch")
         FreeCADGui.doCommand("section = Arch.makeSectionPlane("+ss+")")
-        FreeCADGui.doCommand("Arch.makeSectionView(section)")
+        #FreeCADGui.doCommand("Arch.makeSectionView(section)")
         FreeCAD.ActiveDocument.commitTransaction()
         FreeCAD.ActiveDocument.recompute()
 
@@ -89,17 +94,18 @@ class _SectionPlane:
     "A section plane object"
     def __init__(self,obj):
         obj.Proxy = self
-        obj.addProperty("App::PropertyPlacement","Placement","Base",
-                        translate("Arch","The placement of this object"))
+        obj.addProperty("App::PropertyPlacement","Placement","Base",translate("Arch","The placement of this object"))
         obj.addProperty("Part::PropertyPartShape","Shape","Base","")
-        obj.addProperty("App::PropertyLinkList","Objects","Arch",
-                        translate("Arch","The objects that must be considered by this section plane. Empty means all document"))
+        obj.addProperty("App::PropertyLinkList","Objects","Arch",translate("Arch","The objects that must be considered by this section plane. Empty means all document"))
         self.Type = "SectionPlane"
         
     def execute(self,obj):
         import Part
-        l = obj.ViewObject.DisplaySize
+        l = obj.ViewObject.DisplaySize.Value
         p = Part.makePlane(l,l,Vector(l/2,-l/2,0),Vector(0,0,-1))
+        # make sure the normal direction is pointing outwards, you never know what OCC will decide...
+        if p.normalAt(0,0).getAngle(obj.Placement.Rotation.multVec(FreeCAD.Vector(0,0,1))) > 1:
+            p.reverse()
         p.Placement = obj.Placement
         obj.Shape = p
 
@@ -119,8 +125,7 @@ class _SectionPlane:
 class _ViewProviderSectionPlane(ArchComponent.ViewProviderComponent):
     "A View Provider for Section Planes"
     def __init__(self,vobj):
-        vobj.addProperty("App::PropertyLength","DisplaySize","Arch",
-                        translate("Arch","The display size of this section plane"))
+        vobj.addProperty("App::PropertyLength","DisplaySize","Arch",translate("Arch","The display size of this section plane"))
         vobj.addProperty("App::PropertyPercent","Transparency","Base","")
         vobj.addProperty("App::PropertyFloat","LineWidth","Base","")
         vobj.addProperty("App::PropertyColor","LineColor","Base","")
@@ -142,24 +147,27 @@ class _ViewProviderSectionPlane(ArchComponent.ViewProviderComponent):
         self.mat1 = coin.SoMaterial()
         self.mat2 = coin.SoMaterial()
         self.fcoords = coin.SoCoordinate3()
-        fs = coin.SoType.fromName("SoBrepFaceSet").createInstance()
+        #fs = coin.SoType.fromName("SoBrepFaceSet").createInstance() # this causes a FreeCAD freeze for me
+        fs = coin.SoIndexedFaceSet()
         fs.coordIndex.setValues(0,7,[0,1,2,-1,0,2,3])
         self.drawstyle = coin.SoDrawStyle()
         self.drawstyle.style = coin.SoDrawStyle.LINES
         self.lcoords = coin.SoCoordinate3()
         ls = coin.SoType.fromName("SoBrepEdgeSet").createInstance()
         ls.coordIndex.setValues(0,57,[0,1,-1,2,3,4,5,-1,6,7,8,9,-1,10,11,-1,12,13,14,15,-1,16,17,18,19,-1,20,21,-1,22,23,24,25,-1,26,27,28,29,-1,30,31,-1,32,33,34,35,-1,36,37,38,39,-1,40,41,42,43,44])
+        sep = coin.SoSeparator()
         psep = coin.SoSeparator()
         fsep = coin.SoSeparator()
         fsep.addChild(self.mat2)
         fsep.addChild(self.fcoords)
         fsep.addChild(fs)
-        psep.addChild(fsep)
         psep.addChild(self.mat1)
         psep.addChild(self.drawstyle)
         psep.addChild(self.lcoords)
         psep.addChild(ls)
-        vobj.addDisplayMode(psep,"Default")
+        sep.addChild(fsep)
+        sep.addChild(psep)
+        vobj.addDisplayMode(sep,"Default")
         self.onChanged(vobj,"DisplaySize")
         self.onChanged(vobj,"LineColor")
         self.onChanged(vobj,"Transparency")
@@ -187,7 +195,7 @@ class _ViewProviderSectionPlane(ArchComponent.ViewProviderComponent):
             if hasattr(vobj,"Transparency"):
                 self.mat2.transparency.setValue(vobj.Transparency/100.0)
         elif prop == "DisplaySize":
-            hd = vobj.DisplaySize/2
+            hd = vobj.DisplaySize.Value/2
             verts = []
             fverts = []
             for v in [[-hd,-hd],[hd,-hd],[hd,hd],[-hd,hd]]:
@@ -312,7 +320,10 @@ class _ArchDrawingView:
                         self.direction = p.Rotation.multVec(FreeCAD.Vector(0,0,1))
                         for o in objs:
                             if o.isDerivedFrom("Part::Feature"):
-                                if o.Shape.isValid():
+                                if o.Shape.isNull():
+                                    pass
+                                    #FreeCAD.Console.PrintWarning(translate("Arch","Skipping empty object: ")+o.Name)
+                                elif o.Shape.isValid():
                                     shapes.extend(o.Shape.Solids)
                                 else:
                                     FreeCAD.Console.PrintWarning(translate("Arch","Skipping invalid object: ")+o.Name)
@@ -394,5 +405,6 @@ class _ArchDrawingView:
         result += '</g>\n'
         # print "complete node:",result
         return result
-                
-FreeCADGui.addCommand('Arch_SectionPlane',_CommandSectionPlane())
+
+if FreeCAD.GuiUp:                
+    FreeCADGui.addCommand('Arch_SectionPlane',_CommandSectionPlane())

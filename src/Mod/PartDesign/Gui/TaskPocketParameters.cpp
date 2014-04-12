@@ -33,6 +33,7 @@
 
 #include "ui_TaskPocketParameters.h"
 #include "TaskPocketParameters.h"
+#include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Gui/Application.h>
@@ -63,6 +64,8 @@ TaskPocketParameters::TaskPocketParameters(ViewProviderPocket *PocketView,QWidge
     ui = new Ui_TaskPocketParameters();
     ui->setupUi(proxy);
     QMetaObject::connectSlotsByName(this);
+
+    ui->doubleSpinBox->setDecimals(Base::UnitsApi::getDecimals());
 
     connect(ui->doubleSpinBox, SIGNAL(valueChanged(double)),
             this, SLOT(onLengthChanged(double)));
@@ -175,7 +178,7 @@ void TaskPocketParameters::updateUI(int index)
         ui->buttonFace->setEnabled(false);
         ui->lineFaceName->setEnabled(false);
         onButtonFace(false);
-    } else if (index == 1) {
+    } else if (index == 1) { // Through all
         ui->checkBoxMidplane->setEnabled(true);
         ui->checkBoxReversed->setEnabled(!ui->checkBoxMidplane->isChecked());
         ui->doubleSpinBox->setEnabled(false);
@@ -203,7 +206,7 @@ void TaskPocketParameters::updateUI(int index)
         ui->spinOffset->setEnabled(true);
         ui->labelOffset->setVisible(true);
         ui->checkBoxMidplane->setEnabled(false);
-        ui->checkBoxReversed->setEnabled(false);
+        ui->checkBoxReversed->setEnabled(false); // No need for reverse since user-chosen face will dtermine direction
         ui->buttonFace->setEnabled(true);
         ui->lineFaceName->setEnabled(true);
         QMetaObject::invokeMethod(ui->lineFaceName, "setFocus", Qt::QueuedConnection);

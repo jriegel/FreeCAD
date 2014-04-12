@@ -100,14 +100,15 @@ class DraftWorkbench (Workbench):
             FreeCADGui.addLanguagePath(":/translations")
             FreeCADGui.addIconPath(":/icons")
             self.appendMenu(["&Macro",translate("draft","Installed Macros")],macros.macrosList)
-        except:
-            pass
+        except Exception as inst:
+            print inst
+            FreeCAD.Console.PrintError("Error: Initializing one or more of the Draft modules failed, Draft will not work as expected.\n")
 
         # setup menus
         self.cmdList = ["Draft_Line","Draft_Wire","Draft_Circle","Draft_Arc","Draft_Ellipse",
                         "Draft_Polygon","Draft_Rectangle", "Draft_Text",
                         "Draft_Dimension", "Draft_BSpline","Draft_Point",
-                        "Draft_ShapeString","Draft_Facebinder"]
+                        "Draft_ShapeString","Draft_Facebinder","Draft_BezCurve"]
         self.modList = ["Draft_Move","Draft_Rotate","Draft_Offset",
                         "Draft_Trimex", "Draft_Upgrade", "Draft_Downgrade", "Draft_Scale",
                         "Draft_Drawing","Draft_Edit","Draft_WireToBSpline","Draft_AddPoint",
@@ -117,24 +118,26 @@ class DraftWorkbench (Workbench):
                             "Draft_SelectGroup","Draft_SelectPlane",
                             "Draft_ShowSnapBar","Draft_ToggleGrid"]
         self.lineList = ["Draft_UndoLine","Draft_FinishLine","Draft_CloseLine"]
-        self.utils = ["Draft_Heal","Draft_FlipDimension"]
+        self.utils = ["Draft_Heal","Draft_FlipDimension",
+                      "Draft_ToggleConstructionMode","Draft_ToggleContinueMode"]
         self.snapList = ['Draft_Snap_Lock','Draft_Snap_Midpoint','Draft_Snap_Perpendicular',
                          'Draft_Snap_Grid','Draft_Snap_Intersection','Draft_Snap_Parallel',
                          'Draft_Snap_Endpoint','Draft_Snap_Angle','Draft_Snap_Center',
                          'Draft_Snap_Extension','Draft_Snap_Near','Draft_Snap_Ortho',
-                         'Draft_Snap_Dimensions']
+                         'Draft_Snap_Dimensions','Draft_Snap_WorkingPlane']
         self.appendToolbar(QT_TRANSLATE_NOOP("Workbench","Draft creation tools"),self.cmdList)
         self.appendToolbar(QT_TRANSLATE_NOOP("Workbench","Draft modification tools"),self.modList)
         self.appendMenu(translate("draft","&Draft"),self.cmdList+self.modList)
-        self.appendMenu([translate("draft","&Draft"),translate("draft","Context tools")],self.treecmdList)
-        self.appendMenu([translate("draft","&Draft"),translate("draft","Utilities")],self.utils)
+        self.appendMenu([translate("draft","&Draft"),translate("draft","Utilities")],self.utils+self.treecmdList)
         self.appendMenu([translate("draft","&Draft"),translate("draft","Wire tools")],self.lineList)
         self.appendMenu([translate("draft","&Draft"),translate("draft","Snapping")],self.snapList)
         if hasattr(FreeCADGui,"draftToolBar"):
             if not hasattr(FreeCADGui.draftToolBar,"loadedPreferences"):
                 FreeCADGui.addPreferencePage(":/ui/userprefs-base.ui","Draft")
+                FreeCADGui.addPreferencePage(":/ui/userprefs-snap.ui","Draft")
                 FreeCADGui.addPreferencePage(":/ui/userprefs-visual.ui","Draft")
-                FreeCADGui.addPreferencePage(":/ui/userprefs-import.ui","Draft")
+                FreeCADGui.addPreferencePage(":/ui/userprefs-import1.ui","Draft")
+                FreeCADGui.addPreferencePage(":/ui/userprefs-import2.ui","Draft")
                 FreeCADGui.draftToolBar.loadedPreferences = True
         Log ('Loading Draft module...done\n')
 
@@ -157,7 +160,7 @@ class DraftWorkbench (Workbench):
             if (FreeCAD.activeDraftCommand == None):
                 if (FreeCADGui.Selection.getSelection()):
                     self.appendContextMenu("Draft",self.cmdList+self.modList)
-                    self.appendContextMenu("Draft context tools",self.treecmdList)
+                    self.appendContextMenu("Utilities",self.treecmdList)
                 else:
                     self.appendContextMenu("Draft",self.cmdList)
             else:
@@ -165,7 +168,7 @@ class DraftWorkbench (Workbench):
                     self.appendContextMenu("",self.lineList)
         else:
             if (FreeCADGui.Selection.getSelection()):
-                self.appendContextMenu("Draft context tools",self.treecmdList)
+                self.appendContextMenu("Utilities",self.treecmdList)
 
     def GetClassName(self): 
         return "Gui::PythonWorkbench"

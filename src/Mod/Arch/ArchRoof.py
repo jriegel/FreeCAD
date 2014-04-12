@@ -21,10 +21,15 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD,FreeCADGui,Draft,ArchComponent, DraftVecUtils
+import FreeCAD,Draft,ArchComponent, DraftVecUtils
 from FreeCAD import Vector
-from PySide import QtCore
-from DraftTools import translate
+if FreeCAD.GuiUp:
+    import FreeCADGui
+    from PySide import QtCore, QtGui
+    from DraftTools import translate
+else:
+    def translate(ctxt,txt):
+        return txt
 
 __title__="FreeCAD Roof"
 __author__ = "Yorik van Havre"
@@ -88,10 +93,8 @@ class _Roof(ArchComponent.Component):
 
     def __init__(self,obj):
         ArchComponent.Component.__init__(self,obj)
-        obj.addProperty("App::PropertyAngle","Angle","Base",
-                        translate("Arch","The angle of this roof"))
-        obj.addProperty("App::PropertyInteger","Face","Base",
-                        translate("Arch","The face number of the base object used to build this roof"))
+        obj.addProperty("App::PropertyAngle","Angle","Base",translate("Arch","The angle of this roof"))
+        obj.addProperty("App::PropertyInteger","Face","Base",translate("Arch","The face number of the base object used to build this roof"))
         self.Type = "Roof"
         
     def execute(self,obj):
@@ -163,4 +166,5 @@ class _ViewProviderRoof(ArchComponent.ViewProviderComponent):
         import Arch_rc
         return ":/icons/Arch_Roof_Tree.svg"
 
-FreeCADGui.addCommand('Arch_Roof',_CommandRoof())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('Arch_Roof',_CommandRoof())

@@ -50,7 +50,7 @@ class TaskPadParameters : public TaskSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskPadParameters(ViewProviderPad *PadView,QWidget *parent = 0);
+    TaskPadParameters(ViewProviderPad *PadView,bool newObj=false,QWidget *parent = 0);
     ~TaskPadParameters();
 
     int getMode(void) const;
@@ -60,6 +60,9 @@ public:
     bool   getReversed(void) const;
     bool   getMidplane(void) const;
     const std::string getFaceName(void) const;
+    QByteArray getFaceName(void) const;
+    const bool updateView() const;
+    void saveHistory(void);
 
 private Q_SLOTS:
     void onLengthChanged(double);
@@ -89,7 +92,7 @@ class TaskDlgPadParameters : public TaskDlgSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskDlgPadParameters(ViewProviderPad *PadView);
+    TaskDlgPadParameters(ViewProviderPad *PadView,bool newObj=false);
     ~TaskDlgPadParameters();
 
     ViewProviderPad* getPadView() const

@@ -964,7 +964,7 @@ class svgHandler(xml.sax.ContentHandler):
                 
         def characters(self,content):
                 if self.text:
-                        FreeCAD.Console.PrintMessage("reading characters %s\n" % str(content))
+                        FreeCAD.Console.PrintMessage("reading characters %s\n" % content)
                         obj=self.doc.addObject("App::Annotation",'Text')
                         obj.LabelText = content.encode('latin1')
                         vec = Vector(self.x,-self.y,0)
@@ -1168,10 +1168,10 @@ def export(exportList,filename):
             # translated-style exports have the viewbox starting at X=0, Y=0
             svg.write(' viewBox="0 0 ' + str(sizex) + ' ' + str(sizey) + '"')
         else:
-            # raw-style exports have the viewbox starting at X=0, Y=-height
+            # raw-style exports have the viewbox starting at X=xmin, Y=-ymax
             # we need the funny Y here because SVG is upside down, and we
             # flip the sketch right-way up with a scale later
-            svg.write(' viewBox="0 ' + str(sizey * -1.0) + ' ' + str(sizex) + ' ' + str(sizey) + '"')
+            svg.write(' viewBox="%f %f %f %f"' %(minx,-maxy,sizex,sizey))
         svg.write(' xmlns="http://www.w3.org/2000/svg" version="1.1"')
         svg.write('>\n')
 
@@ -1179,7 +1179,8 @@ def export(exportList,filename):
         for ob in exportList:
                 if svg_export_style == 0:
                     # translated-style exports have the entire sketch translated to fit in the X>0, Y>0 quadrant
-                    svg.write('<g transform="translate('+str(-minx)+','+str(-miny+(2*margin))+') scale(1,-1)">\n')
+                    #svg.write('<g transform="translate('+str(-minx)+','+str(-miny+(2*margin))+') scale(1,-1)">\n')
+                    svg.write('<g transform="translate('+str(-minx)+','+str(maxy)+') scale(1,-1)">\n')
                 else:
                     # raw-style exports do not translate the sketch
                     svg.write('<g transform="scale(1,-1)">\n')

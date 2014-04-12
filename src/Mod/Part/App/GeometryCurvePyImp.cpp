@@ -47,6 +47,7 @@
 # include <Standard_Failure.hxx>
 # include <GeomAPI_IntCS.hxx>
 # include <GeomAPI_ExtremaCurveCurve.hxx>
+# include <Standard_NullValue.hxx>
 # include <ShapeConstruct_Curve.hxx>
 #endif
 
@@ -362,6 +363,8 @@ PyObject* GeometryCurvePy::toBSpline(PyObject * args)
                 return 0;
             ShapeConstruct_Curve scc;
             Handle_Geom_BSplineCurve spline = scc.ConvertToBSpline(c, u, v, Precision::Confusion());
+            if (spline.IsNull())
+                Standard_NullValue::Raise("Conversion to B-Spline failed");
             return new BSplineCurvePy(new GeomBSplineCurve(spline));
         }
     }
