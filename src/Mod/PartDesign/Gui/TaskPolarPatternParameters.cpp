@@ -339,7 +339,14 @@ void TaskPolarPatternParameters::getAxis(App::DocumentObject*& obj, std::vector<
         obj = NULL;
     }
 }
-
+const std::string TaskPolarPatternParameters::getAxis(void) const
+{
+    if (ui->comboAxis->currentIndex() == 0)
+        return "N_Axis";
+    else if (ui->comboAxis->count() > 2 && ui->comboAxis->currentIndex() == 1)
+        return ui->comboAxis->currentText().toStdString();
+    return std::string("");
+}
 const bool TaskPolarPatternParameters::getReverse(void) const
 {
     return ui->checkReverse->isChecked();
@@ -395,10 +402,7 @@ bool TaskDlgPolarPatternParameters::accept()
             return false;
 
         TaskPolarPatternParameters* polarpatternParameter = static_cast<TaskPolarPatternParameters*>(parameter);
-        std::vector<std::string> axes;
-        App::DocumentObject* obj;
-        polarpatternParameter->getAxis(obj, axes);
-        std::string axis = getPythonStr(obj, axes);
+        std::string axis = polarpatternParameter->getAxis();
         if (!axis.empty()) {            
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Axis = %s", name.c_str(), axis.c_str());
         } else
