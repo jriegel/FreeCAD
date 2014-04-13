@@ -396,7 +396,10 @@ bool TaskDlgPolarPatternParameters::accept()
             return false;
 
         TaskPolarPatternParameters* polarpatternParameter = static_cast<TaskPolarPatternParameters*>(parameter);
-        std::string axis = polarpatternParameter->getAxis();
+        std::vector<std::string> axes;
+        App::DocumentObject* obj;
+        polarpatternParameter->getAxis(obj, axes);
+        std::string axis = getPythonStr(obj, axes);
         if (!axis.empty()) {
             App::DocumentObject* sketch = 0;
             if (axis == "N_Axis")

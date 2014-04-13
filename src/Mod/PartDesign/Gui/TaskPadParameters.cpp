@@ -56,7 +56,7 @@ using namespace Gui;
 /* TRANSLATOR PartDesignGui::TaskPadParameters */
 
 TaskPadParameters::TaskPadParameters(ViewProviderPad *PadView,bool newObj, QWidget *parent)
-    : TaskBox(Gui::BitmapFactory().pixmap("PartDesign_Pad"),tr("Pad parameters"),true, parent),PadView(PadView)
+    : TaskSketchBasedParameters(PadView, parent, "PartDesign_Pad",tr("Pad parameters"))
 {
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
@@ -353,10 +353,10 @@ int TaskPadParameters::getMode(void) const
     return ui->changeMode->currentIndex();
 }
 
-const std::string TaskPadParameters::getFaceName(void) const
+QByteArray TaskPadParameters::getFaceName(void) const
 {
     if (getMode() == 3)
-        return getFaceReference(ui->lineFaceName->text(), ui->lineFaceName->property("FaceName").toString()).toStdString();
+        return getFaceReference(ui->lineFaceName->text(), ui->lineFaceName->property("FaceName").toString()).toLatin1();
     else
         return "";
 }
@@ -416,7 +416,7 @@ void TaskPadParameters::saveHistory(void)
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 TaskDlgPadParameters::TaskDlgPadParameters(ViewProviderPad *PadView,bool newObj)
-    : TaskDialog(),PadView(PadView)
+   : TaskDlgSketchBasedParameters(PadView)
 {
     assert(PadView);
     parameter  = new TaskPadParameters(PadView,newObj);
@@ -431,19 +431,6 @@ TaskDlgPadParameters::~TaskDlgPadParameters()
 
 //==== calls from the TaskView ===============================================================
 
-
-void TaskDlgPadParameters::open()
-{
-    // a transaction is already open at creation time of the pad
-    if (!Gui::Command::hasPendingCommand()) {
-        QString msg = QObject::tr("Edit pad");
-        Gui::Command::openCommand((const char*)msg.toUtf8());
-    }
-}
-
-void TaskDlgPadParameters::clicked(int)
-{
-}
 
 bool TaskDlgPadParameters::accept()
 {

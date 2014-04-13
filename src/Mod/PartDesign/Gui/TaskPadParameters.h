@@ -59,7 +59,6 @@ public:
     double getOffset(void) const;
     bool   getReversed(void) const;
     bool   getMidplane(void) const;
-    const std::string getFaceName(void) const;
     QByteArray getFaceName(void) const;
     const bool updateView() const;
     void saveHistory(void);
