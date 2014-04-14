@@ -49,6 +49,7 @@
 #endif
 
 #include "ImportOCAF.h"
+#include "ImportOCAFAssembly.h"
 #include <Base/PyObjectBase.h>
 #include <Base/Console.h>
 #include <App/Application.h>
@@ -61,6 +62,107 @@
 #include <Mod/Part/App/encodeFilename.h>
 
 /* module functions */
+
+static PyObject * importAssembly(PyObject *self, PyObject *args)
+{
+    char* Name;
+    PyObject* TargetObject=0;
+    if (!PyArg_ParseTuple(args, "s|O",&Name,&TargetObject))
+        return 0;
+
+    PY_TRY {
+        //Base::Console().Log("Insert in Part with %s",Name);
+        Base::FileInfo file(Name);
+
+        App::Document *pcDoc = 0;
+            
+		pcDoc = App::GetApplication().getActiveDocument();
+        
+        if (!pcDoc) 
+            pcDoc = App::GetApplication().newDocument("ImportedAssembly");
+        
+
+        Handle(XCAFApp_Application) hApp = XCAFApp_Application::GetApplication();
+        Handle(TDocStd_Document) hDoc;
+        hApp->NewDocument(TCollection_ExtendedString("MDTV-CAF"), hDoc);
+
+        if (file.hasExtension("stp") || file.hasExtension("step")) {
+            try {
+                STEPCAFControl_Reader aReader;
+                aReader.SetColorMode(true);
+                aReader.SetNameMode(true);
+                aReader.SetLayerMode(true);
+                if (aReader.ReadFile((Standard_CString)Name) != IFSelect_RetDone) {
+                    PyErr_SetString(PyExc_Exception, "cannot read STEP file");
+                    return 0;
+                }
+
+                Handle_Message_ProgressIndicator pi = new Part::ProgressIndicator(100);
+                aReader.Reader().WS()->MapReader()->SetProgress(pi);
+                pi->NewScope(100, "Reading STEP file...");
+                pi->Show();
+                aReader.Transfer(hDoc);
+                pi->EndScope();
+            }
+            catch (OSD_Exception) {
+                Handle_Standard_Failure e = Standard_Failure::Caught();
+                Base::Console().Error("%s\n", e->GetMessageString());
+                Base::Console().Message("Try to load STEP file without colors...\n");
+
+                Part::ImportStepParts(pcDoc,Name);
+                pcDoc->recompute();
+            }
+        }
+        else if (file.hasExtension("igs") || file.hasExtension("iges")) {
+            try {
+                IGESControl_Controller::Init();
+                Interface_Static::SetIVal("read.surfacecurve.mode",3);
+                IGESCAFControl_Reader aReader;
+                aReader.SetColorMode(true);
+                aReader.SetNameMode(true);
+                aReader.SetLayerMode(true);
+                if (aReader.ReadFile((Standard_CString)Name) != IFSelect_RetDone) {
+                    PyErr_SetString(PyExc_Exception, "cannot read IGES file");
+                    return 0;
+                }
+
+                Handle_Message_ProgressIndicator pi = new Part::ProgressIndicator(100);
+                aReader.WS()->MapReader()->SetProgress(pi);
+                pi->NewScope(100, "Reading IGES file...");
+                pi->Show();
+                aReader.Transfer(hDoc);
+                pi->EndScope();
+            }
+            catch (OSD_Exception) {
+                Handle_Standard_Failure e = Standard_Failure::Caught();
+                Base::Console().Error("%s\n", e->GetMessageString());
+                Base::Console().Message("Try to load IGES file without colors...\n");
+
+                Part::ImportIgesParts(pcDoc,Name);
+                pcDoc->recompute();
+            }
+        }
+        else {
+            PyErr_SetString(PyExc_Exception, "no supported file format");
+            return 0;
+        }
+
+        Import::ImportOCAFAssembly ocaf(hDoc, pcDoc, file.fileNamePure());
+        ocaf.loadShapes();
+        pcDoc->recompute();
+
+    }
+    catch (Standard_Failure) {
+        Handle_Standard_Failure e = Standard_Failure::Caught();
+        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        return 0;
+    }
+    PY_CATCH
+
+    Py_Return;
+}
+
+
 
 static PyObject * importer(PyObject *self, PyObject *args)
 {
@@ -288,5 +390,7 @@ struct PyMethodDef Import_Import_methods[] = {
      "insert(string,string) -- Insert the file into the given document."},
     {"export"     ,exporter  ,METH_VARARGS,
      "export(list,string) -- Export a list of objects into a single file."},
+    {"importAssembly"     ,importAssembly  ,METH_VARARGS,
+     "importAssembly(FileName,Target) -- Import a Assembly file and creates a Assembly structure."},
     {NULL, NULL}                   /* end of table marker */
 };
