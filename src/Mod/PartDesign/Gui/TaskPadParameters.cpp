@@ -447,7 +447,7 @@ bool TaskDlgPadParameters::accept()
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Length2 = %f",name.c_str(),parameter->getLength2());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Offset = %f",name.c_str(),parameter->getOffset());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Type = %u",name.c_str(),parameter->getMode());
-        std::string facename = parameter->getFaceName();
+        std::string facename = (const char*)parameter->getFaceName();
 
         if (!facename.empty()) {
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.UpToFace = %s", name.c_str(), facename.c_str());
