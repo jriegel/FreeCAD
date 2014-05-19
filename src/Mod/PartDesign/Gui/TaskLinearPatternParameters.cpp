@@ -477,22 +477,11 @@ bool TaskDlgLinearPatternParameters::accept()
         App::DocumentObject* obj;
         linearpatternParameter->getDirection(obj, directions);
         std::string direction = getPythonStr(obj, directions);
-        if (!direction.empty()) {
-            App::DocumentObject* sketch = 0;
-            if (direction == "H_Axis" || direction == "V_Axis" ||
-                (direction.size() > 4 && direction.substr(0,4) == "Axis"))
-                sketch = linearpatternParameter->getSketchObject();
-            else
-                sketch = linearpatternParameter->getSupportObject();
-
-            if (sketch) {
-                QString buf = QString::fromLatin1("(App.ActiveDocument.%1,[\"%2\"])");
-                buf = buf.arg(QString::fromLatin1(sketch->getNameInDocument()));
-                buf = buf.arg(QString::fromLatin1(direction.c_str()));
-                Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = %s", name.c_str(), buf.toStdString().c_str());
-            }
-        } else
+        if (!direction.empty() && obj) {
+            Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = %s", name.c_str(), direction.c_str());
+        } else {
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = None", name.c_str());
+        }
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Reversed = %u",name.c_str(),linearpatternParameter->getReverse());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Length = %f",name.c_str(),linearpatternParameter->getLength());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Occurrences = %u",name.c_str(),linearpatternParameter->getOccurrences());
