@@ -479,10 +479,11 @@ bool TaskDlgLinearPatternParameters::accept()
         App::DocumentObject* obj;
         linearpatternParameter->getDirection(obj, directions);
         std::string direction = getPythonStr(obj, directions);
-        if (!direction.empty()) {
+        if (!direction.empty() && obj) {
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = %s", name.c_str(), direction.c_str());
-        } else
+        } else {
             Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Direction = None", name.c_str());
+        }
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Reversed = %u",name.c_str(),linearpatternParameter->getReverse());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Length = %f",name.c_str(),linearpatternParameter->getLength());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Occurrences = %u",name.c_str(),linearpatternParameter->getOccurrences());
