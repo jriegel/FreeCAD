@@ -170,7 +170,7 @@ public:
     const char* getValueAsString(void) const;
     /// get all possible enum values as vector of strings
     std::vector<std::string> getEnumVector(void) const;
-    /// set all enum values as vector of strings
+	/// set all enum values as vector of strings, use setEnums() if possible!
     void setEnumVector(const std::vector<std::string>&);
     /// get the pointer to the enum list
     const char** getEnums(void) const;
