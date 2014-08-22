@@ -800,6 +800,7 @@ SET(Viewprovider_CPP_SRCS
     ViewProviderBuilder.cpp
     ViewProviderPlacement.cpp
     ViewProviderPlane.cpp
+    ViewProviderPart.cpp
     ViewProviderMaterialObject.cpp
 )
 SET(Viewprovider_SRCS
@@ -818,6 +819,7 @@ SET(Viewprovider_SRCS
     ViewProviderBuilder.h
     ViewProviderPlacement.h
     ViewProviderPlane.h
+    ViewProviderPart.h
     ViewProviderMaterialObject.h
 )
 SOURCE_GROUP("View3D\\Viewprovider" FILES ${Viewprovider_SRCS})

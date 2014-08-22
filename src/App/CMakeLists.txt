@@ -75,6 +75,7 @@ SET(Document_CPP_SRCS
     FeatureTest.cpp
     GeoFeature.cpp
     Part.cpp
+    Path.cpp
     InventorObject.cpp
     MeasureDistance.cpp
     Placement.cpp
@@ -99,6 +100,7 @@ SET(Document_HPP_SRCS
     FeatureTest.h
     GeoFeature.h
     Part.h
+    Path.h
     InventorObject.h
     MeasureDistance.h
     Placement.h
