@@ -363,12 +363,10 @@ protected:
     // reference coordinates for relative operations
     double xInit,yInit;
     bool relative;
-<<<<<<< HEAD
 
     std::string oldWb;
-=======
     int antiAliasing;
->>>>>>> master
+
 };
 
 } // namespace PartGui

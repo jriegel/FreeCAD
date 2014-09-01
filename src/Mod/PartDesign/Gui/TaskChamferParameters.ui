@@ -43,7 +43,6 @@
    </item>
    <item>
       <widget class="Gui::InputField" name="chamferDistance"/>
-    </widget>
    </item>
    <item>
     <widget class="QLabel" name="label">

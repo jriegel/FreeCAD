@@ -44,25 +44,27 @@ PROPERTY_SOURCE(PartDesignGui::ViewProviderDraft,PartDesignGui::ViewProviderDres
 bool ViewProviderDraft::setEdit(int ModNum)
 {
     if (ModNum == ViewProvider::Default ) {
-        // When double-clicking on the item for this fillet the
-        // object unsets and sets its edit mode without closing
-        // the task panel
-        Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
-        TaskDlgDraftParameters *draftDlg = qobject_cast<TaskDlgDraftParameters *>(dlg);
-        if (draftDlg && draftDlg->getDraftView() != this)
-            draftDlg = 0; // another pad left open its task panel
-        if (dlg && !draftDlg) {
-            QMessageBox msgBox;
-            msgBox.setText(QObject::tr("A dialog is already open in the task panel"));
-            msgBox.setInformativeText(QObject::tr("Do you want to close this dialog?"));
-            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-            msgBox.setDefaultButton(QMessageBox::Yes);
-            int ret = msgBox.exec();
-            if (ret == QMessageBox::Yes)
-                Gui::Control().reject();
-            else
-                return false;
-        }
+		TaskDlgDressUpParameters *dressUpDlg = NULL;
+
+        //// When double-clicking on the item for this fillet the
+        //// object unsets and sets its edit mode without closing
+        //// the task panel
+        //Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
+        //TaskDlgDraftParameters *draftDlg = qobject_cast<TaskDlgDraftParameters *>(dlg);
+        //if (draftDlg && draftDlg->getDraftView() != this)
+        //    draftDlg = 0; // another pad left open its task panel
+        //if (dlg && !draftDlg) {
+        //    QMessageBox msgBox;
+        //    msgBox.setText(QObject::tr("A dialog is already open in the task panel"));
+        //    msgBox.setInformativeText(QObject::tr("Do you want to close this dialog?"));
+        //    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        //    msgBox.setDefaultButton(QMessageBox::Yes);
+        //    int ret = msgBox.exec();
+        //    if (ret == QMessageBox::Yes)
+        //        Gui::Control().reject();
+        //    else
+        //        return false;
+        //}
 
 
         if (checkDlgOpen(dressUpDlg)) {

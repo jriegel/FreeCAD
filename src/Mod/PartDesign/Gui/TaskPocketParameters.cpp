@@ -301,15 +301,16 @@ void TaskPocketParameters::onFaceName(const QString& text)
 
 double TaskPocketParameters::getLength(void) const
 {
-    return ui->doubleSpinBox->value();
+    return ui->pocketLength->value().getValue();
 }
 
 double TaskPocketParameters::getOffset(void) const
 {
-    if (on) {
-        PartDesign::Pocket* pcPocket = static_cast<PartDesign::Pocket*>(PocketView->getObject());
-        pcPocket->getDocument()->recomputeFeature(pcPocket);
-    }
+    //if (on) {
+    //    PartDesign::Pocket* pcPocket = static_cast<PartDesign::Pocket*>(PocketView->getObject());
+    //    pcPocket->getDocument()->recomputeFeature(pcPocket);
+    //}
+	return ui->spinOffset->value();
 }
 
 bool   TaskPocketParameters::getReversed(void) const
@@ -389,19 +390,19 @@ TaskDlgPocketParameters::~TaskDlgPocketParameters()
 //==== calls from the TaskView ===============================================================
 
 
-void TaskDlgPocketParameters::open()
-{
-    // a transaction is already open at creation time of the pocket
-    if (!Gui::Command::hasPendingCommand()) {
-        QString msg = tr("Edit pocket");
-        Gui::Command::openCommand((const char*)msg.toUtf8());
-    }
-}
-
-void TaskDlgPocketParameters::clicked(int)
-{
-
-}
+//void TaskDlgPocketParameters::open()
+//{
+//    // a transaction is already open at creation time of the pocket
+//    if (!Gui::Command::hasPendingCommand()) {
+//        QString msg = tr("Edit pocket");
+//        Gui::Command::openCommand((const char*)msg.toUtf8());
+//    }
+//}
+//
+//void TaskDlgPocketParameters::clicked(int)
+//{
+//
+//}
 
 bool TaskDlgPocketParameters::accept()
 {
@@ -433,34 +434,34 @@ bool TaskDlgPocketParameters::accept()
     return true;
 }
 
-bool TaskDlgPocketParameters::reject()
-{
-    // get the support and Sketch
-    PartDesign::Pocket* pcPocket = static_cast<PartDesign::Pocket*>(PocketView->getObject()); 
-    Sketcher::SketchObject *pcSketch = 0;
-    App::DocumentObject    *pcSupport = 0;
-    if (pcPocket->Sketch.getValue()) {
-        pcSketch = static_cast<Sketcher::SketchObject*>(pcPocket->Sketch.getValue()); 
-        pcSupport = pcSketch->Support.getValue();
-    }
-
-    // roll back the done things
-    Gui::Command::abortCommand();
-    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
-    
-    // if abort command deleted the object the support is visible again
-    if (!Gui::Application::Instance->getViewProvider(pcPocket)) {
-        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
-            Gui::Application::Instance->getViewProvider(pcSketch)->show();
-        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
-            Gui::Application::Instance->getViewProvider(pcSupport)->show();
-    }
-
-    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
-    //Gui::Command::commitCommand();
-
-    return true;
-}
+//bool TaskDlgPocketParameters::reject()
+//{
+//    // get the support and Sketch
+//    PartDesign::Pocket* pcPocket = static_cast<PartDesign::Pocket*>(PocketView->getObject()); 
+//    Sketcher::SketchObject *pcSketch = 0;
+//    App::DocumentObject    *pcSupport = 0;
+//    if (pcPocket->Sketch.getValue()) {
+//        pcSketch = static_cast<Sketcher::SketchObject*>(pcPocket->Sketch.getValue()); 
+//        pcSupport = pcSketch->Support.getValue();
+//    }
+//
+//    // roll back the done things
+//    Gui::Command::abortCommand();
+//    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
+//    
+//    // if abort command deleted the object the support is visible again
+//    if (!Gui::Application::Instance->getViewProvider(pcPocket)) {
+//        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
+//            Gui::Application::Instance->getViewProvider(pcSketch)->show();
+//        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
+//            Gui::Application::Instance->getViewProvider(pcSupport)->show();
+//    }
+//
+//    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
+//    //Gui::Command::commitCommand();
+//
+//    return true;
+//}
 
 
 

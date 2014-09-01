@@ -275,17 +275,17 @@ void TaskRevolutionParameters::onReversed(bool on)
 {
     PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(vp->getObject());
     pcRevolution->Reversed.setValue(on);
-    if (updateView())
+    //if (updateView())
         pcRevolution->getDocument()->recomputeFeature(pcRevolution);
 }
 
-void TaskRevolutionParameters::onUpdateView(bool on)
-{
-    if (on) {
-        PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(RevolutionView->getObject());
-        pcRevolution->getDocument()->recomputeFeature(pcRevolution);
-    }
-}
+//void TaskRevolutionParameters::onUpdateView(bool on)
+//{
+//    if (on) {
+//        PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(RevolutionView->getObject());
+//        pcRevolution->getDocument()->recomputeFeature(pcRevolution);
+//    }
+//}
 
 double TaskRevolutionParameters::getAngle(void) const
 {
@@ -369,19 +369,19 @@ TaskDlgRevolutionParameters::~TaskDlgRevolutionParameters()
 //==== calls from the TaskView ===============================================================
 
 
-void TaskDlgRevolutionParameters::open()
-{
-    // a transaction is already open at creation time of the revolve
-    if (!Gui::Command::hasPendingCommand()) {
-        QString msg = QObject::tr("Edit revolve");
-        Gui::Command::openCommand((const char*)msg.toUtf8());
-    }
-}
-
-void TaskDlgRevolutionParameters::clicked(int)
-{
-
-}
+//void TaskDlgRevolutionParameters::open()
+//{
+//    // a transaction is already open at creation time of the revolve
+//    if (!Gui::Command::hasPendingCommand()) {
+//        QString msg = QObject::tr("Edit revolve");
+//        Gui::Command::openCommand((const char*)msg.toUtf8());
+//    }
+//}
+//
+//void TaskDlgRevolutionParameters::clicked(int)
+//{
+//
+//}
 
 bool TaskDlgRevolutionParameters::accept()
 {
@@ -403,34 +403,34 @@ bool TaskDlgRevolutionParameters::accept()
     return true;
 }
 
-bool TaskDlgRevolutionParameters::reject()
-{
-    // get the support and Sketch
-    PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(RevolutionView->getObject());
-    Sketcher::SketchObject *pcSketch = 0;
-    App::DocumentObject    *pcSupport = 0;
-    if (pcRevolution->Sketch.getValue()) {
-        pcSketch = static_cast<Sketcher::SketchObject*>(pcRevolution->Sketch.getValue());
-        pcSupport = pcSketch->Support.getValue();
-    }
-
-    // role back the done things
-    Gui::Command::abortCommand();
-    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
-
-    // if abort command deleted the object the support is visible again
-    if (!Gui::Application::Instance->getViewProvider(pcRevolution)) {
-        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
-            Gui::Application::Instance->getViewProvider(pcSketch)->show();
-        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
-            Gui::Application::Instance->getViewProvider(pcSupport)->show();
-    }
-
-    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
-    //Gui::Command::commitCommand();
-
-    return true;
-}
+//bool TaskDlgRevolutionParameters::reject()
+//{
+//    // get the support and Sketch
+//    PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(RevolutionView->getObject());
+//    Sketcher::SketchObject *pcSketch = 0;
+//    App::DocumentObject    *pcSupport = 0;
+//    if (pcRevolution->Sketch.getValue()) {
+//        pcSketch = static_cast<Sketcher::SketchObject*>(pcRevolution->Sketch.getValue());
+//        pcSupport = pcSketch->Support.getValue();
+//    }
+//
+//    // role back the done things
+//    Gui::Command::abortCommand();
+//    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
+//
+//    // if abort command deleted the object the support is visible again
+//    if (!Gui::Application::Instance->getViewProvider(pcRevolution)) {
+//        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
+//            Gui::Application::Instance->getViewProvider(pcSketch)->show();
+//        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
+//            Gui::Application::Instance->getViewProvider(pcSupport)->show();
+//    }
+//
+//    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
+//    //Gui::Command::commitCommand();
+//
+//    return true;
+//}
 
 
 

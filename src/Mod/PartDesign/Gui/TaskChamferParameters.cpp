@@ -71,11 +71,8 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
     PartDesign::Chamfer* pcChamfer = static_cast<PartDesign::Chamfer*>(DressUpView->getObject());
     double r = pcChamfer->Size.getValue();
 
-    ui->doubleSpinBox->setDecimals(Base::UnitsApi::getDecimals());
-    ui->doubleSpinBox->setMaximum(INT_MAX);
-    ui->doubleSpinBox->setValue(r);
-    ui->doubleSpinBox->selectAll();
-    QMetaObject::invokeMethod(ui->doubleSpinBox, "setFocus", Qt::QueuedConnection);
+	ui->chamferDistance->setValue(Base::Quantity(r,Base::Unit::Length));
+    QMetaObject::invokeMethod(ui->chamferDistance, "setFocus", Qt::QueuedConnection);
 
     std::vector<std::string> strings = pcChamfer->Base.getSubValues();
     for (std::vector<std::string>::const_iterator i = strings.begin(); i != strings.end(); i++)
@@ -171,19 +168,19 @@ TaskDlgChamferParameters::~TaskDlgChamferParameters()
 //==== calls from the TaskView ===============================================================
 
 
-void TaskDlgChamferParameters::open()
-{
-    // a transaction is already open at creation time of the chamfer
-    if (!Gui::Command::hasPendingCommand()) {
-        QString msg = tr("Edit chamfer");
-        Gui::Command::openCommand((const char*)msg.toUtf8());
-    }
-}
-
-void TaskDlgChamferParameters::clicked(int)
-{
-
-}
+//void TaskDlgChamferParameters::open()
+//{
+//    // a transaction is already open at creation time of the chamfer
+//    if (!Gui::Command::hasPendingCommand()) {
+//        QString msg = tr("Edit chamfer");
+//        Gui::Command::openCommand((const char*)msg.toUtf8());
+//    }
+//}
+//
+//void TaskDlgChamferParameters::clicked(int)
+//{
+//
+//}
 
 bool TaskDlgChamferParameters::accept()
 {

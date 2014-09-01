@@ -265,19 +265,19 @@ TaskDlgDraftParameters::~TaskDlgDraftParameters()
 //==== calls from the TaskView ===============================================================
 
 
-void TaskDlgDraftParameters::open()
-{
-    // a transaction is already open at creation time of the draft
-    if (!Gui::Command::hasPendingCommand()) {
-        QString msg = QObject::tr("Edit draft");
-        Gui::Command::openCommand((const char*)msg.toUtf8());
-    }
-}
-
-void TaskDlgDraftParameters::clicked(int)
-{
-
-}
+//void TaskDlgDraftParameters::open()
+//{
+//    // a transaction is already open at creation time of the draft
+//    if (!Gui::Command::hasPendingCommand()) {
+//        QString msg = QObject::tr("Edit draft");
+//        Gui::Command::openCommand((const char*)msg.toUtf8());
+//    }
+//}
+//
+//void TaskDlgDraftParameters::clicked(int)
+//{
+//
+//}
 
 bool TaskDlgDraftParameters::accept()
 {

@@ -43,6 +43,7 @@
 #include <Gui/MenuManager.h>
 #include <Gui/ToolBarManager.h>
 #include <Gui/Control.h>
+#include <Mod/Sketcher/Gui/Workbench.h>
 
 #include <Mod/Part/App/Part2DObject.h>
 #include <Mod/PartDesign/App/Body.h>

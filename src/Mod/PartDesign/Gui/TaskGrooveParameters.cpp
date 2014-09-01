@@ -333,19 +333,19 @@ TaskDlgGrooveParameters::~TaskDlgGrooveParameters()
 //==== calls from the TaskView ===============================================================
 
 
-void TaskDlgGrooveParameters::open()
-{
-    // a transaction is already open at creation time of the groove
-    if (!Gui::Command::hasPendingCommand()) {
-        QString msg = QObject::tr("Edit groove");
-        Gui::Command::openCommand((const char*)msg.toUtf8());
-    }
-}
-
-void TaskDlgGrooveParameters::clicked(int)
-{
-
-}
+//void TaskDlgGrooveParameters::open()
+//{
+//    // a transaction is already open at creation time of the groove
+//    if (!Gui::Command::hasPendingCommand()) {
+//        QString msg = QObject::tr("Edit groove");
+//        Gui::Command::openCommand((const char*)msg.toUtf8());
+//    }
+//}
+//
+//void TaskDlgGrooveParameters::clicked(int)
+//{
+//
+//}
 
 bool TaskDlgGrooveParameters::accept()
 {
@@ -367,34 +367,34 @@ bool TaskDlgGrooveParameters::accept()
     return true;
 }
 
-bool TaskDlgGrooveParameters::reject()
-{
-    // get the support and Sketch
-    PartDesign::Groove* pcGroove = static_cast<PartDesign::Groove*>(GrooveView->getObject());
-    Sketcher::SketchObject *pcSketch = 0;
-    App::DocumentObject    *pcSupport = 0;
-    if (pcGroove->Sketch.getValue()) {
-        pcSketch = static_cast<Sketcher::SketchObject*>(pcGroove->Sketch.getValue());
-        pcSupport = pcSketch->Support.getValue();
-    }
-
-    // role back the done things
-    Gui::Command::abortCommand();
-    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
-
-    // if abort command deleted the object the support is visible again
-    if (!Gui::Application::Instance->getViewProvider(pcGroove)) {
-        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
-            Gui::Application::Instance->getViewProvider(pcSketch)->show();
-        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
-            Gui::Application::Instance->getViewProvider(pcSupport)->show();
-    }
-
-    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
-    //Gui::Command::commitCommand();
-
-    return true;
-}
+//bool TaskDlgGrooveParameters::reject()
+//{
+//    // get the support and Sketch
+//    PartDesign::Groove* pcGroove = static_cast<PartDesign::Groove*>(GrooveView->getObject());
+//    Sketcher::SketchObject *pcSketch = 0;
+//    App::DocumentObject    *pcSupport = 0;
+//    if (pcGroove->Sketch.getValue()) {
+//        pcSketch = static_cast<Sketcher::SketchObject*>(pcGroove->Sketch.getValue());
+//        pcSupport = pcSketch->Support.getValue();
+//    }
+//
+//    // role back the done things
+//    Gui::Command::abortCommand();
+//    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
+//
+//    // if abort command deleted the object the support is visible again
+//    if (!Gui::Application::Instance->getViewProvider(pcGroove)) {
+//        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
+//            Gui::Application::Instance->getViewProvider(pcSketch)->show();
+//        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
+//            Gui::Application::Instance->getViewProvider(pcSupport)->show();
+//    }
+//
+//    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
+//    //Gui::Command::commitCommand();
+//
+//    return true;
+//}
 
 
 
