@@ -4,12 +4,13 @@ else(MSVC)
     add_definitions(-DHAVE_LIMITS_H -DHAVE_CONFIG_H)
 endif(MSVC)
 
-if(FREECAD_BUILD_FEM_NETGEN)
+if(BUILD_FEM_NETGEN)
     add_definitions(-DFCWithNetgen)
-endif(FREECAD_BUILD_FEM_NETGEN)
+endif(BUILD_FEM_NETGEN)
 
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
@@ -26,7 +27,7 @@ include_directories(
 link_directories(${OCC_LIBRARY_DIR})
 
 
-if(FREECAD_BUILD_FEM_NETGEN)
+if(BUILD_FEM_NETGEN)
     set(Fem_LIBS
         Part
         FreeCADApp
@@ -34,14 +35,14 @@ if(FREECAD_BUILD_FEM_NETGEN)
         NETGENPlugin
         SMESH
     )
-else(FREECAD_BUILD_FEM_NETGEN)
+else(BUILD_FEM_NETGEN)
     set(Fem_LIBS
         Part
         FreeCADApp
         StdMeshers
         SMESH
     )
-endif(FREECAD_BUILD_FEM_NETGEN)
+endif(BUILD_FEM_NETGEN)
 
 generate_from_xml(FemMeshPy)
 
@@ -155,21 +156,7 @@ fc_target_copy_resource(Fem
     ${FemScripts_SRCS}
     )
 
-	
-if(MSVC)
-    set_target_properties(Fem PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Fem PROPERTIES DEBUG_OUTPUT_NAME "Fem_d")
-    set_target_properties(Fem PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Fem)
-    set_target_properties(Fem PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Fem PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Fem PROPERTIES DEBUG_OUTPUT_NAME "Fem_d")
-    set_target_properties(Fem PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Fem)
-    set_target_properties(Fem PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Fem PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Fem)
-    set_target_properties(Fem PROPERTIES PREFIX "")
-    set_target_properties(Fem PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Fem Fem /Mod/Fem)
+SET_PYTHON_PREFIX_SUFFIX(Fem)
 
-INSTALL(TARGETS Fem DESTINATION lib)
+INSTALL(TARGETS Fem DESTINATION ${CMAKE_INSTALL_LIBDIR})

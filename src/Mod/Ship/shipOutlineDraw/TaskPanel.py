@@ -22,10 +22,12 @@
 #***************************************************************************
 
 import FreeCAD as App
+from FreeCAD import Base, Vector
 import FreeCADGui as Gui
+import Units
+import Part
 from PySide import QtGui, QtCore
 import Preview
-import Plot
 import Instance
 from shipUtils import Paths
 
@@ -42,17 +44,47 @@ class TaskPanel:
         self.preview = Preview.Preview()
 
     def accept(self):
-        mw = self.getMainWindow()
-        form = mw.findChild(QtGui.QWidget, "TaskPanel")
-        form.scale = self.widget(QtGui.QSpinBox, "Scale")
-
         self.saveSections()
-        self.obj = Plot.Plot(form.scale.value(),
-                             self.obj.Shape,
-                             self.ship.Shape)
+        # Add ship edges to the object
+        edges = self.getEdges([self.ship.Shape])
+        border = edges[0]
+        for i in range(len(edges)):
+            border = border.oldFuse(edges[i])
+            border = border.oldFuse(edges[i].mirror(Vector(0.0, 0.0, 0.0),
+                                                    Vector(0.0, 1.0, 0.0)))
+        obj = border.oldFuse(self.obj.Shape)
+
+        # Send the generated object to the scene
+        Part.show(obj)
+        objs = App.ActiveDocument.Objects
+        self.obj = objs[len(objs) - 1]
+
         self.preview.clean()
         self.obj.Label = 'OutlineDraw'
         return True
+
+    def getEdges(self, objs):
+        """Return object edges (as a list)
+        """
+        edges = []
+        if not objs:
+            return None
+        for i in range(len(objs)):
+            obj = objs[i]
+            if obj.isDerivedFrom('Part::Feature'):
+                # get shape
+                shape = obj.Shape
+                if not shape:
+                    return None
+                obj = shape
+            if not obj.isDerivedFrom('Part::TopoShape'):
+                return None
+            objEdges = obj.Edges
+            if not objEdges:
+                continue
+            for j in range(0, len(objEdges)):
+                edges.append(objEdges[j])
+        return edges
 
     def reject(self):
         self.preview.clean()
@@ -93,15 +125,14 @@ class TaskPanel:
         form.deleteButton = self.widget(QtGui.QPushButton, "DeleteButton")
         form.nSections = self.widget(QtGui.QSpinBox, "NSections")
         form.createButton = self.widget(QtGui.QPushButton, "CreateButton")
-        form.scale = self.widget(QtGui.QSpinBox, "Scale")
         self.form = form
         # Initial values
         if self.initValues():
             return True
         self.retranslateUi()
-        self.obj = self.preview.update(self.ship.Length,
-                                       self.ship.Breadth,
-                                       self.ship.Draft,
+        self.obj = self.preview.update(self.ship.Length.getValueAs('m').Value,
+                                       self.ship.Breadth.getValueAs('m').Value,
+                                       self.ship.Draft.getValueAs('m').Value,
                                        self.LSections,
                                        self.BSections,
                                        self.TSections,
@@ -203,12 +234,6 @@ class TaskPanel:
                 "Auto create",
                 None,
                 QtGui.QApplication.UnicodeUTF8))
-        self.widget(QtGui.QGroupBox, "ScaleBox").setTitle(
-            QtGui.QApplication.translate(
-                "ship_outline",
-                "Scale",
-                None,
-                QtGui.QApplication.UnicodeUTF8))
         self.widget(QtGui.QPushButton, "DeleteButton").setText(
             QtGui.QApplication.translate(
                 "ship_outline",
@@ -277,13 +302,13 @@ class TaskPanel:
         form.sections.setRowCount(nRow + 1)
         self.skip = True
         for i in range(0, nRow):
-            string = '{0}'.format(SectionList[i])
+            string = '{} m'.format(SectionList[i])
             item = QtGui.QTableWidgetItem(string)
             form.sections.setItem(i, 0, item)
         self.skip = False
-        self.obj = self.preview.update(self.ship.Length,
-                                       self.ship.Breadth,
-                                       self.ship.Draft,
+        self.obj = self.preview.update(self.ship.Length.getValueAs('m').Value,
+                                       self.ship.Breadth.getValueAs('m').Value,
+                                       self.ship.Draft.getValueAs('m').Value,
                                        self.LSections,
                                        self.BSections,
                                        self.TSections,
@@ -303,46 +328,58 @@ class TaskPanel:
         form.sections = self.widget(QtGui.QTableWidget, "Sections")
         form.sectionType = self.widget(QtGui.QComboBox, "SectionType")
 
+        # Add an empty item at the end of the list
         nRow = form.sections.rowCount()
         item = form.sections.item(nRow - 1, 0)
         if item:
             if(item.text() != ''):
                 form.sections.setRowCount(nRow + 1)
-        # Ensure that the new introduced item is a number
+
         ID = form.sectionType.currentIndex()
         if ID == 0:
-            SectionList = self.LSections[:]
+            SectionList = self.LSections
         elif ID == 1:
-            SectionList = self.BSections[:]
+            SectionList = self.BSections
         elif ID == 2:
-            SectionList = self.TSections[:]
+            SectionList = self.TSections
+
         item = form.sections.item(row, column)
-        (number, flag) = item.text().toFloat()
-        if not flag:
-            if len(SectionList) > nRow - 1:
-                number = SectionList[nRow - 1]
-            else:
-                number = 0.0
-        string = '{0}'.format(number)
+        # Look for deleted row (empty string)
+        if not item.text():
+            del SectionList[row]
+            form.sections.removeRow(row)
+            self.obj = self.preview.update(self.ship.Length.getValueAs('m').Value,
+                                           self.ship.Breadth.getValueAs('m').Value,
+                                           self.ship.Draft.getValueAs('m').Value,
+                                           self.LSections,
+                                           self.BSections,
+                                           self.TSections,
+                                           self.ship.Shape)
+            return
+
+        # Get the new section value
+        try:
+            qty = Units.Quantity(item.text())
+            number = qty.getValueAs('m').Value
+        except:
+            number = 0.0
+
+        string = '{} m'.format(number)
         item.setText(string)
         # Regenerate the list
-        SectionList = []
+        del SectionList[:]
         for i in range(0, nRow):
             item = form.sections.item(i, 0)
-            if item:
-                (number, flag) = item.text().toFloat()
-                SectionList.append(number)
-        # Paste it into the section type list
-        ID = form.sectionType.currentIndex()
-        if ID == 0:
-            self.LSections = SectionList[:]
-        elif ID == 1:
-            self.BSections = SectionList[:]
-        elif ID == 2:
-            self.TSections = SectionList[:]
-        self.obj = self.preview.update(self.ship.Length,
-                                       self.ship.Breadth,
-                                       self.ship.Draft,
+            try:
+                qty = Units.Quantity(item.text())
+                number = qty.getValueAs('m').Value
+            except:
+                number = 0.0
+            SectionList.append(number)
+
+        self.obj = self.preview.update(self.ship.Length.getValueAs('m').Value,
+                                       self.ship.Breadth.getValueAs('m').Value,
+                                       self.ship.Draft.getValueAs('m').Value,
                                        self.LSections,
                                        self.BSections,
                                        self.TSections,
@@ -361,11 +398,11 @@ class TaskPanel:
         form.sections.setRowCount(1)
         ID = form.sectionType.currentIndex()
         if ID == 0:
-            self.LSections = []
+            del self.LSections[:]
         elif ID == 1:
-            self.BSections = []
+            del self.BSections[:]
         elif ID == 2:
-            self.TSections = []
+            del self.TSections[:]
         self.setSectionType(ID)
 
     def onCreateButton(self):
@@ -383,15 +420,15 @@ class TaskPanel:
         L = 0.0
         ID = form.sectionType.currentIndex()
         if ID == 0:
-            L = self.ship.Length
+            L = self.ship.Length.getValueAs('m').Value
             d = L / (nSections - 1)
             start = - L / 2.0
         elif ID == 1:
-            L = -0.5 * self.ship.Breadth
+            L = -0.5 * self.ship.Breadth.getValueAs('m').Value
             d = L / (nSections + 1)
             start = d
         elif ID == 2:
-            L = self.ship.Draft
+            L = self.ship.Draft.getValueAs('m').Value
             d = L / (nSections)
             start = d
         # Compute the sections positions
@@ -413,7 +450,6 @@ class TaskPanel:
         mw = self.getMainWindow()
         form = mw.findChild(QtGui.QWidget, "TaskPanel")
         form.sectionType = self.widget(QtGui.QComboBox, "SectionType")
-        form.scale = self.widget(QtGui.QSpinBox, "Scale")
 
         # Load sections
         props = self.ship.PropertiesList
@@ -426,14 +462,6 @@ class TaskPanel:
             self.LSections = self.ship.LSections[:]
             self.BSections = self.ship.BSections[:]
             self.TSections = self.ship.TSections[:]
-        # Load scale too
-        flag = True
-        try:
-            props.index("PlotScale")
-        except ValueError:
-            flag = False
-        if flag:
-            form.scale.setValue(self.ship.PlotScale)
         # Set UI
         self.setSectionType(form.sectionType.currentIndex())
 
@@ -442,7 +470,6 @@ class TaskPanel:
         """
         mw = self.getMainWindow()
         form = mw.findChild(QtGui.QWidget, "TaskPanel")
-        form.scale = self.widget(QtGui.QSpinBox, "Scale")
 
         props = self.ship.PropertiesList
         try:
@@ -479,20 +506,6 @@ class TaskPanel:
         self.ship.LSections = self.LSections[:]
         self.ship.BSections = self.BSections[:]
         self.ship.TSections = self.TSections[:]
-        # Save the scale as well
-        try:
-            props.index("PlotScale")
-        except ValueError:
-            tooltip = str(QtGui.QApplication.translate(
-                "ship_outline",
-                "Plot scale (1:scale format)",
-                None,
-                QtGui.QApplication.UnicodeUTF8))
-            self.ship.addProperty("App::PropertyInteger",
-                                  "PlotScale",
-                                  "Ship",
-                                  tooltip).PlotScale = 250
-        self.ship.PlotScale = form.scale.value()
 
 
 def createTask():

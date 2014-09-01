@@ -418,6 +418,210 @@ ActionSelector::~ActionSelector()
 
 // --------------------------------------------------------------------
 
+InputField::InputField (QWidget * parent)
+  : QLineEdit(parent),
+    Value(0),
+    Maximum(INT_MAX),
+    Minimum(-INT_MAX),
+    StepSize(1.0),
+    HistorySize(5)
+{
+}
+
+InputField::~InputField()
+{
+}
+
+/** Sets the preference path to \a path. */
+void InputField::setParamGrpPath( const QByteArray& path )
+{
+    m_sPrefGrp = path;
+}
+
+/** Returns the widget's preferences path. */
+QByteArray InputField::paramGrpPath() const
+{
+    return m_sPrefGrp;
+}
+
+/// sets the field with a quantity
+void InputField::setValue(double quant)
+{
+    Value = quant;
+    setText(QString("%1 %2").arg(Value).arg(UnitStr));
+}
+
+/// sets the field with a quantity
+double InputField::getQuantity() const
+{
+    return Value;
+}
+
+/// get the value of the singleStep property
+double InputField::singleStep(void)const
+{
+    return StepSize;
+}
+
+/// set the value of the singleStep property 
+void InputField::setSingleStep(double s)
+{
+    StepSize = s;
+}
+
+/// get the value of the maximum property
+double InputField::maximum(void)const
+{
+    return Maximum;
+}
+
+/// set the value of the maximum property 
+void InputField::setMaximum(double m)
+{
+    Maximum = m;
+}
+
+/// get the value of the minimum property
+double InputField::minimum(void)const
+{
+    return Minimum;
+}
+
+/// set the value of the minimum property 
+void InputField::setMinimum(double m)
+{
+    Minimum = m;
+}
+
+void InputField::setUnitText(QString str)
+{
+    UnitStr = str;
+    setText(QString("%1 %2").arg(Value).arg(UnitStr));
+}
+
+QString InputField::getUnitText(void)
+{
+    return UnitStr;
+}
+
+// get the value of the minimum property
+int InputField::historySize(void)const
+{
+    return HistorySize;
+}
+
+// set the value of the minimum property 
+void InputField::setHistorySize(int i)
+{
+    HistorySize = i;
+}
+
+// --------------------------------------------------------------------
+
+QuantitySpinBox::QuantitySpinBox (QWidget * parent)
+  : QAbstractSpinBox(parent),
+    Value(0),
+    Maximum(INT_MAX),
+    Minimum(-INT_MAX),
+    StepSize(1.0)
+{
+}
+
+QuantitySpinBox::~QuantitySpinBox()
+{
+}
+
+/// sets the field with a quantity
+void QuantitySpinBox::setValue(double quant)
+{
+    Value = quant;
+    lineEdit()->setText(QString("%1 %2").arg(Value).arg(UnitStr));
+}
+
+/// sets the field with a quantity
+double QuantitySpinBox::value() const
+{
+    return Value;
+}
+
+/// get the value of the singleStep property
+double QuantitySpinBox::singleStep(void)const
+{
+    return StepSize;
+}
+
+/// set the value of the singleStep property 
+void QuantitySpinBox::setSingleStep(double s)
+{
+    StepSize = s;
+}
+
+/// get the value of the maximum property
+double QuantitySpinBox::maximum(void)const
+{
+    return Maximum;
+}
+
+/// set the value of the maximum property 
+void QuantitySpinBox::setMaximum(double m)
+{
+    Maximum = m;
+}
+
+/// get the value of the minimum property
+double QuantitySpinBox::minimum(void)const
+{
+    return Minimum;
+}
+
+/// set the value of the minimum property 
+void QuantitySpinBox::setMinimum(double m)
+{
+    Minimum = m;
+}
+
+QAbstractSpinBox::StepEnabled QuantitySpinBox::stepEnabled() const
+{
+    if (isReadOnly())
+        return StepNone;
+    if (wrapping())
+        return StepEnabled(StepUpEnabled | StepDownEnabled);
+    StepEnabled ret = StepNone;
+    if (Value < Maximum) {
+        ret |= StepUpEnabled;
+    }
+    if (Value > Minimum) {
+        ret |= StepDownEnabled;
+    }
+    return ret;
+}
+
+void QuantitySpinBox::stepBy(int steps)
+{
+    double step = StepSize * steps;
+    double val = Value + step;
+    if (val > Maximum)
+        val = Maximum;
+    else if (val < Minimum)
+        val = Minimum;
+
+    lineEdit()->setText(QString::fromUtf8("%L1 %2").arg(val).arg(UnitStr));
+    update();
+}
+
+void QuantitySpinBox::setUnitText(QString str)
+{
+    UnitStr = str;
+    lineEdit()->setText(QString("%1 %2").arg(Value).arg(UnitStr));
+}
+
+QString QuantitySpinBox::unitText(void)
+{
+    return UnitStr;
+}
+
+// --------------------------------------------------------------------
+
 CommandIconView::CommandIconView ( QWidget * parent )
   : QListWidget(parent)
 {

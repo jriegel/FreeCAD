@@ -50,6 +50,7 @@
 #include <Gui/Placement.h>
 #include <Gui/FileDialog.h>
 #include <Gui/DlgPropertyLink.h>
+#include <Gui/QuantitySpinBox.h>
 
 #include "PropertyItem.h"
 
@@ -65,6 +66,10 @@ PropertyItem::PropertyItem() : parentItem(0), readonly(false)
 PropertyItem::~PropertyItem()
 {
     qDeleteAll(childItems);
+}
+
+void PropertyItem::initialize()
+{
 }
 
 void PropertyItem::reset()
@@ -84,11 +89,26 @@ void PropertyItem::setPropertyData(const std::vector<App::Property*>& items)
             ro &= (parent->isReadOnly(*it) || (*it)->StatusBits.test(2));
     }
     this->setReadOnly(ro);
+    this->initialize();
 }
 
 const std::vector<App::Property*>& PropertyItem::getPropertyData() const
 {
     return propertyItems;
+}
+
+App::Property* PropertyItem::getFirstProperty()
+{
+    if (propertyItems.empty())
+        return 0;
+    return propertyItems.front();
+}
+
+const App::Property* PropertyItem::getFirstProperty() const
+{
+    if (propertyItems.empty())
+        return 0;
+    return propertyItems.front();
 }
 
 void PropertyItem::setParent(PropertyItem* parent)
@@ -173,7 +193,7 @@ QString PropertyItem::pythonIdentifier(const App::Property* prop) const
     if (parent->getTypeId() == App::Document::getClassTypeId()) {
         App::Document* doc = static_cast<App::Document*>(parent);
         QString docName = QString::fromAscii(App::GetApplication().getDocumentName(doc));
-        QString propName = QString::fromAscii(parent->getName(prop));
+        QString propName = QString::fromAscii(parent->getPropertyName(prop));
         return QString::fromAscii("FreeCAD.getDocument(\"%1\").%2").arg(docName).arg(propName);
     }
     if (parent->getTypeId().isDerivedFrom(App::DocumentObject::getClassTypeId())) {
@@ -181,7 +201,7 @@ QString PropertyItem::pythonIdentifier(const App::Property* prop) const
         App::Document* doc = obj->getDocument();
         QString docName = QString::fromAscii(App::GetApplication().getDocumentName(doc));
         QString objName = QString::fromAscii(obj->getNameInDocument());
-        QString propName = QString::fromAscii(parent->getName(prop));
+        QString propName = QString::fromAscii(parent->getPropertyName(prop));
         return QString::fromAscii("FreeCAD.getDocument(\"%1\").getObject(\"%2\").%3")
             .arg(docName).arg(objName).arg(propName);
     }
@@ -190,7 +210,7 @@ QString PropertyItem::pythonIdentifier(const App::Property* prop) const
         App::Document* doc = obj->getDocument();
         QString docName = QString::fromAscii(App::GetApplication().getDocumentName(doc));
         QString objName = QString::fromAscii(obj->getNameInDocument());
-        QString propName = QString::fromAscii(parent->getName(prop));
+        QString propName = QString::fromAscii(parent->getPropertyName(prop));
         return QString::fromAscii("FreeCADGui.getDocument(\"%1\").getObject(\"%2\").%3")
             .arg(docName).arg(objName).arg(propName);
     }
@@ -511,11 +531,10 @@ QWidget* PropertyIntegerConstraintItem::createEditor(QWidget* parent, const QObj
 
 void PropertyIntegerConstraintItem::setEditorData(QWidget *editor, const QVariant& /*data*/) const
 {
-    const std::vector<App::Property*>& items = getPropertyData();
-    App::PropertyIntegerConstraint* prop = (App::PropertyIntegerConstraint*)items[0];
+    const App::PropertyIntegerConstraint* prop = static_cast
+        <const App::PropertyIntegerConstraint*>(getFirstProperty());
 
-    const App::PropertyIntegerConstraint::Constraints* c = 
-        ((App::PropertyIntegerConstraint*)prop)->getConstraints();
+    const App::PropertyIntegerConstraint::Constraints* c = prop->getConstraints();
     QSpinBox *sb = qobject_cast<QSpinBox*>(editor);
     if (c) {
         sb->setMinimum(c->LowerBound);
@@ -547,30 +566,6 @@ QVariant PropertyFloatItem::toString(const QVariant& prop) const
 {
     double value = prop.toDouble();
     QString data = QLocale::system().toString(value, 'f', decimals());
-    const std::vector<App::Property*>& props = getPropertyData();
-    if (!props.empty()) {
-        if (props.front()->getTypeId().isDerivedFrom(App::PropertyDistance::getClassTypeId())) {
-            QString unit = QString::fromAscii("mm");
-            unit.prepend(QLatin1String(" "));
-            data += unit;
-        }
-        else if (props.front()->getTypeId().isDerivedFrom(App::PropertyLength::getClassTypeId())) {
-            QString unit = QString::fromAscii("mm");
-            unit.prepend(QLatin1String(" "));
-            data += unit;
-        }
-        else if (props.front()->getTypeId().isDerivedFrom(App::PropertySpeed::getClassTypeId())) {
-            //QString unit = Base::UnitsApi::getPrefUnitOf(Base::Acceleration);
-            //unit.prepend(QLatin1String(" "));
-            //data += unit;
-        }
-        else if (props.front()->getTypeId().isDerivedFrom(App::PropertyAcceleration::getClassTypeId())) {
-            QString unit = QString::fromAscii("mm/s^2");
-            unit.prepend(QLatin1String(" "));
-            data += unit;
-        }
-    }
-
     return QVariant(data);
 }
 
@@ -605,32 +600,6 @@ void PropertyFloatItem::setEditorData(QWidget *editor, const QVariant& data) con
     QDoubleSpinBox *sb = qobject_cast<QDoubleSpinBox*>(editor);
     sb->setRange((double)INT_MIN, (double)INT_MAX);
     sb->setValue(data.toDouble());
-    const std::vector<App::Property*>& prop = getPropertyData();
-    if (prop.empty())
-        return;
-    else if (prop.front()->getTypeId().isDerivedFrom(App::PropertyDistance::getClassTypeId())) {
-        QString unit = QString::fromAscii("mm");
-        unit.prepend(QLatin1String(" "));
-        sb->setSuffix(unit);
-    }
-    else if (prop.front()->getTypeId().isDerivedFrom(App::PropertyLength::getClassTypeId())) {
-        sb->setMinimum(0.0);
-        QString unit = QString::fromAscii("mm");
-        unit.prepend(QLatin1String(" "));
-        sb->setSuffix(unit);
-    }
-    else if (prop.front()->getTypeId().isDerivedFrom(App::PropertySpeed::getClassTypeId())) {
-        //sb->setMinimum(0.0);
-        //QString unit = Base::UnitsApi::getPrefUnitOf(Base::Acceleration);
-        //unit.prepend(QLatin1String(" "));
-        //sb->setSuffix(unit);
-    }
-    else if (prop.front()->getTypeId().isDerivedFrom(App::PropertyAcceleration::getClassTypeId())) {
-        sb->setMinimum(0.0);
-        QString unit = QString::fromAscii("mm/s^2");
-        unit.prepend(QLatin1String(" "));
-        sb->setSuffix(unit);
-    }
 }
 
 QVariant PropertyFloatItem::editorData(QWidget *editor) const
@@ -674,34 +643,59 @@ void PropertyUnitItem::setValue(const QVariant& value)
 
 QWidget* PropertyUnitItem::createEditor(QWidget* parent, const QObject* receiver, const char* method) const
 {
-    QDoubleSpinBox *sb = new QDoubleSpinBox(parent);
-    sb->setFrame(false);
-    sb->setDecimals(std::max<int>(5,decimals()));
-    QObject::connect(sb, SIGNAL(valueChanged(double)), receiver, method);
-    return sb;
+    Gui::QuantitySpinBox *infield = new Gui::QuantitySpinBox(parent);
+    infield->setFrame(false);
+    infield->setMinimumHeight(0);
+    QObject::connect(infield, SIGNAL(valueChanged(double)), receiver, method);
+    return infield;
 }
 
 void PropertyUnitItem::setEditorData(QWidget *editor, const QVariant& data) const
 {
     const Base::Quantity& value = data.value<Base::Quantity>();
 
-    QDoubleSpinBox *sb = qobject_cast<QDoubleSpinBox*>(editor);
-    sb->setRange((double)INT_MIN, (double)INT_MAX);
-    //sb->setValue(value.getValue());
-    //sb->setSuffix(value.getUnit().getString());
-    double factor;
-    QString unitStr;
-    value.getUserString(factor, unitStr);
-    double unitValue = value.getValue() / factor; 
-    sb->setValue(unitValue);
-    sb->setSuffix(unitStr);
+    Gui::QuantitySpinBox *infield = qobject_cast<Gui::QuantitySpinBox*>(editor);
+    infield->setValue(value);
 }
 
 QVariant PropertyUnitItem::editorData(QWidget *editor) const
 {
-    QDoubleSpinBox *sb = qobject_cast<QDoubleSpinBox*>(editor);
-    Base::Quantity value = Base::Quantity::parse(sb->text());
+    Gui::QuantitySpinBox *infield = qobject_cast<Gui::QuantitySpinBox*>(editor);
+    Base::Quantity value = infield->value();
     return QVariant::fromValue<Base::Quantity>(value);
+}
+
+// --------------------------------------------------------------------
+
+
+TYPESYSTEM_SOURCE(Gui::PropertyEditor::PropertyUnitConstraintItem, Gui::PropertyEditor::PropertyUnitItem);
+
+PropertyUnitConstraintItem::PropertyUnitConstraintItem()
+{
+
+}
+
+void PropertyUnitConstraintItem::setEditorData(QWidget *editor, const QVariant& data) const
+{
+    const Base::Quantity& value = data.value<Base::Quantity>();
+
+    Gui::QuantitySpinBox *infield = qobject_cast<Gui::QuantitySpinBox*>(editor);
+    infield->setValue(value);
+
+    const App::PropertyQuantityConstraint* prop = static_cast
+        <const App::PropertyQuantityConstraint*>(getFirstProperty());
+
+    const App::PropertyQuantityConstraint::Constraints* c = prop->getConstraints();
+
+    if (c) {
+        infield->setMinimum(c->LowerBound);
+        infield->setMaximum(c->UpperBound);
+        infield->setSingleStep(c->StepSize);
+    }
+    else {
+        infield->setMinimum((double)INT_MIN);
+        infield->setMaximum((double)INT_MAX);
+    }
 }
 
 // --------------------------------------------------------------------
@@ -747,10 +741,10 @@ QWidget* PropertyFloatConstraintItem::createEditor(QWidget* parent, const QObjec
 
 void PropertyFloatConstraintItem::setEditorData(QWidget *editor, const QVariant& /*data*/) const
 {
-    const std::vector<App::Property*>& items = getPropertyData();
-    App::PropertyFloatConstraint* prop = (App::PropertyFloatConstraint*)items[0];
+    const App::PropertyFloatConstraint* prop = static_cast
+        <const App::PropertyFloatConstraint*>(getFirstProperty());
 
-    const App::PropertyFloatConstraint::Constraints* c = ((App::PropertyFloatConstraint*)prop)->getConstraints();
+    const App::PropertyFloatConstraint::Constraints* c = prop->getConstraints();
     QDoubleSpinBox *sb = qobject_cast<QDoubleSpinBox*>(editor);
     if (c) {
         sb->setMinimum(c->LowerBound);
@@ -781,10 +775,11 @@ PropertyAngleItem::PropertyAngleItem()
 
 void PropertyAngleItem::setEditorData(QWidget *editor, const QVariant& data) const
 {
+    const App::PropertyQuantityConstraint* prop = static_cast
+        <const App::PropertyQuantityConstraint*>(getFirstProperty());
+
     const App::PropertyQuantityConstraint::Constraints* c = 0;
-    const std::vector<App::Property*>& items = getPropertyData();
-    if (!items.empty()) {
-        App::PropertyAngle* prop = static_cast<App::PropertyAngle*>(items[0]);
+    if (prop) {
         c = prop->getConstraints();
     }
 
@@ -963,6 +958,112 @@ void PropertyVectorItem::setZ(double z)
 {
     setData(QVariant::fromValue(Base::Vector3d(x(), y(), z)));
 }
+
+
+// ---------------------------------------------------------------
+
+TYPESYSTEM_SOURCE(Gui::PropertyEditor::PropertyVectorDistanceItem, Gui::PropertyEditor::PropertyItem);
+
+PropertyVectorDistanceItem::PropertyVectorDistanceItem()
+{
+    m_x = static_cast<PropertyUnitItem*>(PropertyUnitItem::create());
+    m_x->setParent(this);
+    m_x->setPropertyName(QLatin1String("x"));
+    this->appendChild(m_x);
+    m_y = static_cast<PropertyUnitItem*>(PropertyUnitItem::create());
+    m_y->setParent(this);
+    m_y->setPropertyName(QLatin1String("y"));
+    this->appendChild(m_y);
+    m_z = static_cast<PropertyUnitItem*>(PropertyUnitItem::create());
+    m_z->setParent(this);
+    m_z->setPropertyName(QLatin1String("z"));
+    this->appendChild(m_z);
+}
+
+QVariant PropertyVectorDistanceItem::toString(const QVariant& prop) const
+{
+    const Base::Vector3d& value = prop.value<Base::Vector3d>();
+    QString data = QString::fromAscii("[") + 
+           Base::Quantity(value.x, Base::Unit::Length).getUserString() + QString::fromAscii("  ") +
+           Base::Quantity(value.y, Base::Unit::Length).getUserString() + QString::fromAscii("  ") +
+           Base::Quantity(value.z, Base::Unit::Length).getUserString() + QString::fromAscii("]");
+    return QVariant(data);
+}
+
+
+QVariant PropertyVectorDistanceItem::value(const App::Property* prop) const
+{
+    assert(prop && prop->getTypeId().isDerivedFrom(App::PropertyVector::getClassTypeId()));
+
+    const Base::Vector3d& value = static_cast<const App::PropertyVector*>(prop)->getValue();
+    return QVariant::fromValue<Base::Vector3d>(value);
+}
+
+void PropertyVectorDistanceItem::setValue(const QVariant& variant)
+{
+    if (!variant.canConvert<Base::Vector3d>())
+        return;
+    const Base::Vector3d& value = variant.value<Base::Vector3d>();
+
+    Base::Quantity q = Base::Quantity(value.x, Base::Unit::Length);
+    QString unit = QString::fromLatin1("('%1 %2'").arg(q.getValue()).arg(q.getUnit().getString());
+    q = Base::Quantity(value.y, Base::Unit::Length);
+    unit + QString::fromLatin1("'%1 %2'").arg(q.getValue()).arg(q.getUnit().getString());
+    q = Base::Quantity(value.z, Base::Unit::Length);
+
+    setPropertyValue(unit);
+}
+
+void PropertyVectorDistanceItem::setEditorData(QWidget *editor, const QVariant& data) const
+{
+    QLineEdit* le = qobject_cast<QLineEdit*>(editor);
+    le->setText(toString(data).toString());
+}
+
+QWidget* PropertyVectorDistanceItem::createEditor(QWidget* parent, const QObject* /*receiver*/, const char* /*method*/) const
+{
+    QLineEdit *le = new QLineEdit(parent);
+    le->setFrame(false);
+    le->setReadOnly(true);
+    return le;
+}
+
+QVariant PropertyVectorDistanceItem::editorData(QWidget *editor) const
+{
+    QLineEdit *le = qobject_cast<QLineEdit*>(editor);
+    return QVariant(le->text());
+}
+
+Base::Quantity PropertyVectorDistanceItem::x() const
+{
+    return Base::Quantity(data(1,Qt::EditRole).value<Base::Vector3d>().x, Base::Unit::Length);
+}
+
+void PropertyVectorDistanceItem::setX(Base::Quantity x)
+{
+    setData(QVariant::fromValue(Base::Vector3d(x.getValue(), y().getValue(), z().getValue())));
+}
+
+Base::Quantity PropertyVectorDistanceItem::y() const
+{
+    return Base::Quantity(data(1,Qt::EditRole).value<Base::Vector3d>().y, Base::Unit::Length);
+}
+
+void PropertyVectorDistanceItem::setY(Base::Quantity y)
+{
+    setData(QVariant::fromValue(Base::Vector3d(x().getValue(), y.getValue(), z().getValue())));
+}
+
+Base::Quantity PropertyVectorDistanceItem::z() const
+{
+    return Base::Quantity(data(1,Qt::EditRole).value<Base::Vector3d>().z, Base::Unit::Length);
+}
+
+void PropertyVectorDistanceItem::setZ(Base::Quantity z)
+{
+    setData(QVariant::fromValue(Base::Vector3d(x().getValue(), y().getValue(), z.getValue())));
+}
+
 
 // ---------------------------------------------------------------
 
@@ -1391,7 +1492,7 @@ TYPESYSTEM_SOURCE(Gui::PropertyEditor::PropertyPlacementItem, Gui::PropertyEdito
 
 PropertyPlacementItem::PropertyPlacementItem() : init_axis(false), changed_value(false), rot_angle(0), rot_axis(0,0,1)
 {
-    m_a = static_cast<PropertyAngleItem*>(PropertyAngleItem::create());
+    m_a = static_cast<PropertyUnitItem*>(PropertyUnitItem::create());
     m_a->setParent(this);
     m_a->setPropertyName(QLatin1String("Angle"));
     this->appendChild(m_a);
@@ -1400,7 +1501,7 @@ PropertyPlacementItem::PropertyPlacementItem() : init_axis(false), changed_value
     m_d->setPropertyName(QLatin1String("Axis"));
     m_d->setReadOnly(true);
     this->appendChild(m_d);
-    m_p = static_cast<PropertyVectorItem*>(PropertyVectorItem::create());
+    m_p = static_cast<PropertyVectorDistanceItem*>(PropertyVectorDistanceItem::create());
     m_p->setParent(this);
     m_p->setPropertyName(QLatin1String("Position"));
     m_p->setReadOnly(true);
@@ -1411,7 +1512,7 @@ PropertyPlacementItem::~PropertyPlacementItem()
 {
 }
 
-double PropertyPlacementItem::getAngle() const
+Base::Quantity PropertyPlacementItem::getAngle() const
 {
     QVariant value = data(1, Qt::EditRole);
     if (!value.canConvert<Base::Placement>())
@@ -1422,10 +1523,10 @@ double PropertyPlacementItem::getAngle() const
     val.getRotation().getValue(dir, angle);
     if (dir * this->rot_axis < 0.0)
         angle = -angle;
-    return Base::toDegrees<double>(angle);
+    return Base::Quantity(Base::toDegrees<double>(angle), Base::Unit::Angle);
 }
 
-void PropertyPlacementItem::setAngle(double angle)
+void PropertyPlacementItem::setAngle(Base::Quantity angle)
 {
     QVariant value = data(1, Qt::EditRole);
     if (!value.canConvert<Base::Placement>())
@@ -1433,10 +1534,10 @@ void PropertyPlacementItem::setAngle(double angle)
 
     Base::Placement val = value.value<Base::Placement>();
     Base::Rotation rot;
-    rot.setValue(this->rot_axis, Base::toRadians<double>(angle));
+    rot.setValue(this->rot_axis, Base::toRadians<double>(angle.getValue()));
     val.setRotation(rot);
     changed_value = true;
-    rot_angle = angle;
+    rot_angle = angle.getValue();
     setValue(QVariant::fromValue(val));
 }
 
@@ -1514,15 +1615,15 @@ QVariant PropertyPlacementItem::toolTip(const App::Property* prop) const
     angle = Base::toDegrees<double>(angle);
     pos = p.getPosition();
     QString data = QString::fromUtf8("Axis: (%1 %2 %3)\n"
-                                     "Angle: %4 \xc2\xb0\n"
-                                     "Position: (%5 %6 %7)")
+                                     "Angle: %4\n"
+                                     "Position: (%5  %6  %7)")
                     .arg(QLocale::system().toString(dir.x,'f',decimals()))
                     .arg(QLocale::system().toString(dir.y,'f',decimals()))
                     .arg(QLocale::system().toString(dir.z,'f',decimals()))
-                    .arg(QLocale::system().toString(angle,'f',decimals()))
-                    .arg(QLocale::system().toString(pos.x,'f',decimals()))
-                    .arg(QLocale::system().toString(pos.y,'f',decimals()))
-                    .arg(QLocale::system().toString(pos.z,'f',decimals()));
+                    .arg(Base::Quantity(angle, Base::Unit::Angle).getUserString())
+                    .arg(Base::Quantity(pos.x, Base::Unit::Length).getUserString())
+                    .arg(Base::Quantity(pos.y, Base::Unit::Length).getUserString())
+                    .arg(Base::Quantity(pos.z, Base::Unit::Length).getUserString());
     return QVariant(data);
 }
 
@@ -1534,14 +1635,14 @@ QVariant PropertyPlacementItem::toString(const QVariant& prop) const
     p.getRotation().getValue(dir, angle);
     angle = Base::toDegrees<double>(angle);
     pos = p.getPosition();
-    QString data = QString::fromUtf8("[(%1 %2 %3);%4 \xc2\xb0;(%5 %6 %7)]")
+    QString data = QString::fromUtf8("[(%1 %2 %3); %4; (%5  %6  %7)]")
                     .arg(QLocale::system().toString(dir.x,'f',2))
                     .arg(QLocale::system().toString(dir.y,'f',2))
                     .arg(QLocale::system().toString(dir.z,'f',2))
-                    .arg(QLocale::system().toString(angle,'f',2))
-                    .arg(QLocale::system().toString(pos.x,'f',2))
-                    .arg(QLocale::system().toString(pos.y,'f',2))
-                    .arg(QLocale::system().toString(pos.z,'f',2));
+                    .arg(Base::Quantity(angle, Base::Unit::Angle).getUserString())
+                    .arg(Base::Quantity(pos.x, Base::Unit::Length).getUserString())
+                    .arg(Base::Quantity(pos.y, Base::Unit::Length).getUserString())
+                    .arg(Base::Quantity(pos.z, Base::Unit::Length).getUserString());
     return QVariant(data);
 }
 
@@ -1560,13 +1661,13 @@ void PropertyPlacementItem::setValue(const QVariant& value)
     QString data = QString::fromAscii("App.Placement("
                                       "App.Vector(%1,%2,%3),"
                                       "App.Rotation(App.Vector(%4,%5,%6),%7))")
-                    .arg(pos.x,0,'f',decimals())
-                    .arg(pos.y,0,'f',decimals())
-                    .arg(pos.z,0,'f',decimals())
-                    .arg(rot_axis.x,0,'f',decimals())
-                    .arg(rot_axis.y,0,'f',decimals())
-                    .arg(rot_axis.z,0,'f',decimals())
-                    .arg(rot_angle,0,'f',decimals());
+                    .arg(pos.x)
+                    .arg(pos.y)
+                    .arg(pos.z)
+                    .arg(rot_axis.x)
+                    .arg(rot_axis.y)
+                    .arg(rot_axis.z)
+                    .arg(rot_angle,0);
     setPropertyValue(data);
 }
 

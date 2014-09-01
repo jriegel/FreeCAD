@@ -59,7 +59,7 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
     ui->setupUi(proxy);
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->doubleSpinBox, SIGNAL(valueChanged(double)),
+    connect(ui->filletRadius, SIGNAL(valueChanged(double)),
             this, SLOT(onLengthChanged(double)));
     connect(ui->buttonRefAdd, SIGNAL(toggled(bool)),
             this, SLOT(onButtonRefAdd(bool)));
@@ -71,11 +71,11 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
     PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
     double r = pcFillet->Radius.getValue();
 
-    ui->doubleSpinBox->setDecimals(Base::UnitsApi::getDecimals());
-    ui->doubleSpinBox->setMaximum(INT_MAX);
-    ui->doubleSpinBox->setValue(r);
-    ui->doubleSpinBox->selectAll();
-    QMetaObject::invokeMethod(ui->doubleSpinBox, "setFocus", Qt::QueuedConnection);
+    ui->filletRadius->setUnit(Base::Unit::Length);
+    ui->filletRadius->setValue(r);
+    ui->filletRadius->setMinimum(0);
+    ui->filletRadius->selectNumber();
+    QMetaObject::invokeMethod(ui->filletRadius, "setFocus", Qt::QueuedConnection);
 
     std::vector<std::string> strings = pcFillet->Base.getSubValues();
     for (std::vector<std::string>::const_iterator i = strings.begin(); i != strings.end(); i++)
@@ -134,9 +134,8 @@ void TaskFilletParameters::onLengthChanged(double len)
 
 double TaskFilletParameters::getLength(void) const
 {
-    return ui->doubleSpinBox->value();
+    return ui->filletRadius->getQuantity().getValue();
 }
-
 
 TaskFilletParameters::~TaskFilletParameters()
 {
@@ -171,6 +170,21 @@ TaskDlgFilletParameters::~TaskDlgFilletParameters()
 }
 
 //==== calls from the TaskView ===============================================================
+
+
+void TaskDlgFilletParameters::open()
+{
+    // a transaction is already open at creation time of the fillet
+    if (!Gui::Command::hasPendingCommand()) {
+        QString msg = tr("Edit fillet");
+        Gui::Command::openCommand((const char*)msg.toUtf8());
+    }
+}
+
+void TaskDlgFilletParameters::clicked(int)
+{
+
+}
 
 bool TaskDlgFilletParameters::accept()
 {

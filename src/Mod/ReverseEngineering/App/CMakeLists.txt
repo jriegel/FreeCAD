@@ -4,6 +4,10 @@ else(MSVC)
     add_definitions(-DHAVE_LIMITS_H -DHAVE_CONFIG_H)
 endif(MSVC)
 
+if (PCL_SURFACE_FOUND AND PCL_FEATURES_FOUND)
+    add_definitions(-DHAVE_PCL_SURFACE)
+endif ()
+
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${Boost_INCLUDE_DIRS}
@@ -11,6 +15,9 @@ include_directories(
     ${PYTHON_INCLUDE_PATH}
     ${XERCESC_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
+    ${EIGEN3_INCLUDE_DIR}
+    ${PCL_INCLUDE_DIRS}
+    ${FLANN_INCLUDE_DIRS}
 )
 
 link_directories(${OCC_LIBRARY_DIR})
@@ -18,7 +25,13 @@ link_directories(${OCC_LIBRARY_DIR})
 set(Reen_LIBS
     Part
     Mesh
+    Points
     FreeCADApp
+    ${PCL_COMMON_LIBRARIES}
+    ${PCL_KDTREE_LIBRARIES}
+    ${PCL_FEATURES_LIBRARIES}
+    ${PCL_SEARCH_LIBRARIES}
+    ${PCL_SURFACE_LIBRARIES}
 )
 
 SET(Reen_SRCS
@@ -26,6 +39,8 @@ SET(Reen_SRCS
     AppReverseEngineeringPy.cpp
     ApproxSurface.cpp
     ApproxSurface.h
+    SurfaceTriangulation.cpp
+    SurfaceTriangulation.h
     PreCompiled.cpp
     PreCompiled.h
 )
@@ -39,20 +54,7 @@ fc_target_copy_resource(ReverseEngineering
     ${CMAKE_BINARY_DIR}/Mod/ReverseEngineering
     Init.py)
 
-if(MSVC)
-    set_target_properties(ReverseEngineering PROPERTIES SUFFIX ".pyd")
-    set_target_properties(ReverseEngineering PROPERTIES DEBUG_OUTPUT_NAME "ReverseEngineering_d")
-    set_target_properties(ReverseEngineering PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/ReverseEngineering)
-    set_target_properties(ReverseEngineering PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(ReverseEngineering PROPERTIES SUFFIX ".pyd")
-    set_target_properties(ReverseEngineering PROPERTIES DEBUG_OUTPUT_NAME "ReverseEngineering_d")
-    set_target_properties(ReverseEngineering PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/ReverseEngineering)
-    set_target_properties(ReverseEngineering PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(ReverseEngineering PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/ReverseEngineering)
-    set_target_properties(ReverseEngineering PROPERTIES PREFIX "")
-    set_target_properties(ReverseEngineering PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(ReverseEngineering ReverseEngineering /Mod/ReverseEngineering)
+SET_PYTHON_PREFIX_SUFFIX(ReverseEngineering)
 
-INSTALL(TARGETS ReverseEngineering DESTINATION lib)
+INSTALL(TARGETS ReverseEngineering DESTINATION ${CMAKE_INSTALL_LIBDIR})

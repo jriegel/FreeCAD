@@ -38,20 +38,7 @@ fc_target_copy_resource(Sandbox
     ${CMAKE_BINARY_DIR}/Mod/Sandbox
     Init.py)
 
-if(MSVC)
-    set_target_properties(Sandbox PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Sandbox PROPERTIES DEBUG_OUTPUT_NAME "Sandbox_d")
-    set_target_properties(Sandbox PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sandbox)
-    set_target_properties(Sandbox PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Sandbox PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Sandbox PROPERTIES DEBUG_OUTPUT_NAME "Sandbox_d")
-    set_target_properties(Sandbox PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sandbox)
-    set_target_properties(Sandbox PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Sandbox PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sandbox)
-    set_target_properties(Sandbox PROPERTIES PREFIX "")
-    set_target_properties(Sandbox PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Sandbox Sandbox /Mod/Sandbox)
+SET_PYTHON_PREFIX_SUFFIX(Sandbox)
 
-INSTALL(TARGETS Sandbox DESTINATION lib)
+INSTALL(TARGETS Sandbox DESTINATION ${CMAKE_INSTALL_LIBDIR})

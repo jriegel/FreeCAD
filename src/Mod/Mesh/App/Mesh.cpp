@@ -1129,8 +1129,7 @@ void MeshObject::removeSelfIntersections()
 
     if (!selfIntersections.empty()) {
         MeshCore::MeshFixSelfIntersection cMeshFix(_kernel, selfIntersections);
-        cMeshFix.Fixup();
-        this->_segments.clear();
+        deleteFacets(cMeshFix.GetFacets());
     }
 }
 
@@ -1147,8 +1146,7 @@ void MeshObject::removeSelfIntersections(const std::vector<unsigned long>& indic
     for (it = indices.begin(); it != indices.end(); ) {
         unsigned long id1 = *it; ++it;
         unsigned long id2 = *it; ++it;
-        selfIntersections.push_back(std::make_pair
-            <unsigned long, unsigned long>(id1,id2));
+        selfIntersections.push_back(std::make_pair(id1,id2));
     }
 
     if (!selfIntersections.empty()) {

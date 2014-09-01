@@ -1,3 +1,8 @@
+
+if(PCL_FOUND)
+    add_definitions(-DHAVE_PCL)
+endif(PCL_FOUND)
+
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Boost_INCLUDE_DIRS}
@@ -61,20 +66,7 @@ fc_target_copy_resource(PointsGui
     ${CMAKE_BINARY_DIR}/Mod/Points
     InitGui.py)
 
-if(MSVC)
-    set_target_properties(PointsGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(PointsGui PROPERTIES DEBUG_OUTPUT_NAME "PointsGui_d")
-    set_target_properties(PointsGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Points)
-    set_target_properties(PointsGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(PointsGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(PointsGui PROPERTIES DEBUG_OUTPUT_NAME "PointsGui_d")
-    set_target_properties(PointsGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Points)
-    set_target_properties(PointsGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(PointsGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Points)
-    set_target_properties(PointsGui PROPERTIES PREFIX "")
-    set_target_properties(PointsGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(PointsGui PointsGui /Mod/Points)
+SET_PYTHON_PREFIX_SUFFIX(PointsGui)
 
-INSTALL(TARGETS PointsGui DESTINATION lib)
+INSTALL(TARGETS PointsGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

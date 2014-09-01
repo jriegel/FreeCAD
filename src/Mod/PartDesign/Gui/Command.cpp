@@ -46,6 +46,7 @@
 #include <sstream>
 #include <algorithm>
 
+#include <App/DocumentObjectGroup.h>
 #include <App/Plane.h>
 #include <Gui/Application.h>
 #include <Gui/Command.h>
@@ -1093,6 +1094,13 @@ void CmdPartDesignPad::activated(int iMsg)
 
     // specific parameters for Pad
     doCommand(Doc,"App.activeDocument().%s.Length = 10.0",FeatName.c_str());
+    App::DocumentObjectGroup* grp = sketch->getGroup();
+    if (grp) {
+        doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().%s)"
+                     ,grp->getNameInDocument(),FeatName.c_str());
+        doCommand(Doc,"App.activeDocument().%s.removeObject(App.activeDocument().%s)"
+                     ,grp->getNameInDocument(),sketch->getNameInDocument());
+    }
     updateActive();
 
     finishSketchBased(this, sketch, FeatName);
@@ -1198,6 +1206,7 @@ CmdPartDesignGroove::CmdPartDesignGroove()
 
 void CmdPartDesignGroove::activated(int iMsg)
 {
+#if old
     Part::Part2DObject* sketch;
     std::string FeatName;
     prepareSketchBased(this, "Groove", sketch, FeatName);
@@ -1209,6 +1218,209 @@ void CmdPartDesignGroove::activated(int iMsg)
     PartDesign::Groove* pcGroove = static_cast<PartDesign::Groove*>(getDocument()->getObject(FeatName.c_str()));
     if (pcGroove && pcGroove->suggestReversed())
         doCommand(Doc,"App.activeDocument().%s.Reversed = 1",FeatName.c_str());
+#endif
+    // Get a valid sketch from the user
+    // First check selections
+    std::vector<App::DocumentObject*> sketches = getSelection().getObjectsOfType(Part::Part2DObject::getClassTypeId());
+    Gui::validateSketches(sketches, true);
+    // Next let the user choose from a list of all eligible objects
+    if (sketches.size() == 0) {
+        sketches = getDocument()->getObjectsOfType(Part::Part2DObject::getClassTypeId());
+        Gui::validateSketches(sketches, true);
+        if (sketches.size() == 0) {
+            QMessageBox::warning(Gui::getMainWindow(), QObject::tr("No valid sketches in this document"),
+                QObject::tr("Please create a sketch or 2D object first. It must have a support face on a solid"));
+            return;
+        }
+    }
+    // If there is more than one selection/possibility, show dialog and let user pick sketch
+    if (sketches.size() > 1) {
+        PartDesignGui::FeaturePickDialog Dlg(sketches);
+        if ((Dlg.exec() != QDialog::Accepted) || (sketches = Dlg.getFeatures()).empty())
+            return; // Cancelled or nothing selected
+    }
+
+    Part::Part2DObject* sketch = static_cast<Part::Part2DObject*>(sketches.front());
+    App::DocumentObject* support = sketch->Support.getValue();
+    std::string FeatName = getUniqueObjectName("Groove");
+
+    openCommand("Make Groove");
+    doCommand(Doc,"App.activeDocument().addObject(\"PartDesign::Groove\",\"%s\")",FeatName.c_str());
+    doCommand(Doc,"App.activeDocument().%s.Sketch = App.activeDocument().%s",FeatName.c_str(),sketch->getNameInDocument());
+    doCommand(Doc,"App.activeDocument().%s.ReferenceAxis = (App.activeDocument().%s,['V_Axis'])",
+                                                                             FeatName.c_str(), sketch->getNameInDocument());
+    doCommand(Doc,"App.activeDocument().%s.Angle = 360.0",FeatName.c_str());
+    PartDesign::Groove* pcGroove = static_cast<PartDesign::Groove*>(getDocument()->getObject(FeatName.c_str()));
+    if (pcGroove && pcGroove->suggestReversed())
+        doCommand(Doc,"App.activeDocument().%s.Reversed = 1",FeatName.c_str());
+    App::DocumentObjectGroup* grp = sketch->getGroup();
+    if (grp) {
+        doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().%s)"
+                     ,grp->getNameInDocument(),FeatName.c_str());
+        doCommand(Doc,"App.activeDocument().%s.removeObject(App.activeDocument().%s)"
+                     ,grp->getNameInDocument(),sketch->getNameInDocument());
+    }
+    updateActive();
+    if (isActiveObjectValid()) {
+        doCommand(Gui,"Gui.activeDocument().hide(\"%s\")",sketch->getNameInDocument());
+        if (support)
+            doCommand(Gui,"Gui.activeDocument().hide(\"%s\")",support->getNameInDocument());
+    }
+    doCommand(Gui,"Gui.activeDocument().setEdit('%s')",FeatName.c_str());
+
+    if (support) {
+        copyVisual(FeatName.c_str(), "ShapeColor", support->getNameInDocument());
+        copyVisual(FeatName.c_str(), "LineColor", support->getNameInDocument());
+        copyVisual(FeatName.c_str(), "PointColor", support->getNameInDocument());
+    }
+}
+
+bool CmdPartDesignGroove::isActive(void)
+{
+    return hasActiveDocument();
+}
+
+//===========================================================================
+// PartDesign_Fillet
+//===========================================================================
+DEF_STD_CMD_A(CmdPartDesignFillet);
+
+CmdPartDesignFillet::CmdPartDesignFillet()
+  :Command("PartDesign_Fillet")
+{
+    sAppModule    = "PartDesign";
+    sGroup        = QT_TR_NOOP("PartDesign");
+    sMenuText     = QT_TR_NOOP("Fillet");
+    sToolTipText  = QT_TR_NOOP("Make a fillet on an edge, face or body");
+    sWhatsThis    = sToolTipText;
+    sStatusTip    = sToolTipText;
+    sPixmap       = "PartDesign_Fillet";
+}
+
+void CmdPartDesignFillet::activated(int iMsg)
+{
+    std::vector<Gui::SelectionObject> selection = getSelection().getSelectionEx();
+
+    if (selection.size() != 1) {
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
+            QObject::tr("Select an edge, face or body. Only one body is allowed."));
+        return;
+    }
+
+    if (!selection[0].isObjectTypeOf(Part::Feature::getClassTypeId())){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong object type"),
+            QObject::tr("Fillet works only on parts"));
+        return;
+    }
+
+    Part::Feature *base = static_cast<Part::Feature*>(selection[0].getObject());
+
+    const Part::TopoShape& TopShape = base->Shape.getShape();
+    if (TopShape._Shape.IsNull()){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
+            QObject::tr("Shape of selected part is empty"));
+        return;
+    }
+
+    TopTools_IndexedMapOfShape mapOfEdges;
+    TopTools_IndexedDataMapOfShapeListOfShape mapEdgeFace;
+    TopExp::MapShapesAndAncestors(TopShape._Shape, TopAbs_EDGE, TopAbs_FACE, mapEdgeFace);
+    TopExp::MapShapes(TopShape._Shape, TopAbs_EDGE, mapOfEdges);
+
+    std::vector<std::string> SubNames = std::vector<std::string>(selection[0].getSubNames());
+
+    unsigned int i = 0;
+
+    while(i < SubNames.size())
+    {
+        std::string aSubName = static_cast<std::string>(SubNames.at(i));
+
+        if (aSubName.size() > 4 && aSubName.substr(0,4) == "Edge") {
+            TopoDS_Edge edge = TopoDS::Edge(TopShape.getSubShape(aSubName.c_str()));
+            const TopTools_ListOfShape& los = mapEdgeFace.FindFromKey(edge);
+
+            if(los.Extent() != 2)
+            {
+                SubNames.erase(SubNames.begin()+i);
+                continue;
+            }
+
+            const TopoDS_Shape& face1 = los.First();
+            const TopoDS_Shape& face2 = los.Last();
+            GeomAbs_Shape cont = BRep_Tool::Continuity(TopoDS::Edge(edge),
+                                                       TopoDS::Face(face1),
+                                                       TopoDS::Face(face2));
+            if (cont != GeomAbs_C0) {
+                SubNames.erase(SubNames.begin()+i);
+                continue;
+            }
+
+            i++;
+        }
+        else if(aSubName.size() > 4 && aSubName.substr(0,4) == "Face") {
+            TopoDS_Face face = TopoDS::Face(TopShape.getSubShape(aSubName.c_str()));
+
+            TopTools_IndexedMapOfShape mapOfFaces;
+            TopExp::MapShapes(face, TopAbs_EDGE, mapOfFaces);
+
+            for(int j = 1; j <= mapOfFaces.Extent(); ++j) {
+                TopoDS_Edge edge = TopoDS::Edge(mapOfFaces.FindKey(j));
+
+                int id = mapOfEdges.FindIndex(edge);
+
+                std::stringstream buf;
+                buf << "Edge";
+                buf << id;
+
+                if(std::find(SubNames.begin(),SubNames.end(),buf.str()) == SubNames.end())
+                {
+                    SubNames.push_back(buf.str());
+                }
+
+            }
+
+            SubNames.erase(SubNames.begin()+i);
+        }
+        // empty name or any other sub-element
+        else {
+            SubNames.erase(SubNames.begin()+i);
+        }
+    }
+
+    if (SubNames.size() == 0) {
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
+        QObject::tr("No fillet possible on selected faces/edges"));
+        return;
+    }
+
+    std::string SelString;
+    SelString += "(App.";
+    SelString += "ActiveDocument";//getObject()->getDocument()->getName();
+    SelString += ".";
+    SelString += selection[0].getFeatName();
+    SelString += ",[";
+    for(std::vector<std::string>::const_iterator it = SubNames.begin();it!=SubNames.end();++it){
+        SelString += "\"";
+        SelString += *it;
+        SelString += "\"";
+        if(it != --SubNames.end())
+            SelString += ",";
+    }
+    SelString += "])";
+
+    std::string FeatName = getUniqueObjectName("Fillet");
+
+    openCommand("Make Fillet");
+    doCommand(Doc,"App.activeDocument().addObject(\"PartDesign::Fillet\",\"%s\")",FeatName.c_str());
+    doCommand(Doc,"App.activeDocument().%s.Base = %s",FeatName.c_str(),SelString.c_str());
+    doCommand(Gui,"Gui.activeDocument().hide(\"%s\")",selection[0].getFeatName());
+    doCommand(Gui,"Gui.activeDocument().setEdit('%s')",FeatName.c_str());
+    App::DocumentObjectGroup* grp = base->getGroup();
+    if (grp) {
+        doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().%s)"
+                     ,grp->getNameInDocument(),FeatName.c_str());
+    }
+
 
     finishSketchBased(this, sketch, FeatName);
     adjustCameraPosition();
@@ -1345,6 +1557,7 @@ void makeChamferOrFillet(Gui::Command* cmd, const std::string& which)
 
     std::string FeatName = cmd->getUniqueObjectName(which.c_str());
 
+
     cmd->openCommand((std::string("Make ") + which).c_str());
     cmd->doCommand(cmd->Doc,"App.activeDocument().addObject(\"PartDesign::%s\",\"%s\")",which.c_str(), FeatName.c_str());
     cmd->doCommand(cmd->Doc,"App.activeDocument().%s.Base = %s",FeatName.c_str(),SelString.c_str());
@@ -1395,6 +1608,7 @@ CmdPartDesignChamfer::CmdPartDesignChamfer()
     sStatusTip    = sToolTipText;
     sPixmap       = "PartDesign_Chamfer";
 }
+
 
 void CmdPartDesignChamfer::activated(int iMsg)
 {
@@ -1510,6 +1724,7 @@ void CmdPartDesignDraft::activated(int iMsg)
     doCommand(Doc,"App.activeDocument().addObject(\"PartDesign::Draft\",\"%s\")",FeatName.c_str());
     doCommand(Doc,"App.activeDocument().%s.Base = %s",FeatName.c_str(),SelString.c_str());
     doCommand(Doc,"App.activeDocument().%s.Angle = %f",FeatName.c_str(), 1.5);
+
 
     finishFeature(this, FeatName);
 }
@@ -1653,6 +1868,7 @@ void CmdPartDesignLinearPattern::activated(int iMsg)
     doCommand(Doc,"App.activeDocument().%s.Length = 100", FeatName.c_str());
     doCommand(Doc,"App.activeDocument().%s.Occurrences = 2", FeatName.c_str());
 
+
     finishTransformed(this, FeatName, selList);
 }
 
@@ -1693,6 +1909,7 @@ void CmdPartDesignPolarPattern::activated(int iMsg)
                   FeatName.c_str(), sketch->getNameInDocument());
     doCommand(Doc,"App.activeDocument().%s.Angle = 360", FeatName.c_str());
     doCommand(Doc,"App.activeDocument().%s.Occurrences = 2", FeatName.c_str());
+
 
     finishTransformed(this, FeatName, selList);
 }

@@ -158,6 +158,19 @@ This is a more detailed check as done in isValid().</UserDocu>
         <UserDocu>Sew the shape if there is a gap.</UserDocu>
       </Documentation>
     </Methode>
+    <Methode Name="childShapes" Const="true">
+      <Documentation>
+        <UserDocu>
+childShapes([cumOri=True, cumLoc=True]) -> list
+Return a list of sub-shapes that are direct children of this shape.
+ * If cumOri is true, the function composes all
+   sub-shapes with the orientation of this shape.
+ * If cumLoc is true, the function multiplies all
+   sub-shapes by the location of this shape, i.e. it applies to
+   each sub-shape the transformation that is associated with this shape.
+        </UserDocu>
+      </Documentation>
+    </Methode>
     <Methode Name="removeInternalWires">
       <Documentation>
         <UserDocu>Removes internal wires (also holes) from the shape.</UserDocu>
@@ -346,6 +359,15 @@ into BSpline surfaces.</UserDocu>
     <Methode Name="copy" Const="true">
       <Documentation>
         <UserDocu>Create a copy of this shape</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="cleaned" Const="true">
+      <Documentation>
+        <UserDocu>This creates a cleaned copy of the shape with the triangulation removed.
+This can be useful to reduce file size when exporting as a BRep file.
+Warning: Use the cleaned shape with care because certain algorithms may work incorrectly
+if the shape has no internal triangulation any more.
+</UserDocu>
       </Documentation>
     </Methode>
     <Methode Name="replaceShape" Const="true">

@@ -266,6 +266,12 @@ class Spreadsheet:
         else:
             return self.__dict__.__getitem__(key)
             
+    def __setitem__(self, key, value):
+        __setattr__(self, key, value)
+
+    def __getitem__(self, key):
+        return __getattr__(self, key)
+            
     def __getstate__(self):
         self._cells["Type"] = self.Type
         if hasattr(self,"Object"):
@@ -325,7 +331,7 @@ class Spreadsheet:
                                 co.Proxy.execute(co)
 
     def execute(self,obj):
-        self.setControlledCells(obj)
+        pass
 
     def isFunction(self,key):
         "isFunction(cell): returns True if the given cell or value is a function"
@@ -437,21 +443,23 @@ class Spreadsheet:
             raise Exception(msg)
         return result
         
-    def setControlledCells(self,obj):
-        "Fills the cells that are controlled by a controller"
+    def recompute(self,obj):
+        "Fills the controlled cells  and properties"
         if obj:
             if hasattr(obj,"Controllers"):
+                import Draft
                 for co in obj.Controllers:
-                    import Draft
                     if Draft.getType(co) == "SpreadsheetController":
                         co.Proxy.setCells(co,obj)
+                    elif Draft.getType(co) == "SpreadsheetPropertyController":
+                        co.Proxy.compute(co)
                     
     def getControlledCells(self,obj):
         "returns a list of cells managed by controllers"
         cells = []
         if hasattr(obj,"Controllers"):
+            import Draft
             for co in obj.Controllers:
-                import Draft
                 if Draft.getType(co) == "SpreadsheetController":
                     cells.extend(co.Proxy.getCells(co,obj))
         return cells
@@ -460,8 +468,8 @@ class Spreadsheet:
         "returns a list of controlling cells managed by controllers"
         cells = []
         if hasattr(obj,"Controllers"):
+            import Draft
             for co in obj.Controllers:
-                import Draft
                 if Draft.getType(co) == "SpreadsheetPropertyController":
                     if co.Cell:
                         cells.append(co.Cell.lower())
@@ -479,7 +487,7 @@ class ViewProviderSpreadsheet(object):
     def attach(self,vobj):
         self.Object = vobj.Object
 
-    def setEdit(self,vobj,mode):
+    def setEdit(self,vobj,mode=0):
         if hasattr(self,"editor"):
             pass
         else:
@@ -487,9 +495,11 @@ class ViewProviderSpreadsheet(object):
             addSpreadsheetView(self.editor)
         return True
     
-    def unsetEdit(self,vobj,mode):
-        del self.editor
+    def unsetEdit(self,vobj,mode=0):
         return False
+
+    def doubleClicked(self,vobj):
+        self.setEdit(vobj)
         
     def claimChildren(self):
         if hasattr(self,"Object"):
@@ -543,21 +553,23 @@ class SpreadsheetController:
             baseset = FreeCAD.ActiveDocument.Objects
             if obj.FilterType == "Object Type":
                 for o in baseset:
-                    t = Draft.getType(o)
-                    if t == "Part":
-                        t = obj.TypeId
-                    if obj.Filter:
-                        if obj.Filter in t:
-                            result.append(obj)
-                    else:
-                        result.append(obj)
+                    if not ("Spreadsheet" in Draft.getType(o)):
+                        t = Draft.getType(o)
+                        if t == "Part":
+                            t = obj.TypeId
+                        if obj.Filter:
+                            if obj.Filter in t:
+                                result.append(o)
+                        else:
+                            result.append(o)
             elif obj.FilterType == "Object Name":
                 for o in baseset:
-                    if obj.Filter:
-                        if obj.Filter in o.Label:
+                    if not ("Spreadsheet" in Draft.getType(o)):
+                        if obj.Filter:
+                            if obj.Filter in o.Label:
+                                    result.append(o)
+                        else:
                             result.append(o)
-                    else:
-                        result.append(o)
         return result
 
     def getCells(self,obj,spreadsheet):
@@ -570,6 +582,7 @@ class SpreadsheetController:
                 # get the correct cell key
                 c,r = spreadsheet.Proxy.splitKey(obj.BaseCell)
                 if obj.Direction == "Horizontal":
+                    c = c.lower()
                     c = "abcdefghijklmnopqrstuvwxyz".index(c)
                     c += i
                     c = "abcdefghijklmnopqrstuvwxyz"[c]
@@ -593,6 +606,7 @@ class SpreadsheetController:
                     # get the correct cell key
                     c,r = spreadsheet.Proxy.splitKey(obj.BaseCell)
                     if obj.Direction == "Horizontal":
+                        c = c.lower()
                         c = "abcdefghijklmnopqrstuvwxyz".index(c)
                         c += i
                         c = "abcdefghijklmnopqrstuvwxyz"[c]
@@ -609,6 +623,11 @@ class SpreadsheetController:
                             if hasattr(value,arg):
                                 value = getattr(value,arg)
                         try:
+                            if isinstance(value,float) or isinstance(value,int):
+                                pass
+                            else:
+                                value = str(value)
+                                value = ''.join([ c for c in value if c not in ('<','>',':')])
                             setattr(spreadsheet.Proxy,cell,value)
                             if DEBUG: print "setting cell ",cell," to value ",value
                         except:
@@ -637,6 +656,9 @@ class SpreadsheetPropertyController:
         obj.TargetType = ["Property","Constraint"]
         
     def execute(self,obj):
+        pass
+
+    def compute(self,obj):
         if obj.Cell and obj.TargetObject and obj.TargetProperty and obj.InList:
             sp = obj.InList[0]
             import Draft
@@ -663,9 +685,18 @@ class SpreadsheetPropertyController:
                 else:
                     if Draft.getType(obj.TargetObject) == "Sketch":
                         if obj.TargetProperty.isdigit():
+                            # try setting by constraint id
                             try:
                                 c = int(obj.TargetProperty)
                                 obj.TargetObject.setDatum(c,float(value))
+                                FreeCAD.ActiveDocument.recompute()
+                                if DEBUG: print "setting constraint ",obj.TargetProperty, " of object ",obj.TargetObject.Name, " to ",value
+                            except:
+                                if DEBUG: print "unable to set constraint ",obj.TargetProperty, " of object ",obj.TargetObject.Name, " to ",value
+                        else:
+                            # try setting by constraint name
+                            try:
+                                obj.TargetObject.setDatum(obj.TargetProperty,float(value))
                                 FreeCAD.ActiveDocument.recompute()
                                 if DEBUG: print "setting constraint ",obj.TargetProperty, " of object ",obj.TargetObject.Name, " to ",value
                             except:
@@ -709,10 +740,25 @@ class SpreadsheetView(QtGui.QWidget):
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.label = QtGui.QLabel(self)
         self.label.setMinimumSize(QtCore.QSize(82, 0))
-        self.label.setText(str(translate("Spreadsheet","Cell"))+" A1 :")
-        self.horizontalLayout.addWidget(self.label)
+        self.label.setText(translate("Spreadsheet","Cell")+" A1 :")
         self.lineEdit = QtGui.QLineEdit(self)
+        self.applyButton = QtGui.QPushButton(self)
+        self.applyButton.setText(translate("Spreadsheet","Apply"))
+        self.applyButton.setIcon(QtGui.QIcon(":/icons/edit_OK.svg"))
+        self.applyButton.setToolTip(translate("Spreadsheet","Apply the changes to the current cell"))
+        self.wipeButton = QtGui.QPushButton(self)
+        self.wipeButton.setText(translate("Spreadsheet","Delete"))
+        self.wipeButton.setIcon(QtGui.QIcon(":/icons/process-stop.svg"))
+        self.wipeButton.setToolTip(translate("Spreadsheet","Deletes the contents of the current cell"))
+        self.computeButton = QtGui.QPushButton(self)
+        self.computeButton.setText(translate("Spreadsheet","Compute"))
+        self.computeButton.setIcon(QtGui.QIcon(":/icons/view-refresh.svg"))
+        self.computeButton.setToolTip(translate("Spreadsheet","Updates the values handled by controllers"))
+        self.horizontalLayout.addWidget(self.label)
         self.horizontalLayout.addWidget(self.lineEdit)
+        self.horizontalLayout.addWidget(self.applyButton)
+        self.horizontalLayout.addWidget(self.wipeButton)
+        self.horizontalLayout.addWidget(self.computeButton)
         self.verticalLayout.addLayout(self.horizontalLayout)
 
         # add table
@@ -728,10 +774,12 @@ class SpreadsheetView(QtGui.QWidget):
         QtCore.QObject.connect(self.table, QtCore.SIGNAL("cellChanged(int,int)"), self.changeCell)
         QtCore.QObject.connect(self.table, QtCore.SIGNAL("currentCellChanged(int,int,int,int)"), self.setEditLine)
         QtCore.QObject.connect(self.lineEdit, QtCore.SIGNAL("returnPressed()"), self.getEditLine)
-        QtCore.QObject.connect(self, QtCore.SIGNAL("destroyed()"), self.destroy)
+        QtCore.QObject.connect(self.applyButton, QtCore.SIGNAL("clicked()"), self.getEditLine)
+        QtCore.QObject.connect(self.wipeButton, QtCore.SIGNAL("clicked()"), self.wipeCell)
+        QtCore.QObject.connect(self.computeButton, QtCore.SIGNAL("clicked()"), self.recompute)
 
-    def destroy(self):
-        if DEBUG: print "Closing spreadsheet view"
+    def closeEvent(self, event):
+        #if DEBUG: print "Closing spreadsheet view"
         if self.spreadsheet:
             # before deleting this view, we remove the reference to it in the object
             if hasattr(self.spreadsheet,"ViewObject"):
@@ -748,7 +796,7 @@ class SpreadsheetView(QtGui.QWidget):
             controlled = self.spreadsheet.Proxy.getControlledCells(self.spreadsheet)
             controlling = self.spreadsheet.Proxy.getControllingCells(self.spreadsheet)
             for cell in self.spreadsheet.Proxy._cells.keys():
-                if cell != "Type":
+                if not cell in ["Type","Object"]:
                     c,r = self.spreadsheet.Proxy.splitKey(cell)
                     c = "abcdefghijklmnopqrstuvwxyz".index(c)
                     r = int(str(r))-1
@@ -772,6 +820,10 @@ class SpreadsheetView(QtGui.QWidget):
                         brush.setStyle(QtCore.Qt.Dense6Pattern)
                         if self.table.item(r,c):
                             self.table.item(r,c).setBackground(brush)
+                    else:
+                        brush = QtGui.QBrush()
+                        if self.table.item(r,c):
+                            self.table.item(r,c).setBackground(brush)
 
     def changeCell(self,r,c,value=None):
         "changes the contens of a cell"
@@ -780,21 +832,28 @@ class SpreadsheetView(QtGui.QWidget):
             self.doNotChange = False
         elif self.spreadsheet:
             key = "abcdefghijklmnopqrstuvwxyz"[c]+str(r+1)
-            if not value:
+            if value == None:
                 value = self.table.item(r,c).text()
-            if DEBUG: print "Changing "+key+" to "+value
-            # store the entry as best as possible
-            try:
-                v = int(value)
-            except:
+            if value == "":
+                if DEBUG: print "Wiping "+key
+                if self.table.item(r,c):
+                    self.table.item(r,c).setText("")
+                if key in self.spreadsheet.Proxy._cells.keys():
+                    del self.spreadsheet.Proxy._cells[key]
+            else:
+                if DEBUG: print "Changing "+key+" to "+value
+                # store the entry as best as possible
                 try:
-                    v = float(value)
+                    v = int(value)
                 except:
                     try:
-                        v = v = str(value)
+                        v = float(value)
                     except:
-                        v = value
-            setattr(self.spreadsheet.Proxy,key,v)
+                        try:
+                            v = v = str(value)
+                        except:
+                            v = value
+                setattr(self.spreadsheet.Proxy,key,v)
             self.update()
             # TODO do not update the whole spreadsheet when only one cell has changed:
             # use the _relations table and recursively update only cells based on this one
@@ -817,11 +876,19 @@ class SpreadsheetView(QtGui.QWidget):
         "called when something has been entered in the edit line"
         txt = str(self.lineEdit.text())
         if DEBUG: print "Text edited ",txt
-        if txt:
-            r = self.table.currentRow()
-            c = self.table.currentColumn()
-            self.changeCell(r,c,txt)
+        r = self.table.currentRow()
+        c = self.table.currentColumn()
+        self.changeCell(r,c,txt)
 
+    def wipeCell(self):
+        if DEBUG: print "Wiping cell"
+        self.lineEdit.setText("")
+        self.getEditLine()
+
+    def recompute(self):
+        if self.spreadsheet:
+            self.spreadsheet.Proxy.recompute(self.spreadsheet)
+        self.update()
 
 class _Command_Spreadsheet_Create:
     "the Spreadsheet_Create FreeCAD command"
@@ -834,9 +901,10 @@ class _Command_Spreadsheet_Create:
         from DraftTools import translate
         FreeCAD.ActiveDocument.openTransaction(str(translate("Spreadsheet","Create Spreadsheet")))
         FreeCADGui.doCommand("import Spreadsheet")
-        FreeCADGui.doCommand("Spreadsheet.makeSpreadsheet()")
+        FreeCADGui.doCommand("s = Spreadsheet.makeSpreadsheet()")
+        FreeCADGui.doCommand("FreeCAD.ActiveDocument.recompute()")
+        FreeCADGui.doCommand("FreeCADGui.ActiveDocument.setEdit(s.Name,0)")
         FreeCAD.ActiveDocument.commitTransaction()
-        FreeCAD.ActiveDocument.recompute()
 
 
 class _Command_Spreadsheet_Controller:

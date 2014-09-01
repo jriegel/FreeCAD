@@ -43,20 +43,7 @@ fc_target_copy_resource(WebGui
     ${CMAKE_BINARY_DIR}/Mod/Web
     Init.py InitGui.py)
 
-if(MSVC)
-    set_target_properties(WebGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(WebGui PROPERTIES DEBUG_OUTPUT_NAME "WebGui_d")
-    set_target_properties(WebGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Web)
-    set_target_properties(WebGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(WebGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(WebGui PROPERTIES DEBUG_OUTPUT_NAME "WebGui_d")
-    set_target_properties(WebGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Web)
-    set_target_properties(WebGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(WebGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Web)
-    set_target_properties(WebGui PROPERTIES PREFIX "")
-    set_target_properties(WebGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(WebGui WebGui /Mod/Web)
+SET_PYTHON_PREFIX_SUFFIX(WebGui)
 
-INSTALL(TARGETS WebGui DESTINATION lib)
+INSTALL(TARGETS WebGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

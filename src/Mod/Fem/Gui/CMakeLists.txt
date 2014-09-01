@@ -4,11 +4,12 @@ else(MSVC)
     add_definitions(-DHAVE_LIMITS_H -DHAVE_CONFIG_H)
 endif(MSVC)
 
-if(FREECAD_BUILD_FEM_NETGEN)
+if(BUILD_FEM_NETGEN)
     add_definitions(-DFCWithNetgen)
-endif(FREECAD_BUILD_FEM_NETGEN)
+endif(BUILD_FEM_NETGEN)
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Boost_INCLUDE_DIRS}
@@ -204,20 +205,7 @@ fc_target_copy_resource(FemGui
     MechanicalAnalysis.ui
     )
 
-if(MSVC)
-    set_target_properties(FemGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(FemGui PROPERTIES DEBUG_OUTPUT_NAME "FemGui_d")
-    set_target_properties(FemGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Fem)
-    set_target_properties(FemGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(FemGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(FemGui PROPERTIES DEBUG_OUTPUT_NAME "FemGui_d")
-    set_target_properties(FemGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Fem)
-    set_target_properties(FemGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(FemGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Fem)
-    set_target_properties(FemGui PROPERTIES PREFIX "")
-    set_target_properties(FemGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(FemGui FemGui /Mod/Fem)
+SET_PYTHON_PREFIX_SUFFIX(FemGui)
 
-INSTALL(TARGETS FemGui DESTINATION lib)
+INSTALL(TARGETS FemGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -58,7 +58,7 @@ Property::~Property()
 
 const char* Property::getName(void) const
 {
-    return father->getName(this);
+    return father->getPropertyName(this);
 }
 
 short Property::getType(void) const
@@ -126,8 +126,10 @@ std::string Property::encodeAttribute(const std::string& str) const
             tmp += "&amp;";
         else if (*it == '>')
             tmp += "&gt;";
+        else if (*it == '\r')
+            tmp += "&#xD;";
         else if (*it == '\n')
-            tmp += " ";
+            tmp += "&#xA;";
         else
             tmp += *it;
     }

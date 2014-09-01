@@ -24,6 +24,7 @@
 #ifndef GUI_INPUTFIELD_H
 #define GUI_INPUTFIELD_H
 
+#include <QValidator>
 #include <Base/Parameter.h>
 #include <Base/Quantity.h>
 #include "Widgets.h"
@@ -31,7 +32,9 @@
 #include "SpinBox.h"
 #include "FileDialog.h"
 
+#ifdef Q_MOC_RUN
 Q_DECLARE_METATYPE(Base::Quantity)
+#endif
 
 namespace Gui {
 
@@ -64,8 +67,17 @@ public:
 
     /// set the field with a quantity
     void setValue(const Base::Quantity&);
+    //set a numerical value which gets converted to a quantity with the currently set unit type
+    void setValue(const double&);
+
     /// get the current value
     Base::Quantity getQuantity(void)const{return this->actQuantity;}
+
+    /// gives the current state of the user input, gives true if it is a valid input with correct quantity
+    /// (shown by the green pixmap), returns false if the input is a unparsable string or has a wrong unit
+    /// (shown by the red pixmap in the gui)
+    bool hasValidInput() { return validInput;};
+
     /** sets the Unit this field is working with. 
      *  After setting the Unit the field will only accept
      *  user input with this unit type. Or if the user input 
@@ -73,6 +85,7 @@ public:
      *  Quantity. 
      */
     void setUnit(const Base::Unit&);
+    const Base::Unit& getUnit() const;
 
     /// set the input field to the last used value (works only if the setParamGrpPath() was called)
     void setToLastUsedValue(void);
@@ -93,11 +106,15 @@ public:
     /// set the value of the minimum property 
     void setHistorySize(int);
     /// set the unit by a string (can be used in the *.ui file)  
-    void setUnitText(QString);
+    void setUnitText(const QString&);
     /// get the unit as a string (can be used in the *.ui file)  
     QString getUnitText(void); 
     /// set the number portion selected (use after setValue()) 
     void selectNumber(void);
+    /// input validation
+    void fixup(QString& input) const;
+    /// input validation
+    QValidator::State validate(QString& input, int& pos) const;
 
     /** @name history and default management */
     //@{
@@ -139,15 +156,22 @@ protected Q_SLOTS:
     void updateIconLabel(const QString& text);
 
 protected:
+    virtual void showEvent(QShowEvent * event);
+    virtual void focusInEvent(QFocusEvent * event);
     virtual void keyPressEvent(QKeyEvent * event);
     virtual void wheelEvent(QWheelEvent * event);
     virtual void contextMenuEvent(QContextMenuEvent * event);
     virtual void resizeEvent(QResizeEvent*);
 
 private:
+    QPixmap getValidationIcon(const char* name, const QSize& size) const;
+    void updateText(const Base::Quantity&);
+
+private:
     QLabel* iconLabel;
     QByteArray m_sPrefGrp;
     std::string ErrorText;
+    bool validInput;
 
     /// handle to the parameter group for defaults and history
     ParameterGrp::handle _handle;
@@ -164,8 +188,6 @@ private:
     int HistorySize;
     int SaveSize;
 };
-
-
 
 } // namespace Gui
 

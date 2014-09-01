@@ -1,3 +1,5 @@
+include (CheckCXXSourceRuns)
+
 # ================================================================================
 # == Macros, mostly for special targets ==========================================
 
@@ -168,10 +170,14 @@ endmacro(generate_from_py)
 #endmacro(qt4_wrap_ui)
 
 
-MACRO(ADD_MSVC_PRECOMPILED_HEADER PrecompiledHeader PrecompiledSource SourcesVar)
+MACRO(ADD_MSVC_PRECOMPILED_HEADER TargetName PrecompiledHeader PrecompiledSource SourcesVar)
   IF(MSVC)
     GET_FILENAME_COMPONENT(PrecompiledBasename ${PrecompiledHeader} NAME_WE)
-    SET(PrecompiledBinary "$(IntDir)\\$(TargetName).pch")
+    IF(MSVC_IDE)
+      SET(PrecompiledBinary "$(IntDir)\\$(TargetName).pch")
+    ELSE(MSVC_IDE)
+      SET(PrecompiledBinary ${CMAKE_CURRENT_BINARY_DIR}/${TargetName}.pch)
+    ENDIF(MSVC_IDE)
     SET(Sources ${${SourcesVar}})
 
     SET_SOURCE_FILES_PROPERTIES(${PrecompiledSource}
@@ -203,3 +209,105 @@ MACRO(GET_MSVC_PRECOMPILED_SOURCE PrecompiledSource SourcesVar)
     ENDFOREACH (it)
   ENDIF(MSVC)
 ENDMACRO(GET_MSVC_PRECOMPILED_SOURCE)
+
+# Macro to replace all the binary output locations.  Takes 2 optional parameters.
+# ${ARGVN} is zero based so the 3rd element is ${ARGV2}.  When the 3rd element is missing,
+# Runtime and Lib directories default to /bin and /lib.  When present, the 3rd element
+# specifies both Runtime and Lib directories.  4th specifies linux install path.
+MACRO(SET_BIN_DIR ProjectName OutputName)
+    set_target_properties(${ProjectName} PROPERTIES OUTPUT_NAME ${OutputName})
+    if(${ARGC} GREATER 2)
+        # VS_IDE (and perhaps others) make Release and Debug subfolders.  This removes them.
+        set_target_properties(${ProjectName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY         ${CMAKE_BINARY_DIR}${ARGV2})
+        set_target_properties(${ProjectName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}${ARGV2})
+        set_target_properties(${ProjectName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}${ARGV2})
+        set_target_properties(${ProjectName} PROPERTIES LIBRARY_OUTPUT_DIRECTORY         ${CMAKE_BINARY_DIR}${ARGV2})
+    else(${ARGC} GREATER 2)
+        set_target_properties(${ProjectName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY         ${CMAKE_BINARY_DIR}/bin)
+        set_target_properties(${ProjectName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
+        set_target_properties(${ProjectName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/bin)
+        set_target_properties(${ProjectName} PROPERTIES LIBRARY_OUTPUT_DIRECTORY         ${CMAKE_BINARY_DIR}/lib)
+    endif(${ARGC} GREATER 2)
+
+    if(WIN32)
+        set_target_properties(${ProjectName} PROPERTIES DEBUG_OUTPUT_NAME ${OutputName}_d)
+    else(WIN32)
+        # FreeCADBase, SMDS, Driver and MEFISTO2 libs don't depend on parts from CMAKE_INSTALL_LIBDIR
+        if(NOT ${ProjectName} MATCHES "^(FreeCADBase|SMDS|Driver|MEFISTO2)$")
+            if(${ARGC} STREQUAL 4)
+                set_target_properties(${ProjectName} PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}${ARGV3})
+            else(${ARGC} STREQUAL 4)
+                set_target_properties(${ProjectName} PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_LIBDIR})
+            endif(${ARGC} STREQUAL 4)
+        endif(NOT ${ProjectName} MATCHES "^(FreeCADBase|SMDS|Driver|MEFISTO2)$")
+    endif(WIN32)
+ENDMACRO(SET_BIN_DIR)
+
+# Set python prefix & suffix together
+MACRO(SET_PYTHON_PREFIX_SUFFIX ProjectName)
+    if(NOT MSVC)
+        set_target_properties(${ProjectName} PROPERTIES PREFIX "")
+    endif(NOT MSVC)
+    
+    if(WIN32)
+        set_target_properties(${ProjectName} PROPERTIES SUFFIX ".pyd")
+    endif(WIN32)
+ENDMACRO(SET_PYTHON_PREFIX_SUFFIX)
+
+MACRO(CHECK_MINIMUM_OCC_VERSION_HEX MinVersionHex)
+    message(STATUS "Check for OCC version >= ${MinVersionHex}")
+    set(CMAKE_REQUIRED_INCLUDES ${OCC_INCLUDE_DIR})
+    unset(OCC_MIN_VERSION CACHE)
+    CHECK_CXX_SOURCE_RUNS("
+        #include <Standard_Version.hxx>
+        int main ()
+        {
+            return OCC_VERSION_HEX >= ${MinVersionHex} ? 0 : -1;
+        }
+        "
+        OCC_MIN_VERSION)
+ENDMACRO(CHECK_MINIMUM_OCC_VERSION_HEX)
+
+MACRO(GET_OCC_VERSION_HEX)
+    # clear them to run the tests for each configure step
+    unset(OCC_MAJOR CACHE)
+    unset(OCC_MAJOR_COMPILED CACHE)
+    unset(OCC_MAJOR_EXITCODE CACHE)
+    unset(OCC_MINOR CACHE)
+    unset(OCC_MINOR_COMPILED CACHE)
+    unset(OCC_MINOR_EXITCODE CACHE)
+    unset(OCC_MICRO CACHE)
+    unset(OCC_MICRO_COMPILED CACHE)
+    unset(OCC_MICRO_EXITCODE CACHE)
+
+    set(CMAKE_REQUIRED_INCLUDES ${OCC_INCLUDE_DIR})
+    CHECK_CXX_SOURCE_RUNS("
+        #include <Standard_Version.hxx>
+        int main ()
+        {
+            return OCC_VERSION_MAJOR;
+        }
+        "
+        OCC_MAJOR)
+    CHECK_CXX_SOURCE_RUNS("
+        #include <Standard_Version.hxx>
+        int main ()
+        {
+            return OCC_VERSION_MINOR;
+        }
+        "
+        OCC_MINOR)
+    CHECK_CXX_SOURCE_RUNS("
+        #include <Standard_Version.hxx>
+        int main ()
+        {
+            return OCC_VERSION_MAINTENANCE;
+        }
+        "
+        OCC_MICRO)
+
+    unset(OCC_VERSION_HEX CACHE)
+    if (OCC_MAJOR_COMPILED AND OCC_MINOR_COMPILED AND OCC_MICRO_COMPILED)
+        set (OCC_VERSION_HEX "0x0${OCC_MAJOR_EXITCODE}0${OCC_MINOR_EXITCODE}0${OCC_MICRO_EXITCODE}")
+    endif()
+ENDMACRO(GET_OCC_VERSION_HEX)

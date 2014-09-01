@@ -6,6 +6,7 @@ endif(MSVC)
 
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
@@ -138,21 +139,7 @@ fc_target_copy_resource(Robot
     ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Robot
     ${Robot_Resources})
 
+SET_BIN_DIR(Robot Robot /Mod/Robot)
+SET_PYTHON_PREFIX_SUFFIX(Robot)
 
-if(MSVC)
-    set_target_properties(Robot PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Robot PROPERTIES DEBUG_OUTPUT_NAME "Robot_d")
-    set_target_properties(Robot PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Robot)
-    set_target_properties(Robot PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Robot PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Robot PROPERTIES DEBUG_OUTPUT_NAME "Robot_d")
-    set_target_properties(Robot PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Robot)
-    set_target_properties(Robot PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Robot PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Robot)
-    set_target_properties(Robot PROPERTIES PREFIX "")
-    set_target_properties(Robot PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
-
-INSTALL(TARGETS Robot DESTINATION lib)
+INSTALL(TARGETS Robot DESTINATION ${CMAKE_INSTALL_LIBDIR})

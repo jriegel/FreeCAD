@@ -42,13 +42,7 @@
     <widget class="QListWidget" name="listWidgetReferences"/>
    </item>
    <item>
-    <widget class="QDoubleSpinBox" name="doubleSpinBox">
-     <property name="minimum">
-      <double>0.000000000000000</double>
-     </property>
-     <property name="maximum">
-      <double>999999999.000000000000000</double>
-     </property>
+      <widget class="Gui::InputField" name="chamferDistance"/>
     </widget>
    </item>
    <item>
@@ -60,6 +54,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Gui::InputField</class>
+   <extends>QLineEdit</extends>
+   <header>Gui/InputField.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

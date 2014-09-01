@@ -34,7 +34,8 @@ if(MSVC)
          optimized ${SOQT_LIBRARY_RELEASE}
          ${QT_DEBUG_LIBRARIES}
          ${QT_LIBRARIES}
-         QtUiTools.lib
+         optimized QtUiTools.lib
+         debug QtUiToolsd.lib
          ${OPENGL_gl_LIBRARY}
     )
 else(MSVC)
@@ -186,6 +187,7 @@ set(Gui_MOC_HDRS
     PythonConsole.h
     PythonDebugger.h
     PythonEditor.h
+    QuantitySpinBox.h
     ReportView.h
     SceneInspector.h
     SelectionView.h
@@ -759,6 +761,7 @@ SET(Widget_CPP_SRCS
     PrefWidgets.cpp
     InputField.cpp
     ProgressBar.cpp
+    QuantitySpinBox.cpp
     SpinBox.cpp
     Splashscreen.cpp
     WidgetFactory.cpp
@@ -771,6 +774,7 @@ SET(Widget_HPP_SRCS
     PrefWidgets.h
     InputField.h
     ProgressBar.h
+    QuantitySpinBox.h
     SpinBox.h
     Splashscreen.h
     WidgetFactory.h
@@ -932,35 +936,23 @@ if(MSVC)
         ${Workbench_CPP_SRCS}
         ${FreeCADGui_CPP_SRCS}
     )
-    ADD_MSVC_PRECOMPILED_HEADER("PreCompiled.h" "PreCompiled.cpp" FreeCADGui_CPP_SRCS)
+    ADD_MSVC_PRECOMPILED_HEADER(FreeCADGui PreCompiled.h PreCompiled.cpp FreeCADGui_CPP_SRCS)
 endif(MSVC)
 
 add_library(FreeCADGui SHARED ${FreeCADGui_SRCS})
 
 target_link_libraries(FreeCADGui ${FreeCADGui_LIBS})
 
-# Note this is IDE specific, not necessarily platform specific
-if(MSVC)
-    set_target_properties(FreeCADGui PROPERTIES DEBUG_OUTPUT_NAME "FreeCADGuiD")
-    set_target_properties(FreeCADGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    # dirty hack to avoid Debug/Release subdirectory
-    set_target_properties(FreeCADGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(FreeCADGui PROPERTIES DEBUG_OUTPUT_NAME "FreeCADGuiD")
-    set_target_properties(FreeCADGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-else(MSVC)
-    set_target_properties(FreeCADGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set_target_properties(FreeCADGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(FreeCADGui FreeCADGui)
 
 if(WIN32)
     INSTALL(TARGETS FreeCADGui
         RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 else(WIN32)
     INSTALL(TARGETS FreeCADGui
-        LIBRARY DESTINATION lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
     INSTALL(FILES Icons/freecad.xpm
         Icons/freecad-icon-16.png

@@ -110,20 +110,7 @@ fc_target_copy_resource(Assembly
     Init.py
 	AssemblyLib.py)
 
-if(MSVC)
-    set_target_properties(Assembly PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Assembly PROPERTIES DEBUG_OUTPUT_NAME "Assembly_d")
-    set_target_properties(Assembly PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Assembly)
-    set_target_properties(Assembly PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Assembly PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Assembly PROPERTIES DEBUG_OUTPUT_NAME "Assembly_d")
-    set_target_properties(Assembly PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Assembly)
-    set_target_properties(Assembly PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Assembly PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Assembly)
-    set_target_properties(Assembly PROPERTIES PREFIX "")
-    SET_TARGET_PROPERTIES(Assembly PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Assembly Assembly /Mod/Assembly)
+SET_PYTHON_PREFIX_SUFFIX(Assembly)
 
-INSTALL(TARGETS Assembly DESTINATION lib)
+INSTALL(TARGETS Assembly DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -44,6 +44,7 @@
 # include <BRepFill.hxx>
 # include <BRepLib.hxx>
 # include <gp_Circ.hxx>
+# include <gp_Ax3.hxx>
 # include <gp_Pnt.hxx>
 # include <gp_Lin.hxx>
 # include <GCE2d_MakeSegment.hxx>
@@ -437,29 +438,51 @@ static PyObject * makeFilledFace(PyObject *self, PyObject *args)
 {
     // http://opencascade.blogspot.com/2010/03/surface-modeling-part6.html
     // TODO: GeomPlate_BuildPlateSurface
+    // TODO: GeomPlate_MakeApprox
+    // TODO: BRepFeat_SplitShape
     PyObject *obj;
-    if (!PyArg_ParseTuple(args, "O", &obj))
+    PyObject *surf=0;
+    if (!PyArg_ParseTuple(args, "O|O!", &obj, &TopoShapeFacePy::Type, &surf))
         return NULL;
 
     PY_TRY {
+        // See also BRepOffsetAPI_MakeFilling
         BRepFill_Filling builder;
-        
         try {
+            if (surf) {
+                const TopoDS_Shape& face = static_cast<TopoShapeFacePy*>(surf)->
+                    getTopoShapePtr()->_Shape;
+                if (!face.IsNull() && face.ShapeType() == TopAbs_FACE) {
+                    builder.LoadInitSurface(TopoDS::Face(face));
+                }
+            }
             Py::Sequence list(obj);
-            int countEdges = 0;
+            int numConstraints = 0;
             for (Py::Sequence::iterator it = list.begin(); it != list.end(); ++it) {
-                if (PyObject_TypeCheck((*it).ptr(), &(Part::TopoShapeEdgePy::Type))) {
-                    const TopoDS_Shape& sh = static_cast<TopoShapeEdgePy*>((*it).ptr())->
+                if (PyObject_TypeCheck((*it).ptr(), &(Part::TopoShapePy::Type))) {
+                    const TopoDS_Shape& sh = static_cast<TopoShapePy*>((*it).ptr())->
                         getTopoShapePtr()->_Shape;
                     if (!sh.IsNull()) {
-                        builder.Add(TopoDS::Edge(sh), GeomAbs_C0);
-                        countEdges++;
+                        if (sh.ShapeType() == TopAbs_EDGE) {
+                            builder.Add(TopoDS::Edge(sh), GeomAbs_C0);
+                            numConstraints++;
+                        }
+                        else if (sh.ShapeType() == TopAbs_FACE) {
+                            builder.Add(TopoDS::Face(sh), GeomAbs_C0);
+                            numConstraints++;
+                        }
+                        else if (sh.ShapeType() == TopAbs_VERTEX) {
+                            const TopoDS_Vertex& v = TopoDS::Vertex(sh);
+                            gp_Pnt pnt = BRep_Tool::Pnt(v);
+                            builder.Add(pnt);
+                            numConstraints++;
+                        }
                     }
                 }
             }
 
-            if (countEdges == 0) {
-                PyErr_SetString(PyExc_Exception, "Failed to created face with no edges");
+            if (numConstraints == 0) {
+                PyErr_SetString(PyExc_Exception, "Failed to created face with no constraints");
                 return 0;
             }
 
@@ -554,10 +577,11 @@ static PyObject * makeSolid(PyObject *self, PyObject *args)
 static PyObject * makePlane(PyObject *self, PyObject *args)
 {
     double length, width;
-    PyObject *pPnt=0, *pDir=0;
-    if (!PyArg_ParseTuple(args, "dd|O!O!", &length, &width,
-                                           &(Base::VectorPy::Type), &pPnt,
-                                           &(Base::VectorPy::Type), &pDir))
+    PyObject *pPnt=0, *pDirZ=0, *pDirX=0;
+    if (!PyArg_ParseTuple(args, "dd|O!O!O!", &length, &width,
+                                             &(Base::VectorPy::Type), &pPnt,
+                                             &(Base::VectorPy::Type), &pDirZ,
+                                             &(Base::VectorPy::Type), &pDirX))
         return NULL;
 
     if (length < Precision::Confusion()) {
@@ -576,11 +600,21 @@ static PyObject * makePlane(PyObject *self, PyObject *args)
             Base::Vector3d pnt = static_cast<Base::VectorPy*>(pPnt)->value();
             p.SetCoord(pnt.x, pnt.y, pnt.z);
         }
-        if (pDir) {
-            Base::Vector3d vec = static_cast<Base::VectorPy*>(pDir)->value();
+        if (pDirZ) {
+            Base::Vector3d vec = static_cast<Base::VectorPy*>(pDirZ)->value();
             d.SetCoord(vec.x, vec.y, vec.z);
         }
-        Handle_Geom_Plane aPlane = new Geom_Plane(p, d);
+        Handle_Geom_Plane aPlane;
+        if (pDirX) {
+            Base::Vector3d vec = static_cast<Base::VectorPy*>(pDirX)->value();
+            gp_Dir dx;
+            dx.SetCoord(vec.x, vec.y, vec.z);
+            aPlane = new Geom_Plane(gp_Ax3(p, d, dx));
+        }
+        else {
+            aPlane = new Geom_Plane(p, d);
+        }
+
         BRepBuilderAPI_MakeFace Face(aPlane, 0.0, length, 0.0, width
 #if OCC_VERSION_HEX >= 0x060502
           , Precision::Confusion()
@@ -589,6 +623,10 @@ static PyObject * makePlane(PyObject *self, PyObject *args)
         return new TopoShapeFacePy(new TopoShape((Face.Face()))); 
     }
     catch (Standard_DomainError) {
+        PyErr_SetString(PyExc_Exception, "creation of plane failed");
+        return NULL;
+    }
+    catch (Standard_Failure) {
         PyErr_SetString(PyExc_Exception, "creation of plane failed");
         return NULL;
     }
@@ -858,12 +896,19 @@ static PyObject * makeTorus(PyObject *self, PyObject *args)
 static PyObject * makeHelix(PyObject *self, PyObject *args)
 {
     double pitch, height, radius, angle=-1.0;
-    if (!PyArg_ParseTuple(args, "ddd|d", &pitch, &height, &radius, &angle))
+    PyObject *pleft=Py_False;
+    PyObject *pvertHeight=Py_False;
+    if (!PyArg_ParseTuple(args, "ddd|dO!O!", &pitch, &height, &radius, &angle,
+                                             &(PyBool_Type), &pleft,
+                                             &(PyBool_Type), &pvertHeight))
         return 0;
 
     try {
         TopoShape helix;
-        TopoDS_Shape wire = helix.makeHelix(pitch, height, radius, angle);
+        Standard_Boolean anIsLeft = PyObject_IsTrue(pleft) ? Standard_True : Standard_False;
+        Standard_Boolean anIsVertHeight = PyObject_IsTrue(pvertHeight) ? Standard_True : Standard_False;
+        TopoDS_Shape wire = helix.makeHelix(pitch, height, radius, angle,
+                                            anIsLeft, anIsVertHeight);
         return new TopoShapeWirePy(new TopoShape(wire));
     }
     catch (Standard_Failure) {
@@ -993,7 +1038,8 @@ static PyObject * makeLine(PyObject *self, PyObject *args)
 static PyObject * makePolygon(PyObject *self, PyObject *args)
 {
     PyObject *pcObj;
-    if (!PyArg_ParseTuple(args, "O", &pcObj))     // convert args: Python->C
+    PyObject *pclosed=Py_False;
+    if (!PyArg_ParseTuple(args, "O|O!", &pcObj, &(PyBool_Type), &pclosed))     // convert args: Python->C
         return NULL;                             // NULL triggers exception
 
     PY_TRY {
@@ -1018,6 +1064,13 @@ static PyObject * makePolygon(PyObject *self, PyObject *args)
 
             if (!mkPoly.IsDone())
                 Standard_Failure::Raise("Cannot create polygon because less than two vertices are given");
+
+            // if the polygon should be closed
+            if (PyObject_IsTrue(pclosed)) {
+                if (!mkPoly.FirstVertex().IsSame(mkPoly.LastVertex())) {
+                    mkPoly.Add(mkPoly.FirstVertex());
+                }
+            }
 
             return new TopoShapeWirePy(new TopoShape(mkPoly.Wire()));
         }
@@ -1281,14 +1334,19 @@ static PyObject * makeLoft(PyObject *self, PyObject *args)
     PyObject *pcObj;
     PyObject *psolid=Py_False;
     PyObject *pruled=Py_False;
-    if (!PyArg_ParseTuple(args, "O|O!O!", &pcObj,
+    PyObject *pclosed=Py_False;
+    if (!PyArg_ParseTuple(args, "O|O!O!O!", &pcObj,
                                           &(PyBool_Type), &psolid,
-                                          &(PyBool_Type), &pruled))
+                                          &(PyBool_Type), &pruled,
+                                          &(PyBool_Type), &pclosed)) {
+        Base::Console().Message("Part.makeLoft Parameter Error\n");
         return NULL;
+    }
 
     try {
         TopTools_ListOfShape profiles;
         Py::Sequence list(pcObj);
+
         for (Py::Sequence::iterator it = list.begin(); it != list.end(); ++it) {
             if (PyObject_TypeCheck((*it).ptr(), &(Part::TopoShapePy::Type))) {
                 const TopoDS_Shape& sh = static_cast<TopoShapePy*>((*it).ptr())->
@@ -1300,11 +1358,13 @@ static PyObject * makeLoft(PyObject *self, PyObject *args)
         TopoShape myShape;
         Standard_Boolean anIsSolid = PyObject_IsTrue(psolid) ? Standard_True : Standard_False;
         Standard_Boolean anIsRuled = PyObject_IsTrue(pruled) ? Standard_True : Standard_False;
-        TopoDS_Shape aResult = myShape.makeLoft(profiles, anIsSolid, anIsRuled);
+        Standard_Boolean anIsClosed = PyObject_IsTrue(pclosed) ? Standard_True : Standard_False;
+        TopoDS_Shape aResult = myShape.makeLoft(profiles, anIsSolid, anIsRuled,anIsClosed);
         return new TopoShapePy(new TopoShape(aResult));
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
+        Base::Console().Message("debug: Part.makeLoft catching 'Standard_Failure' msg: '%s'\n", e->GetMessageString());
         PyErr_SetString(PyExc_Exception, e->GetMessageString());
         return 0;
     }
@@ -1644,8 +1704,8 @@ struct PyMethodDef Part_methods[] = {
      "makeSolid(shape) -- Create a solid out of the shells inside a shape."},
 
     {"makePlane"  ,makePlane ,METH_VARARGS,
-     "makePlane(length,width,[pnt,dir]) -- Make a plane\n"
-     "By default pnt=Vector(0,0,0) and dir=Vector(0,0,1)"},
+     "makePlane(length,width,[pnt,dirZ,dirX]) -- Make a plane\n"
+     "By default pnt=Vector(0,0,0) and dirZ=Vector(0,0,1), dirX is ignored in this case"},
 
     {"makeBox"    ,makeBox ,METH_VARARGS,
      "makeBox(length,width,height,[pnt,dir]) -- Make a box located\n"

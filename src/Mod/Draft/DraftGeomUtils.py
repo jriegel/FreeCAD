@@ -58,6 +58,8 @@ def edg(p1,p2):
 
 def getVerts(shape):
     "getVerts(shape): returns a list containing vectors of each vertex of the shape"
+    if not hasattr(shape,"Vertexes"):
+        return []
     p = []
     for v in shape.Vertexes:
             p.append(v.Point)
@@ -85,39 +87,11 @@ def isNull(something):
 
 def isPtOnEdge(pt,edge) :
     '''isPtOnEdge(Vector,edge): Tests if a point is on an edge'''
-    if isinstance(edge.Curve,Part.Line) :
-        orig = edge.Vertexes[0].Point
-        #if DraftVecUtils.isNull(pt.sub(orig).cross(vec(edge))) : <== can give unprecise results
-        if round(pt.sub(orig).getAngle(vec(edge)),precision()) == 0:
-            return pt.sub(orig).Length <= vec(edge).Length and pt.sub(orig).dot(vec(edge)) >= 0
-        else : 
-            return False
-        
-    elif isinstance(edge.Curve,Part.Circle) :
-        center = edge.Curve.Center
-        axis   = edge.Curve.Axis ; axis.normalize()
-        radius = edge.Curve.Radius
-        if  round(pt.sub(center).dot(axis),precision()) == 0 \
-        and round(pt.sub(center).Length - radius,precision()) == 0 :
-            if len(edge.Vertexes) == 1 :
-                return True # edge is a complete circle
-            else :
-                begin = edge.Vertexes[0].Point
-                end   = edge.Vertexes[-1].Point
-                if DraftVecUtils.isNull(pt.sub(begin)) or DraftVecUtils.isNull(pt.sub(end)) :
-                    return True
-                else :
-                    # newArc = Part.Arc(begin,pt,end)
-                    # return DraftVecUtils.isNull(newArc.Center.sub(center)) \
-                    #    and DraftVecUtils.isNull(newArc.Axis-axis) \
-                    #    and round(newArc.Radius-radius,precision()) == 0
-                    angle1 = -DraftVecUtils.angle(begin.sub(center))
-                    angle2 = -DraftVecUtils.angle(end.sub(center))
-                    anglept = -DraftVecUtils.angle(pt.sub(center))
-                    if angle2 < angle1:
-                        angle2 = angle2 + math.pi*2
-                    if (angle1 < anglept) and (anglept < angle2):
-                        return True
+    v = Part.Vertex(pt)
+    d = v.distToShape(edge)
+    if d:
+        if round(d[0],precision()) == 0:
+            return True
     return False
 
 def hasCurves(shape):
@@ -155,6 +129,26 @@ def isAligned(edge,axis="x"):
                     return True
     return False
     
+def getQuad(face):
+    """getQuad(face): returns a list of 3 vectors (basepoint, Xdir, Ydir) if the face
+    is a quad, or None if not."""
+    if len(face.Edges) != 4:
+        return None
+    v1 = vec(face.Edges[0])
+    v2 = vec(face.Edges[1])
+    v3 = vec(face.Edges[2])
+    v4 = vec(face.Edges[3])
+    angles90 = [round(math.pi*0.5,precision()),round(math.pi*1.5,precision())]
+    angles180 = [0,round(math.pi,precision()),round(math.pi*2,precision())]
+    for ov in [v2,v3,v4]:
+        if not (round(v1.getAngle(ov),precision()) in angles90+angles180):
+            return None
+    for ov in [v2,v3,v4]:
+        if round(v1.getAngle(ov),precision()) in angles90:
+            v1.normalize()
+            ov.normalize()
+            return [face.Edges[0].Vertexes[0].Point,v1,ov]
+
 def areColinear(e1,e2):
     """areColinear(e1,e2): returns True if both edges are colinear"""
     if not isinstance(e1.Curve,Part.Line):
@@ -173,7 +167,6 @@ def areColinear(e1,e2):
             if (a2 == 0) or (a2 == round(math.pi,precision())):
                 return True
     return False
-    
 
 def hasOnlyWires(shape):
     "hasOnlyWires(shape): returns True if all the edges are inside a wire"
@@ -183,7 +176,7 @@ def hasOnlyWires(shape):
     if ne == len(shape.Edges):
         return True
     return False
-    
+
 def geomType(edge):
     "returns the type of geom this edge is based on"
     try:
@@ -201,7 +194,7 @@ def geomType(edge):
             return "Unknown"
     except:
         return "Unknown"
-        
+
 def isValidPath(shape):
     "isValidPath(shape): returns True if the shape can be used as an extrusion path"
     if shape.isNull():
@@ -339,14 +332,17 @@ def findIntersection(edge1,edge2,infinite1=False,infinite2=False,ex1=False,ex2=F
             # Line and Arc are on same plane
             
             dOnLine = center.sub(pt1).dot(dirVec)
-            onLine  = Vector(dirVec) ; onLine.scale(dOnLine,dOnLine,dOnLine)
+            onLine  = Vector(dirVec)
+            onLine.scale(dOnLine,dOnLine,dOnLine)
             toLine  = pt1.sub(center).add(onLine)
             
             if toLine.Length < arc.Curve.Radius :
                 dOnLine = (arc.Curve.Radius**2 - toLine.Length**2)**(0.5)
-                onLine  = Vector(dirVec) ; onLine.scale(dOnLine,dOnLine,dOnLine)
+                onLine  = Vector(dirVec)
+                onLine.scale(dOnLine,dOnLine,dOnLine)
                 int = [center.add(toLine).add(onLine)]
-                onLine  = Vector(dirVec) ; onLine.scale(-dOnLine,-dOnLine,-dOnLine)
+                onLine  = Vector(dirVec)
+                onLine.scale(-dOnLine,-dOnLine,-dOnLine)
                 int += [center.add(toLine).add(onLine)]
             elif round(toLine.Length-arc.Curve.Radius,precision()) == 0 :
                 int = [center.add(toLine)]
@@ -907,10 +903,12 @@ def offset(edge,vector):
         v1 = Vector.add(edge.Vertexes[0].Point, vector)
         v2 = Vector.add(edge.Vertexes[-1].Point, vector)
         return Part.Line(v1,v2).toShape()
-    else:
+    elif geomType(edge) == "Circle":
         rad = edge.Vertexes[0].Point.sub(edge.Curve.Center)
         newrad = Vector.add(rad,vector).Length
         return Part.Circle(edge.Curve.Center,NORM,newrad).toShape()
+    else:
+        return None
 
 def isReallyClosed(wire):
     "checks if a wire is really closed"
@@ -973,95 +971,105 @@ def calculatePlacement(shape):
     return pla
 
 def offsetWire(wire,dvec,bind=False,occ=False):
-        '''
-        offsetWire(wire,vector,[bind]): offsets the given wire along the
-        given vector. The vector will be applied at the first vertex of
-        the wire. If bind is True (and the shape is open), the original
-        wire and the offsetted one are bound by 2 edges, forming a face.
-        '''
-        edges = sortEdges(wire.Edges)
-        norm = getNormal(wire)
-        closed = isReallyClosed(wire)
-        nedges = []
-        if occ:
-                l=abs(dvec.Length)
-                if not l: return None
-                if wire.Wires:
-                        wire = wire.Wires[0]
-                else:
-                        wire = Part.Wire(edges)
-                try:
-                        off = wire.makeOffset(l)
-                except:
-                        return None
-                else:
-                        return off
-        for i in range(len(edges)):
-                curredge = edges[i]
-                delta = dvec
-                if i != 0:
-                        angle = DraftVecUtils.angle(vec(edges[0]),vec(curredge),norm)
-                        delta = DraftVecUtils.rotate(delta,angle,norm)
-                nedge = offset(curredge,delta)
-                nedges.append(nedge)
-        nedges = connect(nedges,closed)
-        if bind and not closed:
-                e1 = Part.Line(edges[0].Vertexes[0].Point,nedges[0].Vertexes[0].Point).toShape()
-                e2 = Part.Line(edges[-1].Vertexes[-1].Point,nedges[-1].Vertexes[-1].Point).toShape()
-                alledges = edges.extend(nedges)
-                alledges = alledges.extend([e1,e2])
-                w = Part.Wire(alledges)
-                return w
+    '''
+    offsetWire(wire,vector,[bind]): offsets the given wire along the
+    given vector. The vector will be applied at the first vertex of
+    the wire. If bind is True (and the shape is open), the original
+    wire and the offsetted one are bound by 2 edges, forming a face.
+    '''
+    edges = sortEdges(wire.Edges)
+    norm = getNormal(wire)
+    closed = isReallyClosed(wire)
+    nedges = []
+    if occ:
+        l=abs(dvec.Length)
+        if not l: return None
+        if wire.Wires:
+            wire = wire.Wires[0]
         else:
-                return nedges
+            wire = Part.Wire(edges)
+        try:
+            off = wire.makeOffset(l)
+        except:
+            return None
+        else:
+            return off
+    for i in range(len(edges)):
+        curredge = edges[i]
+        delta = dvec
+        if i != 0:
+            if isinstance(curredge.Curve,Part.Circle):
+                v = curredge.tangentAt(curredge.FirstParameter)
+            else:
+                v = vec(curredge)
+            angle = DraftVecUtils.angle(vec(edges[0]),v,norm)
+            delta = DraftVecUtils.rotate(delta,angle,norm)
+        nedge = offset(curredge,delta)
+        if not nedge:
+            return None
+        if isinstance(curredge.Curve,Part.Circle):
+            nedge = Part.ArcOfCircle(nedge.Curve,curredge.FirstParameter,curredge.LastParameter).toShape()
+        nedges.append(nedge)
+        FreeCAD.n=nedges
+    nedges = connect(nedges,closed)
+    if bind and not closed:
+        e1 = Part.Line(edges[0].Vertexes[0].Point,nedges[0].Vertexes[0].Point).toShape()
+        e2 = Part.Line(edges[-1].Vertexes[-1].Point,nedges[-1].Vertexes[-1].Point).toShape()
+        alledges = edges.extend(nedges)
+        alledges = alledges.extend([e1,e2])
+        w = Part.Wire(alledges)
+        return w
+    else:
+        return nedges
 
 def connect(edges,closed=False):
         '''connects the edges in the given list by their intersections'''
         nedges = []
         for i in range(len(edges)):
-                curr = edges[i]
-                # print "DraftGeomUtils.connect edge ",i," : ",curr.Vertexes[0].Point,curr.Vertexes[-1].Point
-                if i > 0:
-                        prev = edges[i-1]
+            curr = edges[i]
+            #print "debug: DraftGeomUtils.connect edge ",i," : ",curr.Vertexes[0].Point,curr.Vertexes[-1].Point
+            if i > 0:
+                prev = edges[i-1]
+            else:
+                if closed:
+                    prev = edges[-1]
                 else:
-                        if closed:
-                                prev = edges[-1]
-                        else:
-                                prev = None
-                if i < (len(edges)-1):
-                        next = edges[i+1]
+                    prev = None
+            if i < (len(edges)-1):
+                next = edges[i+1]
+            else:
+                if closed: next = edges[0]
                 else:
-                        if closed: next = edges[0]
-                        else:
-                                next = None
-                if prev:
-                        # print "debug: DraftGeomUtils.connect prev : ",prev.Vertexes[0].Point,prev.Vertexes[-1].Point
-                        i = findIntersection(curr,prev,True,True)
-                        if i:
-                                v1 = i[0]
-                        else:
-                                v1 = curr.Vertexes[0].Point
+                    next = None
+            if prev:
+                #print "debug: DraftGeomUtils.connect prev : ",prev.Vertexes[0].Point,prev.Vertexes[-1].Point
+                i = findIntersection(curr,prev,True,True)
+                if i:
+                    v1 = i[0]
+                else:    
+                    v1 = curr.Vertexes[0].Point
+            else:
+                v1 = curr.Vertexes[0].Point
+            if next:
+                #print "debug: DraftGeomUtils.connect next : ",next.Vertexes[0].Point,next.Vertexes[-1].Point
+                i = findIntersection(curr,next,True,True)
+                if i:
+                    v2 = i[0]
                 else:
-                        v1 = curr.Vertexes[0].Point
-                if next:
-                        # print "debug: DraftGeomUtils.connect next : ",next.Vertexes[0].Point,next.Vertexes[-1].Point
-                        i = findIntersection(curr,next,True,True)
-                        if i:
-                                v2 = i[0]
-                        else:
-                                v2 = curr.Vertexes[-1].Point 
-                else:
-                        v2 = curr.Vertexes[-1].Point
-                if geomType(curr) == "Line":
-                        if v1 != v2:
-                                nedges.append(Part.Line(v1,v2).toShape())
-                elif geomType(curr) == "Circle":
-                        if v1 != v2:
-                                nedges.append(Part.Arc(v1,findMidpoint(curr),v2))
+                    v2 = curr.Vertexes[-1].Point 
+            else:
+                v2 = curr.Vertexes[-1].Point
+            if geomType(curr) == "Line":
+                if v1 != v2:
+                    nedges.append(Part.Line(v1,v2).toShape())
+            elif geomType(curr) == "Circle":
+                if v1 != v2:
+                    nedges.append(Part.Arc(v1,findMidpoint(curr),v2).toShape())
         try:
-                return Part.Wire(nedges)
+            return Part.Wire(nedges)
         except:
-                return None
+            print "DraftGeomUtils.connect: unable to connect edges:",nedges
+            return None
 
 def findDistance(point,edge,strict=False):
     '''
@@ -1096,6 +1104,8 @@ def findDistance(point,edge,strict=False):
                 ve2 = None
             center = edge.Curve.Center
             segment = center.sub(point)
+            if segment.Length == 0:
+                return None
             ratio = (segment.Length - edge.Curve.Radius) / segment.Length
             dist = segment.multiply(ratio)
             newpoint = Vector.add(point, dist)
@@ -1242,21 +1252,25 @@ def getTangent(edge,frompoint=None):
         return None
 
 def bind(w1,w2):
-        '''bind(wire1,wire2): binds 2 wires by their endpoints and
-        returns a face'''
-        if w1.isClosed() and w2.isClosed():
-                d1 = w1.BoundBox.DiagonalLength
-                d2 = w2.BoundBox.DiagonalLength
-                if d1 > d2:
-                        #w2.reverse()
-                        return Part.Face([w1,w2])
-                else:
-                        #w1.reverse()
-                        return Part.Face([w2,w1])
+    '''bind(wire1,wire2): binds 2 wires by their endpoints and
+    returns a face'''
+    if w1.isClosed() and w2.isClosed():
+        d1 = w1.BoundBox.DiagonalLength
+        d2 = w2.BoundBox.DiagonalLength
+        if d1 > d2:
+            #w2.reverse()
+            return Part.Face([w1,w2])
         else:
-                w3 = Part.Line(w1.Vertexes[0].Point,w2.Vertexes[0].Point).toShape()
-                w4 = Part.Line(w1.Vertexes[-1].Point,w2.Vertexes[-1].Point).toShape()
-                return Part.Face(Part.Wire(w1.Edges+[w3]+w2.Edges+[w4]))
+            #w1.reverse()
+            return Part.Face([w2,w1])
+    else:
+        try:
+            w3 = Part.Line(w1.Vertexes[0].Point,w2.Vertexes[0].Point).toShape()
+            w4 = Part.Line(w1.Vertexes[-1].Point,w2.Vertexes[-1].Point).toShape()
+            return Part.Face(Part.Wire(w1.Edges+[w3]+w2.Edges+[w4]))
+        except:
+            print "DraftGeomUtils: unable to bind wires"
+            return None
 
 def cleanFaces(shape):
         "removes inner edges from coplanar faces"
@@ -1808,10 +1822,12 @@ def curvetowire(obj,steps):
         p0 = p
     return edgelist
 
-def cleanProjection(shape,tessellate=False):
+def cleanProjection(shape,tessellate=True,seglength=.05):
     "returns a valid compound of edges, by recreating them"
     # this is because the projection algorithm somehow creates wrong shapes.
     # they dispay fine, but on loading the file the shape is invalid
+    # Now with tanderson's fix to ProjectionAlgos, that isn't the case, but this
+    # can be used for tessellating ellipses and splines for DXF output-DF
     oldedges = shape.Edges
     newedges = []
     for e in oldedges:
@@ -1826,15 +1842,18 @@ def cleanProjection(shape,tessellate=False):
                 else:
                     newedges.append(e.Curve.toShape())
             elif geomType(e) == "Ellipse":
-                if len(e.Vertexes) > 1:
-                    a = Part.Arc(e.Curve,e.FirstParameter,e.LastParameter).toShape()
-                    newedges.append(a)
+                if tessellate:
+                    newedges.append(Part.Wire(curvetowire(e, seglength)))
                 else:
-                    newedges.append(e.Curve.toShape())
+                    if len(e.Vertexes) > 1:
+                        a = Part.Arc(e.Curve,e.FirstParameter,e.LastParameter).toShape()
+                        newedges.append(a)
+                    else:
+                        newedges.append(e.Curve.toShape())
             elif geomType(e) == "BSplineCurve" or \
                  geomType(e) == "BezierCurve":
                 if tessellate:
-                    newedges.append(Part.Wire(curvetowire(e,e.Curve.NbPoles)))
+                    newedges.append(Part.Wire(curvetowire(e,seglength)))
                 else:
                     if isLine(e.Curve):
                         l = Part.Line(e.Vertexes[0].Point,e.Vertexes[-1].Point).toShape()
@@ -1847,6 +1866,36 @@ def cleanProjection(shape,tessellate=False):
             print "Debug: error cleaning edge ",e
     return Part.makeCompound(newedges)
     
+def curvetosegment(curve,seglen):
+    points = curve.discretize(seglen)
+    p0 = points[0]
+    edgelist = []
+    for p in points[1:]:
+        edge = Part.makeLine((p0.x,p0.y,p0.z),(p.x,p.y,p.z))
+        edgelist.append(edge)
+        p0 = p
+    return edgelist
+
+def tessellateProjection(shape,seglen):
+    ''' Returns projection with BSplines and Ellipses broken into line segments.
+        Useful for exporting projected views to *dxf files.'''
+    oldedges = shape.Edges
+    newedges = []
+    for e in oldedges:
+        try:
+            if geomType(e) == "Line":
+                newedges.append(e.Curve.toShape())
+            elif geomType(e) == "Circle":
+                newedges.append(e.Curve.toShape())
+            elif geomType(e) == "Ellipse":
+                newedges.append(Part.Wire(curvetosegment(e,seglen)))
+            elif geomType(e) == "BSplineCurve":
+                newedges.append(Part.Wire(curvetosegment(e,seglen)))
+            else:
+                newedges.append(e)
+        except:
+            print "Debug: error cleaning edge ",e
+    return Part.makeCompound(newedges)
 
 # circle functions *********************************************************
 

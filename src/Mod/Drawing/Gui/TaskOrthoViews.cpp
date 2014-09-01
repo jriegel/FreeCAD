@@ -98,7 +98,6 @@ void pagesize(string & page_template, int dims[4], int block[4])
     catch (Standard_Failure)
     { }
 
-    file.close();
 
     if (t3 != 0)
     {
@@ -858,7 +857,10 @@ TaskOrthoViews::TaskOrthoViews(QWidget *parent)
     const char * part = obj.front()->getNameInDocument();
 
     App::Document * doc = App::GetApplication().getActiveDocument();
-    vector<App::DocumentObject*> pages = doc->getObjectsOfType(Drawing::FeaturePage::getClassTypeId());
+    vector<App::DocumentObject*> pages = Gui::Selection().getObjectsOfType(Drawing::FeaturePage::getClassTypeId());
+    if (pages.empty()) {
+	pages = doc->getObjectsOfType(Drawing::FeaturePage::getClassTypeId());
+    }
     string PageName = pages.front()->getNameInDocument();
     const char * page = PageName.c_str();
 

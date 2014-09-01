@@ -198,7 +198,6 @@ std::vector<unsigned long> MeshEvalOrientation::GetIndices() const
     MeshFacetArray::_TConstIterator iBeg = rFAry.begin();
     MeshFacetArray::_TConstIterator iEnd = rFAry.end();
 
-    ulVisited = 0;
     ulStartFacet = 0;
 
     std::vector<unsigned long> uIndices, uComplement;
@@ -369,8 +368,7 @@ bool MeshEvalTopology::Evaluate ()
         else {
             if (count > 2) {
                 // Edge that is shared by more than 2 facets
-                nonManifoldList.push_back(std::make_pair
-                    <unsigned long, unsigned long>(p0, p1));
+                nonManifoldList.push_back(std::make_pair(p0, p1));
                 nonManifoldFacets.push_back(facets);
             }
 
@@ -396,7 +394,7 @@ void MeshEvalTopology::GetFacetManifolds (std::vector<unsigned long> &raclFacetI
         for (int i = 0; i < 3; i++) {
             unsigned long ulPt0 = std::min<unsigned long>(pI->_aulPoints[i],  pI->_aulPoints[(i+1)%3]);
             unsigned long ulPt1 = std::max<unsigned long>(pI->_aulPoints[i],  pI->_aulPoints[(i+1)%3]);
-            std::pair<unsigned long, unsigned long> edge = std::make_pair<unsigned long, unsigned long>(ulPt0, ulPt1);
+            std::pair<unsigned long,unsigned long> edge  = std::make_pair(ulPt0, ulPt1);
 
             if (std::find(nonManifoldList.begin(), nonManifoldList.end(), edge) != nonManifoldList.end())
                 raclFacetIndList.push_back(pI - rclFAry.begin());
@@ -746,8 +744,7 @@ void MeshEvalSelfIntersection::GetIntersections(std::vector<std::pair<unsigned l
                     facet2 = *cMFI;
                     int ret = facet1.IntersectWithFacet(facet2, pt1, pt2);
                     if (ret == 2) {
-                        intersection.push_back(std::make_pair
-                            <unsigned long, unsigned long>(*it,*jt));
+                        intersection.push_back(std::make_pair (*it,*jt));
                     }
                 }
             }
@@ -755,7 +752,7 @@ void MeshEvalSelfIntersection::GetIntersections(std::vector<std::pair<unsigned l
     }
 }
 
-bool MeshFixSelfIntersection::Fixup()
+std::vector<unsigned long> MeshFixSelfIntersection::GetFacets() const
 {
     std::vector<unsigned long> indices;
     const MeshFacetArray& rFaces = _rclMesh.GetFacets();
@@ -782,8 +779,12 @@ bool MeshFixSelfIntersection::Fixup()
     std::sort(indices.begin(), indices.end());
     indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
 
-    _rclMesh.DeleteFacets(indices);
+    return indices;
+}
 
+bool MeshFixSelfIntersection::Fixup()
+{
+    _rclMesh.DeleteFacets(GetFacets());
     return true;
 }
 

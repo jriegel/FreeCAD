@@ -36,12 +36,13 @@ __title__="FreeCAD Axis System"
 __author__ = "Yorik van Havre"
 __url__ = "http://www.freecadweb.org"
 
-def makeAxis(num=5,size=1,name=translate("Arch","Axes")):
+def makeAxis(num=5,size=1000,name=translate("Arch","Axes")):
     '''makeAxis(num,size): makes an Axis System
     based on the given number of axes and interval distances'''
     obj = FreeCAD.ActiveDocument.addObject("App::FeaturePython",name)
     _Axis(obj)
-    _ViewProviderAxis(obj.ViewObject)
+    if FreeCAD.GuiUp:
+        _ViewProviderAxis(obj.ViewObject)
     if num:
         dist = []
         angles = []
@@ -63,7 +64,7 @@ class _CommandAxis:
         
     def Activated(self):
         FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Axis"))
-        FreeCADGui.doCommand("import Arch")
+        FreeCADGui.addModule("Arch")
         sel = FreeCADGui.Selection.getSelection()
         st = Draft.getObjectsOfType(sel,"Structure")
         if st:
@@ -72,6 +73,9 @@ class _CommandAxis:
         else:
             FreeCADGui.doCommand("Arch.makeAxis()")
         FreeCAD.ActiveDocument.commitTransaction()
+
+    def IsActive(self):
+        return not FreeCAD.ActiveDocument is None
        
 class _Axis:
     "The Axis object"
@@ -300,7 +304,7 @@ class _ViewProviderAxis:
                     num += 1
             
   
-    def setEdit(self,vobj,mode):
+    def setEdit(self,vobj,mode=0):
         taskd = _AxisTaskPanel()
         taskd.obj = vobj.Object
         taskd.update()
@@ -310,6 +314,9 @@ class _ViewProviderAxis:
     def unsetEdit(self,vobj,mode):
         FreeCADGui.Control.closeDialog()
         return
+
+    def doubleClicked(self,vobj):
+        self.setEdit(vobj)
 
     def __getstate__(self):
         return None
@@ -365,7 +372,7 @@ class _AxisTaskPanel:
         return True
 
     def getStandardButtons(self):
-        return int(QtGui.QDialogButtonBox.Ok)
+        return int(QtGui.QDialogButtonBox.Close)
     
     def update(self):
         'fills the treewidget'
@@ -408,9 +415,10 @@ class _AxisTaskPanel:
         self.obj.touch()
         FreeCAD.ActiveDocument.recompute()
     
-    def accept(self):
-        self.resetObject()
+    def reject(self):
+        FreeCAD.ActiveDocument.recompute()
         FreeCADGui.ActiveDocument.resetEdit()
+        return True
                     
     def retranslateUi(self, TaskPanel):
         TaskPanel.setWindowTitle(QtGui.QApplication.translate("Arch", "Axes", None, QtGui.QApplication.UnicodeUTF8))

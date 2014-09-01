@@ -1,8 +1,14 @@
+
+if(OPENCV2_FOUND)
+    add_definitions(-DHAVE_OPENCV2)
+endif(OPENCV2_FOUND)
+
+
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Boost_INCLUDE_DIRS}
     ${COIN3D_INCLUDE_DIR}
-    #${OPENCV_INCLUDE_DIR}
+    ${OPENCV2_INCLUDE_DIR}
     ${QT_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
     ${SOQT_INCLUDE_DIR}
@@ -13,7 +19,7 @@ include_directories(
 set(ImageGui_LIBS
     Image
     FreeCADGui
-    #${OpenCV_LIBRARIES}
+    ${OpenCV2_LIBRARIES}
     ${OPENGL_glu_LIBRARY}
 )
 
@@ -69,20 +75,7 @@ fc_target_copy_resource(ImageGui
     ${CMAKE_BINARY_DIR}/Mod/Image
     InitGui.py)
 
-if(MSVC)
-    set_target_properties(ImageGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(ImageGui PROPERTIES DEBUG_OUTPUT_NAME "ImageGui_d")
-    set_target_properties(ImageGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Image)
-    set_target_properties(ImageGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(ImageGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(ImageGui PROPERTIES DEBUG_OUTPUT_NAME "ImageGui_d")
-    set_target_properties(ImageGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Image)
-    set_target_properties(ImageGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(ImageGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Image)
-    set_target_properties(ImageGui PROPERTIES PREFIX "")
-    set_target_properties(ImageGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(ImageGui ImageGui /Mod/Image)
+SET_PYTHON_PREFIX_SUFFIX(ImageGui)
 
-INSTALL(TARGETS ImageGui DESTINATION lib)
+INSTALL(TARGETS ImageGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

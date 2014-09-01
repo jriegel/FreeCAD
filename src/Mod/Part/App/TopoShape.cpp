@@ -51,6 +51,7 @@
 # include <BRepBuilderAPI_MakeSolid.hxx>
 # include <BRepBuilderAPI_MakeVertex.hxx>
 # include <BRepBuilderAPI_MakeWire.hxx>
+# include <BRepBuilderAPI_MakeShell.hxx>
 # include <BRepBuilderAPI_NurbsConvert.hxx>
 # include <BRepBuilderAPI_FaceError.hxx>
 # include <BRepBuilderAPI_Copy.hxx>
@@ -59,7 +60,6 @@
 # include <BRepCheck_ListIteratorOfListOfStatus.hxx>
 # include <BRepCheck_Result.hxx>
 # include <BRepFilletAPI_MakeFillet.hxx>
-# include <BRepMesh.hxx>
 # include <BRepMesh_IncrementalMesh.hxx>
 # include <BRepMesh_Triangle.hxx>
 # include <BRepMesh_Edge.hxx>
@@ -74,6 +74,7 @@
 # include <BRepTools.hxx>
 # include <BRepTools_ReShape.hxx>
 # include <BRepTools_ShapeSet.hxx>
+# include <BRepFill_CompatibleWires.hxx>
 # include <GCE2d_MakeSegment.hxx>
 # include <Geom2d_Line.hxx>
 # include <Geom2d_TrimmedCurve.hxx>
@@ -89,6 +90,7 @@
 # include <Handle_Law_BSpline.hxx>
 # include <Handle_TopTools_HSequenceOfShape.hxx>
 # include <Law_BSpFunc.hxx>
+# include <Law_Constant.hxx>
 # include <Law_Linear.hxx>
 # include <Law_S.hxx>
 # include <TopTools_HSequenceOfShape.hxx>
@@ -142,7 +144,6 @@
 #endif
 # include <Poly_Polygon3D.hxx>
 # include <Poly_PolygonOnTriangulation.hxx>
-# include <BRepMesh.hxx>
 # include <BRepBuilderAPI_Sewing.hxx>
 # include <ShapeFix_Shape.hxx>
 # include <XSControl_WorkSession.hxx>
@@ -154,6 +155,8 @@
 #include <Base/FileInfo.h>
 #include <Base/Exception.h>
 #include <Base/Tools.h>
+#include <Base/Console.h>
+
 
 #include "TopoShape.h"
 #include "CrossSection.h"
@@ -180,7 +183,7 @@ const char* BRepBuilderAPI_FaceErrorText(BRepBuilderAPI_FaceError et)
         return "Curve projection failed";
     case BRepBuilderAPI_ParametersOutOfRange:
         return "Parameters out of range";
-#if OCC_HEX_VERSION < 0x060500
+#if OCC_VERSION_HEX < 0x060500
     case BRepBuilderAPI_SurfaceNotC2:
         return "Surface not C2-continous";
 #endif
@@ -617,16 +620,16 @@ void TopoShape::importBrep(const char *FileName)
         // read brep-file
         BRep_Builder aBuilder;
         TopoDS_Shape aShape;
-    #if OCC_HEX_VERSION >= 0x060300
+#if OCC_VERSION_HEX >= 0x060300
         Handle_Message_ProgressIndicator pi = new ProgressIndicator(100);
         pi->NewScope(100, "Reading BREP file...");
         pi->Show();
         QString fn = QString::fromUtf8(FileName);
         BRepTools::Read(aShape,(const char*)fn.toLocal8Bit(),aBuilder,pi);
         pi->EndScope();
-    #else
+#else
         BRepTools::Read(aShape,(const Standard_CString)FileName,aBuilder);
-    #endif
+#endif
         this->_Shape = aShape;
     }
     catch (Standard_Failure) {
@@ -641,7 +644,7 @@ void TopoShape::importBrep(std::istream& str)
         // read brep-file
         BRep_Builder aBuilder;
         TopoDS_Shape aShape;
-#if OCC_HEX_VERSION >= 0x060300
+#if OCC_VERSION_HEX >= 0x060300
         Handle_Message_ProgressIndicator pi = new ProgressIndicator(100);
         pi->NewScope(100, "Reading BREP file...");
         pi->Show();
@@ -687,12 +690,10 @@ void TopoShape::write(const char *FileName) const
 
 void TopoShape::exportIges(const char *filename) const
 {
-    Interface_Static::SetCVal("write.iges.unit","IN");
     try {
         // write iges file
         IGESControl_Controller::Init();
         IGESControl_Writer aWriter;
-        //IGESControl_Writer aWriter(Interface_Static::CVal("write.iges.unit"), 1);
         aWriter.AddShape(this->_Shape);
         aWriter.ComputeModel();
         QString fn = QString::fromUtf8(filename);
@@ -1459,8 +1460,8 @@ static Handle(Law_Function) CreateBsFunction (const Standard_Real theFirst, cons
 {
     //Handle_Law_BSpline aBs;
     //Handle_Law_BSpFunc aFunc = new Law_BSpFunc (aBs, theFirst, theLast);
-    Handle_Law_Linear aFunc = new Law_Linear();
-    aFunc->Set(theFirst, theRadius, theLast, theRadius);
+    Handle_Law_Constant aFunc = new Law_Constant();
+    aFunc->Set(1, theFirst, theLast);
     return aFunc;
 }
 
@@ -1468,6 +1469,7 @@ TopoDS_Shape TopoShape::makeTube(double radius, double tol, int cont, int maxdeg
 {
     // http://opencascade.blogspot.com/2009/11/surface-modeling-part3.html
     Standard_Real theTol = tol;
+    Standard_Real theRadius = radius;
     //Standard_Boolean theIsPolynomial = Standard_True;
     Standard_Boolean myIsElem = Standard_True;
     GeomAbs_Shape theContinuity = GeomAbs_Shape(cont);
@@ -1496,11 +1498,11 @@ TopoDS_Shape TopoShape::makeTube(double radius, double tol, int cont, int maxdeg
     }
 
     //circular profile
-    Handle(Geom_Circle) aCirc = new Geom_Circle (gp::XOY(), radius);
+    Handle(Geom_Circle) aCirc = new Geom_Circle (gp::XOY(), theRadius);
     aCirc->Rotate (gp::OZ(), M_PI/2.);
 
     //perpendicular section
-    Handle(Law_Function) myEvol = ::CreateBsFunction (myPath->FirstParameter(), myPath->LastParameter(), radius);
+    Handle(Law_Function) myEvol = ::CreateBsFunction (myPath->FirstParameter(), myPath->LastParameter(), theRadius);
     Handle(GeomFill_SectionLaw) aSec = new GeomFill_EvolvedSection(aCirc, myEvol);
     Handle(GeomFill_LocationLaw) aLoc = new GeomFill_CurveAndTrihedron(new GeomFill_CorrectedFrenet);
     aLoc->SetCurve (myPath);
@@ -1606,11 +1608,13 @@ TopoDS_Shape TopoShape::makeHelix(Standard_Real pitch, Standard_Real height,
 
     gp_Pnt2d aPnt(0, 0);
     gp_Dir2d aDir(2. * M_PI, pitch);
+    Standard_Real coneDir = 1.0;
     if (leftHanded) {
         //aPnt.SetCoord(0.0, height);
         //aDir.SetCoord(2.0 * PI, -pitch);
         aPnt.SetCoord(2. * M_PI, 0.0);
         aDir.SetCoord(-2. * M_PI, pitch);
+        coneDir = -1.0;
     }
     gp_Ax2d aAx2d(aPnt, aDir);
 
@@ -1623,7 +1627,7 @@ TopoDS_Shape TopoShape::makeHelix(Standard_Real pitch, Standard_Real height,
         if (angle >= Precision::Confusion()) {
             // calculate end point for conical helix
             Standard_Real v = height / cos(angle);
-            Standard_Real u = (height/pitch) * 2.0 * M_PI;
+            Standard_Real u = coneDir * (height/pitch) * 2.0 * M_PI;
             gp_Pnt2d cend(u, v);
             end = cend;
         }
@@ -1788,13 +1792,14 @@ TopoDS_Shape TopoShape::makeThread(Standard_Real pitch,
 
 TopoDS_Shape TopoShape::makeLoft(const TopTools_ListOfShape& profiles, 
                                  Standard_Boolean isSolid,
-                                 Standard_Boolean isRuled) const
+                                 Standard_Boolean isRuled,
+                                 Standard_Boolean isClosed) const
 {
     // http://opencascade.blogspot.com/2010/01/surface-modeling-part5.html
     BRepOffsetAPI_ThruSections aGenerator (isSolid,isRuled);
 
-    int countShapes = 0;
     TopTools_ListIteratorOfListOfShape it;
+    int countShapes = 0;
     for (it.Initialize(profiles); it.More(); it.Next()) {
         const TopoDS_Shape& item = it.Value();
         if (!item.IsNull() && item.ShapeType() == TopAbs_VERTEX) {
@@ -1812,15 +1817,44 @@ TopoDS_Shape TopoShape::makeLoft(const TopTools_ListOfShape& profiles,
         }
     }
 
-    if (countShapes < 2)
-        Standard_Failure::Raise("Need at least two vertices, edges or wires to create loft face");
+    if (countShapes < 2) {
+        Standard_Failure::Raise("Need at least two vertices, edges or wires to create loft face"); }
+    else {
+        // close loft by duplicating initial profile as last profile.  not perfect. 
+        if (isClosed) {
+        /* can only close loft in certain combinations of Vertex/Wire(Edge):
+            - V1-W1-W2-W3-V2  ==> V1-W1-W2-W3-V2-V1  invalid closed
+            - V1-W1-W2-W3     ==> V1-W1-W2-W3-V1     valid closed
+            - W1-W2-W3-V1     ==> W1-W2-W3-V1-W1     invalid closed
+            - W1-W2-W3        ==> W1-W2-W3-W1        valid closed*/
+            if (profiles.Last().ShapeType() == TopAbs_VERTEX)  {
+                Base::Console().Message("TopoShape::makeLoft: can't close Loft with Vertex as last profile. 'Closed' ignored.\n"); }
+            else {
+                // repeat Add logic above for first profile
+                const TopoDS_Shape& firstProfile = profiles.First();
+                if (firstProfile.ShapeType() == TopAbs_VERTEX)  {
+                    aGenerator.AddVertex(TopoDS::Vertex (firstProfile));
+                    countShapes++;
+                }
+                else if (firstProfile.ShapeType() == TopAbs_EDGE)  {
+                 aGenerator.AddWire(TopoDS::Wire (firstProfile));
+                 countShapes++;
+                }
+                else if (firstProfile.ShapeType() == TopAbs_WIRE)  {
+                 aGenerator.AddWire(TopoDS::Wire (firstProfile));
+                 countShapes++;
+                }
+            }     
+        }
+    }
 
     Standard_Boolean anIsCheck = Standard_True;
-    aGenerator.CheckCompatibility (anIsCheck);
+    aGenerator.CheckCompatibility (anIsCheck);   // use BRepFill_CompatibleWires on profiles. force #edges, orientation, "origin" to match.
     aGenerator.Build();
     if (!aGenerator.IsDone())
         Standard_Failure::Raise("Failed to create loft face");
-
+    
+    //Base::Console().Message("DEBUG: TopoShape::makeLoft returns.\n");
     return aGenerator.Shape();
 }
 
@@ -1831,10 +1865,41 @@ TopoDS_Shape TopoShape::makePrism(const gp_Vec& vec) const
     return mkPrism.Shape();
 }
 
-TopoDS_Shape TopoShape::revolve(const gp_Ax1& axis, double d) const
+TopoDS_Shape TopoShape::revolve(const gp_Ax1& axis, double d, Standard_Boolean isSolid) const
 {
-    if (this->_Shape.IsNull()) Standard_Failure::Raise("cannot sweep empty shape");
-    BRepPrimAPI_MakeRevol mkRevol(this->_Shape, axis,d);
+    if (this->_Shape.IsNull()) Standard_Failure::Raise("cannot revolve empty shape");
+
+    TopoDS_Face f; 
+    TopoDS_Wire w;
+    TopoDS_Edge e;
+    Standard_Boolean convertFailed = false;
+
+    TopoDS_Shape base = this->_Shape; 
+    if ((isSolid) && (BRep_Tool::IsClosed(base)) &&
+        ((base.ShapeType() == TopAbs_EDGE) || (base.ShapeType() == TopAbs_WIRE))) {
+        if (base.ShapeType() == TopAbs_EDGE) {
+            BRepBuilderAPI_MakeWire mkWire(TopoDS::Edge(base));
+            if (mkWire.IsDone()) {
+                w = mkWire.Wire(); }
+            else {
+                convertFailed = true; }
+        }
+        else {
+             w = TopoDS::Wire(base);}
+        if (!convertFailed) {       
+            BRepBuilderAPI_MakeFace mkFace(w);
+            if (mkFace.IsDone()) {
+                f = mkFace.Face(); 
+                base = f; }
+            else {
+                convertFailed = true; }
+        }  
+    }        
+    
+    if (convertFailed) {
+        Base::Console().Message("TopoShape::revolve could not make Solid from Wire/Edge.\n");}
+
+    BRepPrimAPI_MakeRevol mkRevol(base, axis,d);
     return mkRevol.Shape();
 }
 
@@ -2220,7 +2285,6 @@ void TopoShape::getFaces(std::vector<Base::Vector3d> &aPoints,
                          std::vector<Facet> &aTopo,
                          float accuracy, uint16_t flags) const
 {
-#if 1
     if (this->_Shape.IsNull())
         return;
     std::set<MeshVertex> vertices;
@@ -2291,110 +2355,6 @@ void TopoShape::getFaces(std::vector<Base::Vector3d> &aPoints,
         points[it->i] = it->toPoint();
     for (std::vector<gp_Pnt>::iterator it = points.begin(); it != points.end(); ++it)
         aPoints.push_back(Base::Vector3d(it->X(),it->Y(),it->Z()));
-#endif
-#if 0
-    BRepMesh::Mesh (this->_Shape, accuracy);
-    std::set<MeshVertex> vertices;
-    for (TopExp_Explorer xp(this->_Shape,TopAbs_FACE); xp.More(); xp.Next()) {
-        TopoDS_Face face = TopoDS::Face(xp.Current());
-        TopAbs_Orientation orient = face.Orientation();
-        // change orientation of the triangles
-        Standard_Boolean reversed = false;
-        if (orient != TopAbs_FORWARD) {
-            reversed = true;
-        }
-        TopLoc_Location aLoc;
-        Handle(Poly_Triangulation) aPoly = BRep_Tool::Triangulation(face, aLoc);
-        if (aPoly.IsNull()) continue;
-
-        // getting the transformation of the shape/face
-        gp_Trsf myTransf;
-        Standard_Boolean identity = true;
-        if(!aLoc.IsIdentity())  {
-            identity = false;
-            myTransf = aLoc.Transformation();
-        }
-
-        // cycling through the poly mesh
-        const TColgp_Array1OfPnt& Nodes = aPoly->Nodes();
-        for (Standard_Integer i=1;i<=Nodes.Length();i++) {
-            Standard_Real X1, Y1, Z1;
-            gp_Pnt p = Nodes.Value(i);
-            p.Transform(myTransf);
-            p.Coord (X1, Y1, Z1);
-        }
-
-        const Poly_Array1OfTriangle& Triangles = aPoly->Triangles();
-        try {
-            for (Standard_Integer i=1;i<=Triangles.Length();i++) {
-                Standard_Integer V1, V2, V3;
-                Poly_Triangle triangle = Triangles.Value(i);
-                triangle.Get(V1, V2, V3);
-                if (reversed)
-                    std::swap(V1,V2);
-                gp_Pnt P1, P2, P3;
-                Data::ComplexGeoData::Facet face;
-                std::set<MeshVertex>::iterator it;
-
-                // 1st vertex
-                P1 = Nodes(V1);
-                P1.Transform(myTransf);
-                MeshVertex v1(P1);
-                it = vertices.find(v1);
-                if (it == vertices.end()) {
-                    v1.i = vertices.size();
-                    face.I1 = v1.i;
-                    vertices.insert(v1);
-                }
-                else {
-                    face.I1 = it->i;
-                }
-
-                // 2nd vertex
-                P2 = Nodes(V2);
-                P2.Transform(myTransf);
-                MeshVertex v2(P2);
-                it = vertices.find(v2);
-                if (it == vertices.end()) {
-                    v2.i = vertices.size();
-                    face.I2 = v2.i;
-                    vertices.insert(v2);
-                }
-                else {
-                    face.I2 = it->i;
-                }
-                
-                // 3rd vertex
-                P3 = Nodes(V3);
-                P3.Transform(myTransf);
-                MeshVertex v3(P3);
-                it = vertices.find(v3);
-                if (it == vertices.end()) {
-                    v3.i = vertices.size();
-                    face.I3 = v3.i;
-                    vertices.insert(v3);
-                }
-                else {
-                    face.I3 = it->i;
-                }
-
-                // make sure that we don't insert invalid facets
-                if (face.I1 != face.I2 &&
-                    face.I2 != face.I3 &&
-                    face.I3 != face.I1)
-                    aTopo.push_back(face);
-            }
-        }
-        catch(Standard_Failure) {
-        }
-    }
-
-    std::map<Standard_Integer,gp_Pnt> points;
-    for (std::set<MeshVertex>::iterator it = vertices.begin(); it != vertices.end(); ++it)
-        points[it->i] = it->toPoint();
-    for (std::map<Standard_Integer,gp_Pnt>::iterator it = points.begin(); it != points.end(); ++it)
-        aPoints.push_back(Base::Vector3d(it->second.X(),it->second.Y(),it->second.Z()));
-#endif
 }
 
 void TopoShape::setFaces(const std::vector<Base::Vector3d> &Points,

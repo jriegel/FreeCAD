@@ -35,16 +35,22 @@ __title__="FreeCAD Arch Frame"
 __author__ = "Yorik van Havre"
 __url__ = "http://www.freecadweb.org"
 
+# Possible roles for frames
+Roles = ['Covering','Member','Railing','Shading Device','Tendon']
     
-def makeFrame(base,profile,name=translate("Arch","Frame")):
-    """makeFrame(base,profile,[name]): creates a frame object from a base sketch (or any other object
+def makeFrame(baseobj,profile,name=translate("Arch","Frame")):
+    """makeFrame(baseobj,profile,[name]): creates a frame object from a base sketch (or any other object
     containing wires) and a profile object (an extrudable 2D object containing faces or closed wires)"""
     obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython",name)
     _Frame(obj)
-    _ViewProviderFrame(obj.ViewObject)
-    obj.Base = base
-    obj.Profile = profile
-    #profile.ViewObject.hide()
+    if FreeCAD.GuiUp:
+        _ViewProviderFrame(obj.ViewObject)
+    if baseobj:
+        obj.Base = baseobj
+    if profile:
+        obj.Profile = profile
+        if FreeCAD.GuiUp:
+            profile.ViewObject.hide()
     return obj
 
 class _CommandFrame:
@@ -56,11 +62,14 @@ class _CommandFrame:
                 'Accel': "F, R",
                 'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Frame","Creates a frame object from a planar 2D object and a profile")}
 
+    def IsActive(self):
+        return not FreeCAD.ActiveDocument is None
+
     def Activated(self):
         s = FreeCADGui.Selection.getSelection()
         if len(s) == 2:
             FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Frame"))
-            FreeCADGui.doCommand("import Arch")
+            FreeCADGui.addModule("Arch")
             FreeCADGui.doCommand("Arch.makeFrame(FreeCAD.ActiveDocument."+s[0].Name+",FreeCAD.ActiveDocument."+s[1].Name+")")
             FreeCAD.ActiveDocument.commitTransaction()
             FreeCAD.ActiveDocument.recompute()
@@ -75,7 +84,9 @@ class _Frame(ArchComponent.Component):
         obj.addProperty("App::PropertyBool","Align","Arch","Specifies if the profile must be aligned with the extrusion wires")
         obj.addProperty("App::PropertyVector","Offset","Arch","An offset vector between the base sketch and the frame")
         obj.addProperty("App::PropertyAngle","Rotation","Arch","The rotation of the profile around its extrusion axis")
+        obj.addProperty("App::PropertyEnumeration","Role","Arch","The role of this wall")
         self.Type = "Frame"
+        obj.Role = Roles
 
     def execute(self,obj):
         if not obj.Base:
@@ -153,6 +164,13 @@ class _ViewProviderFrame(ArchComponent.ViewProviderComponent):
     def getIcon(self):
         import Arch_rc
         return ":/icons/Arch_Frame_Tree.svg"
+        
+    def claimChildren(self):
+        p = []
+        if hasattr(self,"Object"):
+            if self.Object.Profile:
+                p = [self.Object.Profile]
+        return ArchComponent.ViewProviderComponent.claimChildren(self)+p
 
 if FreeCAD.GuiUp:
     FreeCADGui.addCommand('Arch_Frame',_CommandFrame())

@@ -94,20 +94,7 @@ fc_target_copy_resource(AssemblyGui
     ${CMAKE_BINARY_DIR}/Mod/Assembly
     InitGui.py)
 
-if(MSVC)
-    set_target_properties(AssemblyGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(AssemblyGui PROPERTIES DEBUG_OUTPUT_NAME "AssemblyGui_d")
-    set_target_properties(AssemblyGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Assembly)
-    set_target_properties(AssemblyGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(AssemblyGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(AssemblyGui PROPERTIES DEBUG_OUTPUT_NAME "AssemblyGui_d")
-    set_target_properties(AssemblyGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Assembly)
-    set_target_properties(AssemblyGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(AssemblyGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Assembly)
-    set_target_properties(AssemblyGui PROPERTIES PREFIX "")
-    SET_TARGET_PROPERTIES(AssemblyGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(AssemblyGui AssemblyGui /Mod/Assembly)
+SET_PYTHON_PREFIX_SUFFIX(AssemblyGui)
 
-INSTALL(TARGETS AssemblyGui DESTINATION lib)
+INSTALL(TARGETS AssemblyGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

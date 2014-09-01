@@ -5,6 +5,7 @@ else(MSVC)
 endif(MSVC)
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Boost_INCLUDE_DIRS}
@@ -83,20 +84,7 @@ fc_target_copy_resource(Raytracing
     ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_DATADIR}/Mod/Raytracing
     ${Raytracing_Templates})
 
-if(MSVC)
-    set_target_properties(Raytracing PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Raytracing PROPERTIES DEBUG_OUTPUT_NAME "Raytracing_d")
-    set_target_properties(Raytracing PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Raytracing)
-    set_target_properties(Raytracing PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Raytracing PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Raytracing PROPERTIES DEBUG_OUTPUT_NAME "Raytracing_d")
-    set_target_properties(Raytracing PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Raytracing)
-    set_target_properties(Raytracing PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Raytracing PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Raytracing)
-    set_target_properties(Raytracing PROPERTIES PREFIX "")
-    set_target_properties(Raytracing PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Raytracing Raytracing /Mod/Raytracing)
+SET_PYTHON_PREFIX_SUFFIX(Raytracing)
 
-INSTALL(TARGETS Raytracing DESTINATION lib)
+INSTALL(TARGETS Raytracing DESTINATION ${CMAKE_INSTALL_LIBDIR})

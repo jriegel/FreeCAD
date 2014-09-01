@@ -173,9 +173,10 @@ private:
  * The selection gate allows or disallows selection of certain types.
  * It has to be registered to the selection.
  */
-class SelectionGate 
+class GuiExport SelectionGate
 {
 public:
+    virtual ~SelectionGate(){}
     virtual bool allow(App::Document*,App::DocumentObject*, const char*)=0;
 };
 
@@ -200,6 +201,8 @@ class GuiExport SelectionSingleton : public Base::Subject<const SelectionChanges
 public:
     /// Add to selection 
     bool addSelection(const char* pDocName, const char* pObjectName=0, const char* pSubName=0, float x=0, float y=0, float z=0);
+    /// Add to selection with several sub-elements
+    bool addSelection(const char* pDocName, const char* pObjectName, const std::vector<std::string>& pSubNames);
     /// Remove from selection (for internal use)
     void rmvSelection(const char* pDocName, const char* pObjectName=0, const char* pSubName=0);
     /// Set the selection for a document

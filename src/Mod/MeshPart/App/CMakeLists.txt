@@ -4,13 +4,13 @@ else(MSVC)
     add_definitions(-DHAVE_LIMITS_H -DHAVE_CONFIG_H)
 endif(MSVC)
 
-if (FREECAD_BUILD_SMESH)
+if (BUILD_SMESH)
     add_definitions(-DHAVE_SMESH -DHAVE_MEFISTO)
-endif(FREECAD_BUILD_SMESH)
+endif(BUILD_SMESH)
 
-if(FREECAD_BUILD_FEM_NETGEN)
+if(BUILD_FEM_NETGEN)
     add_definitions(-DHAVE_NETGEN)
-endif(FREECAD_BUILD_FEM_NETGEN)
+endif(BUILD_FEM_NETGEN)
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
@@ -27,7 +27,7 @@ include_directories(
 link_directories(${OCC_LIBRARY_DIR})
 
 
-if(FREECAD_BUILD_FEM_NETGEN)
+if(BUILD_FEM_NETGEN)
     set(MeshPart_LIBS
         Part
         Mesh
@@ -35,14 +35,14 @@ if(FREECAD_BUILD_FEM_NETGEN)
         NETGENPlugin
         SMESH
     )
-else(FREECAD_BUILD_FEM_NETGEN)
+else(BUILD_FEM_NETGEN)
     set(MeshPart_LIBS
         Part
         Mesh
         StdMeshers
         SMESH
     )
-endif(FREECAD_BUILD_FEM_NETGEN)
+endif(BUILD_FEM_NETGEN)
 
 
 SET(MeshPart_SRCS
@@ -67,20 +67,7 @@ fc_target_copy_resource(MeshPart
     ${CMAKE_BINARY_DIR}/Mod/MeshPart
     Init.py)
 
-if(MSVC)
-    set_target_properties(MeshPart PROPERTIES SUFFIX ".pyd")
-    set_target_properties(MeshPart PROPERTIES DEBUG_OUTPUT_NAME "MeshPart_d")
-    set_target_properties(MeshPart PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/MeshPart)
-    set_target_properties(MeshPart PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(MeshPart PROPERTIES SUFFIX ".pyd")
-    set_target_properties(MeshPart PROPERTIES DEBUG_OUTPUT_NAME "MeshPart_d")
-    set_target_properties(MeshPart PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/MeshPart)
-    set_target_properties(MeshPart PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(MeshPart PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/MeshPart)
-    set_target_properties(MeshPart PROPERTIES PREFIX "")
-    set_target_properties(MeshPart PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(MeshPart MeshPart /Mod/MeshPart)
+SET_PYTHON_PREFIX_SUFFIX(MeshPart)
 
-INSTALL(TARGETS MeshPart DESTINATION lib)
+INSTALL(TARGETS MeshPart DESTINATION ${CMAKE_INSTALL_LIBDIR})

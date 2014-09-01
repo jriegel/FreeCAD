@@ -157,10 +157,10 @@ TaskPadParameters::TaskPadParameters(ViewProviderPad *PadView,bool newObj, QWidg
     // if it is a newly created object use the last value of the history
     if(newObj){
         ui->lengthEdit->setToLastUsedValue();
+        ui->lengthEdit->selectNumber();
         ui->lengthEdit2->setToLastUsedValue();
+        ui->lengthEdit2->selectNumber();
     }
-
-
 }
 
 void TaskPadParameters::updateUI(int index)
@@ -216,7 +216,7 @@ void TaskPadParameters::updateUI(int index)
         ui->spinOffset->setEnabled(false);
         ui->labelOffset->setVisible(false);
         ui->lengthEdit->setEnabled(true);
-        ui->lengthEdit->selectAll();
+        ui->lengthEdit->selectNumber();
         QMetaObject::invokeMethod(ui->lengthEdit, "setFocus", Qt::QueuedConnection);
         ui->checkBoxMidplane->setEnabled(false);
         ui->checkBoxReversed->setEnabled(false);
@@ -298,7 +298,7 @@ void TaskPadParameters::onModeChanged(int index)
         case 0:
             pcPad->Type.setValue("Length");
             // Avoid error message
-            if (ui->lengthEdit->getQuantity() < Precision::Confusion())
+            if (ui->lengthEdit->getQuantity().getValue() < Precision::Confusion())
                 ui->lengthEdit->setValue(5.0);
             break;
         case 1: pcPad->Type.setValue("UpToLast"); break;
@@ -466,6 +466,36 @@ bool TaskDlgPadParameters::accept()
 
     return true;
 }
+
+bool TaskDlgPadParameters::reject()
+{
+    // get the support and Sketch
+    PartDesign::Pad* pcPad = static_cast<PartDesign::Pad*>(PadView->getObject()); 
+    Sketcher::SketchObject *pcSketch = 0;
+    App::DocumentObject    *pcSupport = 0;
+    if (pcPad->Sketch.getValue()) {
+        pcSketch = static_cast<Sketcher::SketchObject*>(pcPad->Sketch.getValue()); 
+        pcSupport = pcSketch->Support.getValue();
+    }
+
+    // roll back the done things
+    Gui::Command::abortCommand();
+    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
+    
+    // if abort command deleted the object the support is visible again
+    if (!Gui::Application::Instance->getViewProvider(pcPad)) {
+        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
+            Gui::Application::Instance->getViewProvider(pcSketch)->show();
+        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
+            Gui::Application::Instance->getViewProvider(pcSupport)->show();
+    }
+
+    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
+    //Gui::Command::commitCommand();
+
+    return true;
+}
+
 
 
 #include "moc_TaskPadParameters.cpp"

@@ -117,7 +117,7 @@ void TaskPolarPatternParameters::setupUI()
             this, SLOT(onAxisChanged(int)));
     connect(ui->checkReverse, SIGNAL(toggled(bool)),
             this, SLOT(onCheckReverse(bool)));
-    connect(ui->spinAngle, SIGNAL(valueChanged(double)),
+    connect(ui->polarAngle, SIGNAL(valueChanged(double)),
             this, SLOT(onAngle(double)));
     connect(ui->spinOccurrences, SIGNAL(valueChanged(int)),
             this, SLOT(onOccurrences(int)));
@@ -138,9 +138,8 @@ void TaskPolarPatternParameters::setupUI()
 
     ui->comboAxis->setEnabled(true);
     ui->checkReverse->setEnabled(true);
-    ui->spinAngle->setEnabled(true);
+    ui->polarAngle->setEnabled(true);
     ui->spinOccurrences->setEnabled(true);
-    ui->spinAngle->setDecimals(Base::UnitsApi::getDecimals());
     updateUI();
 }
 
@@ -199,7 +198,7 @@ void TaskPolarPatternParameters::updateUI()
     // Note: These three lines would trigger onLength(), on Occurrences() and another updateUI() if we
     // didn't check for blockUpdate
     ui->checkReverse->setChecked(reverse);
-    ui->spinAngle->setValue(angle);
+    ui->polarAngle->setValue(angle);
     ui->spinOccurrences->setValue(occurrences);
 
     blockUpdate = false;
@@ -388,7 +387,7 @@ const bool TaskPolarPatternParameters::getReverse(void) const
 
 const double TaskPolarPatternParameters::getAngle(void) const
 {
-    return ui->spinAngle->value();
+    return ui->polarAngle->value().getValue();
 }
 
 const unsigned TaskPolarPatternParameters::getOccurrences(void) const

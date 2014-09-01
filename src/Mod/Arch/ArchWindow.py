@@ -35,11 +35,12 @@ __title__="FreeCAD Window"
 __author__ = "Yorik van Havre"
 __url__ = "http://www.freecadweb.org"
 
+# presets
 WindowPartTypes = ["Frame","Solid panel","Glass panel"]
-AllowedHosts = ["Wall","Structure","Roof"]
-WindowPresets = ["Fixed", "Open 1-pane", "Open 2-pane", "Sash 2-pane", 
-                        "Sliding 2-pane", "Simple door", "Glass door"]
-Roles = ["Window","Door"]
+AllowedHosts =    ["Wall","Structure","Roof"]
+WindowPresets =   ["Fixed", "Open 1-pane", "Open 2-pane", "Sash 2-pane", 
+                   "Sliding 2-pane", "Simple door", "Glass door"]
+Roles =           ["Window","Door"]
 
 
 def makeWindow(baseobj=None,width=None,height=None,parts=None,name=translate("Arch","Window")):
@@ -50,9 +51,12 @@ def makeWindow(baseobj=None,width=None,height=None,parts=None,name=translate("Ar
         if Draft.getType(baseobj) == "Window":
             obj = Draft.clone(baseobj)
             return obj
+    p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Arch")
     obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython",name)
     _Window(obj)
-    _ViewProviderWindow(obj.ViewObject)
+    if FreeCAD.GuiUp:
+        _ViewProviderWindow(obj.ViewObject)
+        obj.ViewObject.Transparency=p.GetInt("WindowTransparency",85)
     if width:
         obj.Width = width
     if height:
@@ -64,7 +68,7 @@ def makeWindow(baseobj=None,width=None,height=None,parts=None,name=translate("Ar
         obj.WindowParts = parts
     else:
         if baseobj:
-            if baseobj.isDerivedFrom("Part::Feature"):
+            if baseobj.isDerivedFrom("Part::Part2DObject"):
                 if baseobj.Shape.Wires:
                     i = 0
                     ws = ''
@@ -74,7 +78,7 @@ def makeWindow(baseobj=None,width=None,height=None,parts=None,name=translate("Ar
                             ws += "Wire" + str(i)
                             i += 1
                     obj.WindowParts = ["Default","Frame",ws,"1","0"]
-    if obj.Base:
+    if obj.Base and FreeCAD.GuiUp:
         obj.Base.ViewObject.DisplayMode = "Wireframe"
         obj.Base.ViewObject.hide()
     return obj
@@ -371,6 +375,9 @@ class _CommandWindow:
                 'Accel': "W, N",
                 'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Window","Creates a window object from a selected object (wire, rectangle or sketch)")}
 
+    def IsActive(self):
+        return not FreeCAD.ActiveDocument is None
+
     def Activated(self):
         sel = FreeCADGui.Selection.getSelection()
         p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Arch")
@@ -381,7 +388,8 @@ class _CommandWindow:
         self.baseFace = None
         self.wparams = ["Width","Height","H1","H2","H3","W1","W2","O1","O2"]
         self.DECIMALS = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
-        self.FORMAT = "%." + str(self.DECIMALS) + "f mm"
+        import DraftGui
+        self.FORMAT = DraftGui.makeFormatSpec(self.DECIMALS,'Length')
         
         # auto mode
         if sel:
@@ -412,7 +420,7 @@ class _CommandWindow:
                         host = obj.Objects[0].Inlist[0]
 
                 FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Window"))
-                FreeCADGui.doCommand("import Arch")
+                FreeCADGui.addModule("Arch")
                 FreeCADGui.doCommand("win = Arch.makeWindow(FreeCAD.ActiveDocument."+obj.Name+")")
                 if host:
                     FreeCADGui.doCommand("Arch.removeComponents(win,host=FreeCAD.ActiveDocument."+host.Name+")")
@@ -666,14 +674,15 @@ class _Window(ArchComponent.Component):
                             if not DraftGeomUtils.isNull(pl):
                                 base.Placement = pl
                     elif not obj.WindowParts:
-                        pass
+                        if not obj.Base.Shape.isNull():
+                            base = obj.Base.Shape.copy()
+                            if not DraftGeomUtils.isNull(pl):
+                                base.Placement = base.Placement.multiply(pl)
                     else:
                         print "Arch: Bad formatting of window parts definitions"
                             
         base = self.processSubShapes(obj,base)
-        if base:
-            if not base.isNull():
-                obj.Shape = base
+        self.applyShape(obj,base,pl)
 
     def getSubVolume(self,obj,plac=None):
         "returns a subvolume for cutting in a base object"
@@ -781,7 +790,7 @@ class _ViewProviderWindow(ArchComponent.ViewProviderComponent):
         if self.Object.Base:
             self.Object.Base.ViewObject.hide()
         FreeCADGui.Control.closeDialog()
-        return False
+        return
         
     def colorize(self,obj):
         "setting different part colors"
@@ -808,7 +817,8 @@ class _ArchWindowTaskPanel:
 
         self.obj = None
         self.DECIMALS = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",2)
-        self.FORMAT = "%." + str(self.DECIMALS) + "f mm"
+        import DraftGui
+        self.FORMAT = DraftGui.makeFormatSpec(self.DECIMALS,'Length')
         self.form = QtGui.QWidget()
         self.form.setObjectName("TaskPanel")
         self.grid = QtGui.QGridLayout(self.form)
@@ -915,7 +925,7 @@ class _ArchWindowTaskPanel:
         return True
 
     def getStandardButtons(self):
-        return int(QtGui.QDialogButtonBox.Ok)
+        return int(QtGui.QDialogButtonBox.Close)
 
     def check(self,wid,col):
         self.editButton.setEnabled(True)
@@ -1050,7 +1060,8 @@ class _ArchWindowTaskPanel:
             else:
                 if i > 2:
                     try:
-                        n=float(t)
+                        q = FreeCAD.Units.Quantity(t)
+                        t = str(q.Value)
                     except:
                         ok = False
             ar.append(t)
@@ -1083,7 +1094,7 @@ class _ArchWindowTaskPanel:
         self.createButton.setVisible(False)
         self.addButton.setEnabled(True)
     
-    def accept(self):
+    def reject(self):
         FreeCAD.ActiveDocument.recompute()
         FreeCADGui.ActiveDocument.resetEdit()
         return True

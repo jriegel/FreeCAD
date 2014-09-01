@@ -37,31 +37,51 @@ PyObject* ViewProviderFemMeshPy::animate(PyObject * args)
 
 App::Color calcColor(double value,double min, double max)
 {
+    if (max < 0) max = 0;
+    if (min > 0) min = 0;
+
     if (value < min) 
-        return App::Color (0.0,1.0,0.0);    
+        return App::Color (0.0,0.0,1.0);    
     if (value > max)
         return App::Color (1.0,0.0,0.0);
-    if ( value < (min + (max-min)/2.0 ))
-        return App::Color ((value-min) / ((max-min)/2.0),1.0,0.0) ;
-    else
-        return App::Color (1.0,1-((value-min-((max-min)/2.0)) / ((max-min)/2.0)),0.0);
+    if (value == 0.0)
+        return App::Color (0.0,1.0,0.0);
+    if ( value > max/2.0 )
+        return App::Color (1.0,1-((value-(max/2.0)) / (max/2.0)),0.0);
+    if ( value > 0.0 )
+        return App::Color (value/(max/2.0),1.0,0.0) ;
+    if ( value < min/2.0 )
+        return App::Color (0.0,1-((value-(min/2.0)) / (min/2.0)),1.0);
+    if ( value < 0.0 )
+        return App::Color (0.0,1.0,value/(min/2.0)) ;
+    return App::Color (0,0,0);
 }
 
 
 PyObject* ViewProviderFemMeshPy::setNodeColorByResult(PyObject *args)
 {
+	// statistical values get collected and returned
+	double max = -1e12;
+    double min = +1e12;
+	double avg = 0;
+
     PyObject *object=0;
-    if (PyArg_ParseTuple(args,"O!",&(App::DocumentObjectPy::Type), &object)) {
+    int type = 0;
+    if (PyArg_ParseTuple(args,"O!|i",&(App::DocumentObjectPy::Type), &object, &type)) {
         App::DocumentObject* obj = static_cast<App::DocumentObjectPy*>(object)->getDocumentObjectPtr();
         if (obj && obj->getTypeId().isDerivedFrom(Fem::FemResultValue::getClassTypeId())){
             Fem::FemResultValue *result = static_cast<Fem::FemResultValue*>(obj);
             const std::vector<long> & Ids = result->ElementNumbers.getValues() ;
             const std::vector<double> & Vals = result->Values.getValues() ;
             std::vector<App::Color> NodeColors(Vals.size());
-            float max = 0.0;
-            for(std::vector<double>::const_iterator it= Vals.begin();it!=Vals.end();++it)
+			for(std::vector<double>::const_iterator it= Vals.begin();it!=Vals.end();++it){
                 if(*it > max)
                     max = *it;
+                if(*it < min)
+                    min = *it;
+				avg += *it;
+			}
+			avg /= Vals.size();
 
             // fill up color vector
             long i=0;
@@ -77,16 +97,42 @@ PyObject* ViewProviderFemMeshPy::setNodeColorByResult(PyObject *args)
             const std::vector<long> & Ids = result->ElementNumbers.getValues() ;
             const std::vector<Base::Vector3d> & Vecs = result->Values.getValues() ;
             std::vector<App::Color> NodeColors(Vecs.size());
-            float max = 0.0;
-            for(std::vector<Base::Vector3d>::const_iterator it= Vecs.begin();it!=Vecs.end();++it)
-                if(it->Length() > max)
-                    max = it->Length();
+
+			for(std::vector<Base::Vector3d>::const_iterator it= Vecs.begin();it!=Vecs.end();++it){
+                double val;
+                if(type == 0)
+                    val = it->Length();
+                else if (type == 1)
+                    val = it->x;
+                else if (type == 2)
+                    val = it->y;
+                else if (type == 3)
+                    val = it->z;
+                else 
+                    val = it->Length();
+
+                if(val > max)
+                    max = val;
+                if(val < min)
+                    min = val;
+				avg += val;
+            }
+			avg /= Vecs.size();
 
             // fill up color vector
             long i=0;
             for(std::vector<Base::Vector3d>::const_iterator it= Vecs.begin();it!=Vecs.end();++it,i++)
-                NodeColors[i] = calcColor(it->Length(),0.0,max);    
-          
+                if(type == 0)
+                    NodeColors[i] = calcColor(it->Length(),0.0,max);
+                else if (type == 1)
+                    NodeColors[i] = calcColor(it->x,min,max);
+                else if (type == 2)
+                    NodeColors[i] = calcColor(it->y,min,max);
+                else if (type == 3)
+                    NodeColors[i] = calcColor(it->z,min,max);
+                else
+                    NodeColors[i] = calcColor(it->Length(),0.0,max);
+
             // set the color to the view-provider 
             this->getViewProviderFemMeshPtr()->setColorByNodeId(Ids,NodeColors);
 
@@ -97,7 +143,12 @@ PyObject* ViewProviderFemMeshPy::setNodeColorByResult(PyObject *args)
         }
     }
 
-    Py_Return;
+	Py::Tuple res(3);
+	res[0] = Py::Float(min);
+	res[1] = Py::Float(max);
+	res[2] = Py::Float(avg);
+
+	return Py::new_reference_to(res);
 
 }
 

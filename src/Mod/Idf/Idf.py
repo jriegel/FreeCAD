@@ -35,11 +35,11 @@ import ImportGui
 
 ## path to table file (simple comma separated values)
 
-model_tab_filename = FreeCAD.getHomePath()+ "/Mod/Idf/idflibs/footprints_models.csv"
+model_tab_filename = FreeCAD.getHomePath()+ "Mod/Idf/Idflibs/footprints_models.csv"
 
 ## path to directory containing step models
 
-step_path=FreeCAD.getHomePath()+ "/Mod/Idf/idflibs/"
+step_path=FreeCAD.getHomePath()+ "Mod/Idf/Idflibs/"
 
 ignore_hole_size=0.5 # size in MM to prevent huge number of drilled holes
 EmpDisplayMode=2 # 0='Flat Lines', 1='Shaded', 2='Wireframe', 3='Points'; recommended 2 or 0
@@ -110,7 +110,7 @@ def process_emn(doc,filename):
           FreeCAD.Console.PrintMessage("Found board thickness "+emnrecords[0]+"\n")
        if current_section==".BOARD_OUTLINE"  and section_counter>2:
           board_outline.append([int(emnrecords[0]),float(emnrecords[1])*emn_unit,float(emnrecords[2])*emn_unit,float(emnrecords[3])])
-       if current_section==".DRILLED_HOLES"  and section_counter>2 and float(emnrecords[0])*emn_unit>ignore_hole_size:
+       if current_section==".DRILLED_HOLES"  and section_counter>1 and float(emnrecords[0])*emn_unit>ignore_hole_size:
           drills.append([float(emnrecords[0])*emn_unit,float(emnrecords[1])*emn_unit,float(emnrecords[2])*emn_unit])
        if current_section==".PLACEMENT"  and section_counter>1 and fmod(section_counter,2)==0:
           place_item=[]
@@ -125,7 +125,7 @@ def process_emn(doc,filename):
           place_item.append(emnrecords[emn_version+2]) #Place Status
           FreeCAD.Console.PrintMessage(str(place_item)+"\n")
           placement.append(place_item)
-   FreeCAD.Console.PrintMessage("\n".join(passed_sections))
+   FreeCAD.Console.PrintMessage("\n".join(passed_sections)+"\n")
    FreeCAD.Console.PrintMessage("Proceed "+str(Process_board_outline(doc,board_outline,drills,board_thickness))+" outlines\n")
    placement.sort(key=lambda param: (param[IDF_sort],param[0]))
    process_emp(doc,filename,placement,board_thickness)
@@ -242,10 +242,10 @@ def process_emp(doc,filename,placement,board_thickness):
    comps=[]
    for empline in emplines:
      emprecords=split_records(empline)
-     if len( emnrecords )==0 : continue
-     if len( emnrecords[0] )>4 and emnrecords[0][0:4]==".END":
-        current_section=""
+     if len( emprecords )==0 : continue
+     if len( emprecords[0] )>4 and emprecords[0][0:4]==".END":
         passed_sections.append(current_section)
+        current_section=""
         if comp_PartNumber!="":
           if comp_height==0:
             comp_height=0.1	
@@ -270,7 +270,7 @@ def process_emp(doc,filename,placement,board_thickness):
         comp_height=emp_unit*float(emprecords[3]) # Comp Height
      if (current_section==".ELECTRICAL" or current_section==".MECHANICAL") and section_counter>2:
         comp_outline.append([float(emprecords[1])*emp_unit,float(emprecords[2])*emp_unit,float(emprecords[3])]) #add point of outline
-   FreeCAD.Console.PrintMessage("\n".join(passed_sections))
+   FreeCAD.Console.PrintMessage("\n".join(passed_sections)+"\n")
    #Write file with list of footprint
    if IDF_diag==1:
      empfile=pythonopen(IDF_diag_path+"/footprint.lst", "w")

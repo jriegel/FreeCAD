@@ -47,12 +47,13 @@ RayFeature::RayFeature(void)
 {
     ADD_PROPERTY(Source,(0));
     ADD_PROPERTY(Color,(App::Color(0.5f,0.5f,0.5f)));
+    ADD_PROPERTY(Transparency,(0));
 }
 
 App::DocumentObjectExecReturn *RayFeature::execute(void)
 {
     std::stringstream result;
-    std::string ViewName = Label.getValue();
+    std::string ViewName = getNameInDocument();
 
     App::DocumentObject* link = Source.getValue();
     if (!link)
@@ -60,19 +61,26 @@ App::DocumentObjectExecReturn *RayFeature::execute(void)
     if (!link->getTypeId().isDerivedFrom(Part::Feature::getClassTypeId()))
         return new App::DocumentObjectExecReturn("Linked object is not a Part object");
     TopoDS_Shape shape = static_cast<Part::Feature*>(link)->Shape.getShape()._Shape;
-    std::string Name(std::string("Pov_")+static_cast<Part::Feature*>(link)->Label.getValue());
+    std::string Name(std::string("Pov_")+static_cast<Part::Feature*>(link)->getNameInDocument());
     if (shape.IsNull())
         return new App::DocumentObjectExecReturn("Linked shape object is empty");
 
     PovTools::writeShape(result,Name.c_str(),shape);
 
     // This must not be done in PovTools::writeShape!
+    long t = Transparency.getValue();
     const App::Color& c = Color.getValue();
     result << "// instance to render" << endl
            << "object {" << Name << endl
-           << "  texture {" << endl
-           << "      pigment {color rgb <"<<c.r<<","<<c.g<<","<<c.b<<">}" << endl
-           << "      finish {StdFinish } //definition on top of the project" << endl
+           << " texture {" << endl;
+    if (t == 0) {
+        result << "      pigment {color rgb <"<<c.r<<","<<c.g<<","<<c.b<<">}" << endl;
+    }
+    else {
+        float trans = t/100.0f;
+        result << "      pigment {color rgb <"<<c.r<<","<<c.g<<","<<c.b<<"> transmit "<<trans<<"}" << endl;
+    }
+    result << "      finish {StdFinish } //definition on top of the project" << endl
            << "  }" << endl
            << "}" << endl   ;
 

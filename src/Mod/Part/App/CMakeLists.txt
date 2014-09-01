@@ -9,6 +9,7 @@ if(FREETYPE_FOUND)
 endif(FREETYPE_FOUND)
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}/src
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
@@ -270,23 +271,7 @@ fc_target_copy_resource(Part
     ${CMAKE_BINARY_DIR}/Mod/Part
     ${Part_Scripts})
 
-if(MSVC)
-    set_target_properties(Part PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Part PROPERTIES DEBUG_OUTPUT_NAME "Part_d")
-    set_target_properties(Part PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Part)
-    set_target_properties(Part PROPERTIES PREFIX "../")
-    # Set special compiler flag to convert a SIGSEV into an exception
-    # to fix issue #0000215, #0001155, ...
-    set_target_properties(Part PROPERTIES COMPILE_FLAGS "/EHa")
-elseif(MINGW)
-    set_target_properties(Part PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Part PROPERTIES DEBUG_OUTPUT_NAME "Part_d")
-    set_target_properties(Part PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Part)
-    set_target_properties(Part PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Part PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Part)
-    set_target_properties(Part PROPERTIES PREFIX "")
-    set_target_properties(Part PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Part Part /Mod/Part)
+SET_PYTHON_PREFIX_SUFFIX(Part)
 
-INSTALL(TARGETS Part DESTINATION lib)
+INSTALL(TARGETS Part DESTINATION ${CMAKE_INSTALL_LIBDIR})

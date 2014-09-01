@@ -225,6 +225,28 @@ bool Line2D::Intersect (const Line2D& rclLine, Vector2D &rclV) const
   return true;    /*** RETURN TRUE (intersection) **********/
 }
 
+bool Line2D::Intersect (const Vector2D &rclV, double eps) const
+{
+    double dxc = rclV.fX - clV1.fX;
+    double dyc = rclV.fY - clV1.fY;
+
+    double dxl = clV2.fX - clV1.fX;
+    double dyl = clV2.fY - clV1.fY;
+
+    double cross = dxc * dyl - dyc * dxl;
+
+    // is point on the infinite line?
+    if (fabs(cross) > eps)
+        return false;
+
+    // point is on line but it is also between V1 and V2?
+    double dot = dxc * dxl + dyc * dyl;
+    double len = dxl * dxl + dyl * dyl;
+    if (dot < -eps || dot > len + eps)
+        return false;
+    return true;
+}
+
 Vector2D Line2D::FromPos (double fDistance) const
 {
   Vector2D clDir(clV2 - clV1);
@@ -409,3 +431,19 @@ void Polygon2D::Intersect (const Polygon2D &rclPolygon, std::list<Polygon2D> &rc
     rclResultPolygonList.push_back(clResultPolygon);
 }
 
+bool Polygon2D::Intersect (const Vector2D &rclV, double eps) const
+{
+    if (_aclVct.size() < 2)
+        return false;
+
+    size_t numPts = GetCtVectors();
+    for (size_t i = 0; i < numPts; i++) {
+        Vector2D clPt0 = (*this)[i];
+        Vector2D clPt1 = (*this)[(i+1)%numPts];
+        Line2D clLine(clPt0, clPt1);
+        if (clLine.Intersect(rclV, eps))
+            return true;
+    }
+
+    return false;
+}

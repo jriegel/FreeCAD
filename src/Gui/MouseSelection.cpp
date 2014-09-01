@@ -28,6 +28,7 @@
 # include <qevent.h>
 # include <qpainter.h>
 # include <qpixmap.h>
+# include <QGLFramebufferObject>
 # include <QMenu>
 # include <Inventor/SbBox.h>
 # include <Inventor/events/SoEvent.h>
@@ -55,6 +56,8 @@ void AbstractMouseSelection::grabMouseModel( Gui::View3DInventorViewer* viewer )
 {
     _pcView3D = viewer;
     m_cPrevCursor = _pcView3D->getWidget()->cursor();
+    m_antiAliasing = (int)_pcView3D->getAntiAliasingMode();
+    _pcView3D->setAntiAliasingMode(View3DInventorViewer::None);
 
     // do initialization of your mousemodel
     initialize();
@@ -67,6 +70,7 @@ void AbstractMouseSelection::releaseMouseModel()
         terminate();
 
         _pcView3D->getWidget()->setCursor(m_cPrevCursor);
+        _pcView3D->setAntiAliasingMode(View3DInventorViewer::AntiAliasing(m_antiAliasing));
         _pcView3D = 0;
     }
 }
@@ -849,7 +853,9 @@ void RubberbandSelection::initialize()
 {
     d = new Private(_pcView3D);
     _pcView3D->addGraphicsItem(d);
-    _pcView3D->setRenderFramebuffer(true);
+    if (QGLFramebufferObject::hasOpenGLFramebufferObjects()) {
+        _pcView3D->setRenderFramebuffer(true);
+    }
     _pcView3D->scheduleRedraw();
 }
 
@@ -857,7 +863,9 @@ void RubberbandSelection::terminate()
 {
     _pcView3D->removeGraphicsItem(d);
     delete d; d = 0;
-    _pcView3D->setRenderFramebuffer(false);
+    if (QGLFramebufferObject::hasOpenGLFramebufferObjects()) {
+        _pcView3D->setRenderFramebuffer(false);
+    }
     _pcView3D->scheduleRedraw();
 }
 

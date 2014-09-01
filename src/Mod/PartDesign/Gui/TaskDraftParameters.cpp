@@ -58,7 +58,7 @@ TaskDraftParameters::TaskDraftParameters(ViewProviderDressUp *DressUpView,QWidge
     ui->setupUi(proxy);
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->doubleSpinBox, SIGNAL(valueChanged(double)),
+    connect(ui->draftAngle, SIGNAL(valueChanged(double)),
             this, SLOT(onAngleChanged(double)));
     connect(ui->checkReverse, SIGNAL(toggled(bool)),
             this, SLOT(onReversedChanged(bool)));
@@ -76,12 +76,11 @@ TaskDraftParameters::TaskDraftParameters(ViewProviderDressUp *DressUpView,QWidge
     PartDesign::Draft* pcDraft = static_cast<PartDesign::Draft*>(DressUpView->getObject());
     double a = pcDraft->Angle.getValue();
 
-    ui->doubleSpinBox->setDecimals(Base::UnitsApi::getDecimals());
-    ui->doubleSpinBox->setMinimum(0.0);
-    ui->doubleSpinBox->setMaximum(89.99);
-    ui->doubleSpinBox->setValue(a);
-    ui->doubleSpinBox->selectAll();
-    QMetaObject::invokeMethod(ui->doubleSpinBox, "setFocus", Qt::QueuedConnection);
+    ui->draftAngle->setMinimum(0.0);
+    ui->draftAngle->setMaximum(89.99);
+    ui->draftAngle->setValue(a);
+    ui->draftAngle->selectAll();
+    QMetaObject::invokeMethod(ui->draftAngle, "setFocus", Qt::QueuedConnection);
 
     bool r = pcDraft->Reversed.getValue();
     ui->checkReverse->setChecked(r);
@@ -215,7 +214,7 @@ void TaskDraftParameters::onAngleChanged(double angle)
 
 const double TaskDraftParameters::getAngle(void) const
 {
-    return ui->doubleSpinBox->value();
+    return ui->draftAngle->value().getValue();
 }
 
 void TaskDraftParameters::onReversedChanged(const bool on) {
@@ -264,6 +263,21 @@ TaskDlgDraftParameters::~TaskDlgDraftParameters()
 }
 
 //==== calls from the TaskView ===============================================================
+
+
+void TaskDlgDraftParameters::open()
+{
+    // a transaction is already open at creation time of the draft
+    if (!Gui::Command::hasPendingCommand()) {
+        QString msg = QObject::tr("Edit draft");
+        Gui::Command::openCommand((const char*)msg.toUtf8());
+    }
+}
+
+void TaskDlgDraftParameters::clicked(int)
+{
+
+}
 
 bool TaskDlgDraftParameters::accept()
 {

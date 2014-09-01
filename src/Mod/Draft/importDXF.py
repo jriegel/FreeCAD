@@ -40,7 +40,7 @@ texts, colors,layers (from groups)
 '''
 
 TEXTSCALING = 1.35 # scaling factor between autocad font sizes and coin font sizes
-CURRENTDXFLIB = 1.36 # the minimal version of the dxfLibrary needed to run 
+CURRENTDXFLIB = 1.38 # the minimal version of the dxfLibrary needed to run 
 
 import sys, FreeCAD, os, Part, math, re, string, Mesh, Draft, DraftVecUtils, DraftGeomUtils
 from Draft import _Dimension, _ViewProviderDimension
@@ -70,7 +70,7 @@ else:
         libsok = False
 if not libsok:
     files = ['dxfColorMap.py','dxfImportObjects.py','dxfLibrary.py','dxfReader.py']
-    baseurl = 'https://raw.github.com/yorikvanhavre/Draft-dxf-importer/master/'
+    baseurl = 'https://raw.githubusercontent.com/yorikvanhavre/Draft-dxf-importer/'+str(CURRENTDXFLIB)+"/"
     import ArchCommands
     for f in files:
         p = None
@@ -134,13 +134,16 @@ def deformat(text):
     #print "output text: ",t
     return t
 
-def locateLayer(wantedLayer):
+def locateLayer(wantedLayer,color=None):
     "returns layer group and creates it if needed"
     wantedLayerName = decodeName(wantedLayer)
     for l in layers:
         if wantedLayerName==l.Label:
             return l
-    newLayer = doc.addObject("App::DocumentObjectGroup",wantedLayer)
+    if dxfUseDraftVisGroups:
+        newLayer = Draft.makeVisGroup(name=wantedLayer)   
+    else:
+        newLayer = doc.addObject("App::DocumentObjectGroup",wantedLayer)
     newLayer.Label = wantedLayerName
     layers.append(newLayer)
     return newLayer
@@ -154,7 +157,7 @@ def getdimheight(style):
                     if a.type == "dimstyle":
                         if rawValue(a,2) == style:
                             return rawValue(a,140)
-    return None
+    return 1
     
 def calcBulge(v1,bulge,v2):
     '''
@@ -172,7 +175,7 @@ def calcBulge(v1,bulge,v2):
 def getGroup(ob):
     "checks if the object is part of a group"
     for i in FreeCAD.ActiveDocument.Objects:
-        if (i.TypeId == "App::DocumentObjectGroup"):
+        if i.isDerivedFrom("App::DocumentObjectGroup"):
             for j in i.Group:
                 if (j == ob):
                     return i.Label
@@ -271,7 +274,7 @@ def getColor():
         return (r,g,b,0.0)
     else:
         p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/View")
-        c = params.GetUnsigned("DefaultShapeLineColor",0)
+        c = p.GetUnsigned("DefaultShapeLineColor",0)
         r = float(((c>>24)&0xFF)/255)
         g = float(((c>>16)&0xFF)/255)
         b = float(((c>>8)&0xFF)/255)
@@ -299,159 +302,6 @@ def formatObject(obj,dxfobj=None):
             obj.ViewObject.TextColor = dxfDefaultColor
         elif hasattr(obj.ViewObject,"LineColor"):
             obj.ViewObject.LineColor = dxfDefaultColor
-
-
-
-class fcformat:
-    # OBSOLETED - TO BE REMOVED
-    "this contains everything related to color/lineweight formatting"
-    def __init__(self,drawing):
-        self.dxf = drawing
-        params = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft")
-        self.paramtext = params.GetBool("dxftext")
-        self.dxflayout = params.GetBool("dxflayouts")
-        self.paramstyle = params.GetInt("dxfstyle")
-        self.join = params.GetBool("joingeometry")
-        self.makeBlocks = params.GetBool("groupLayers")
-        self.stdSize = params.GetBool("dxfStdSize")
-        self.importDxfHatches = params.GetBool("importDxfHatches")
-        self.renderPolylineWidth = params.GetBool("renderPolylineWidth")
-        self.importPoints = params.GetBool("dxfImportPoints")
-        bparams = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/View")
-
-        if self.paramstyle > 1:
-            # checking if FreeCAD background is dark or bright
-            if bparams.GetBool("Gradient"):
-                c1 = bparams.GetUnsigned("BackgroundColor2")
-                c2 = bparams.GetUnsigned("BackgroundColor3")
-                r1 = float((c1>>24)&0xFF)
-                g1 = float((c1>>16)&0xFF)
-                b1 = float((c1>>8)&0xFF)
-                r2 = float((c2>>24)&0xFF)
-                g2 = float((c2>>16)&0xFF)
-                b2 = float((c2>>8)&0xFF)
-                v1 = FreeCAD.Vector(r1,g1,b1)
-                v2 = FreeCAD.Vector(r2,g2,b2)
-                v = v2.sub(v1)
-                v.multiply(0.5)
-                cv = v1.add(v)
-            else:
-                c1 = bparams.GetUnsigned("BackgroundColor")
-                r1 = float((c1>>24)&0xFF)
-                g1 = float((c1>>16)&0xFF)
-                b1 = float((c1>>8)&0xFF)
-                cv = FreeCAD.Vector(r1,g1,b1)
-            value = cv.x*.3 + cv.y*.59 + cv.z*.11
-            if value < 128: self.brightbg = False
-            else:
-                self.brightbg = True
-	
-        if gui and draftui:
-            r = float(draftui.color.red()/255.0)
-            g = float(draftui.color.green()/255.0)
-            b = float(draftui.color.blue()/255.0)
-            self.lw = float(draftui.linewidth)
-        else:
-            self.lw = float(params.GetInt("linewidth"))
-            c = params.GetUnsigned("color")
-            r = float(((c>>24)&0xFF)/255)
-            g = float(((c>>16)&0xFF)/255)
-            b = float(((c>>8)&0xFF)/255)
-        self.col = (r,g,b,0.0)
-
-        if self.paramstyle == 3:
-            parammappingfile = params.GetString("dxfmappingfile")
-            self.table = self.buildTable(parammappingfile)
-
-    def buildTable(self,tablefile):
-        "builds a table for converting colors into linewidths"
-        try: f = pythonopen(tablefile)
-        except ValueError:
-            print "error: ",tablefile, " not found"
-            return None
-        table = {}
-        header = len(f.readline().split("\t"))
-        if header == 15:
-            for l in f:
-                s = l.split("\t")
-                if "Color_" in s[0]:
-                    index = int(s[0].split("_")[1])
-                    if s[1] == "(Object)": color = "object"
-                    else:
-                        c = s[2].split(",")
-                        color = [float(c[0])/255,float(c[1])/255,float(c[2])/255]
-                        if (color == [0.0,0.0,0.0]) and (not self.brightbg):
-                            color = [1.0,1.0,1.0]
-                    if s[2] == "(Object)": width = "object"
-                    else: width = float(s[10])*10
-                    table[index]=[color,width]
-        elif header == 3:
-            for l in f:
-                s = l.split("\t")
-                index = int(s[0])
-                c = string.replace(s[1],'"','')
-                c = c.split(",")
-                color = [float(c[0])/255,float(c[1])/255,float(c[2])/255]
-                width = float(s[2])
-                table[index]=[color,width]
-            for i in range(256):
-                if not i in table.keys():
-                    table[i]=["object","object"]
-        else:
-            print "error building mapping table: file format not recognized"
-            table = None
-        print table
-        return table
-
-    def formatObject(self,obj,dxfobj=None):
-        "applies color and linetype to objects"
-        if hasattr(obj.ViewObject,"TextColor"):
-            obj.ViewObject.TextColor = (0.0,0.0,0.0)
-        if self.paramstyle == 1:
-            if hasattr(obj.ViewObject,"TextColor"):
-                obj.ViewObject.TextColor = self.col
-            else:
-                obj.ViewObject.LineColor = self.col
-                obj.ViewObject.LineWidth = self.lw	
-        elif (self.paramstyle == 2) and dxfobj:
-            if hasattr(obj.ViewObject,"TextColor"):
-                if dxfobj.color_index == 256: cm = self.getGroupColor(dxfobj)[:3]
-                else: cm = dxfColorMap.color_map[dxfobj.color_index]
-                obj.ViewObject.TextColor = (cm[0],cm[1],cm[2])
-            else:
-                if dxfobj.color_index == 256: cm = self.getGroupColor(dxfobj)
-                elif (dxfobj.color_index == 7) and self.brightbg: cm = [0.0,0.0,0.0]
-                else: cm = dxfColorMap.color_map[dxfobj.color_index]
-                obj.ViewObject.LineColor = (cm[0],cm[1],cm[2],0.0)
-                obj.ViewObject.LineWidth = self.lw
-        elif (self.paramstyle == 3) and dxfobj:
-            if hasattr(obj.ViewObject,"TextColor"):
-                cm = table[dxfobj.color_index][0]
-                wm = table[dxfobj.color_index][1]
-                obj.ViewObject.TextColor = (cm[0],cm[1],cm[2])
-            else:
-                if dxfobj.color_index == 256:
-                    cm = self.table[self.getGroupColor(dxfobj,index=True)][0]
-                    wm = self.table[self.getGroupColor(dxfobj,index=True)][1]
-                else:
-                    cm = self.table[dxfobj.color_index][0]
-                    wm = self.table[dxfobj.color_index][1]
-                if cm == "object": cm = self.getGroupColor(dxfobj)
-                else: obj.ViewObject.LineColor = (cm[0],cm[1],cm[2],0.0)
-                if wm == "object": wm = self.lw
-                else: obj.ViewObject.LineWidth = wm
-
-    def getGroupColor(self,dxfobj,index=False):
-        "get color of bylayer stuff"
-        name = dxfobj.layer
-        for table in self.dxf.tables.get_type("table"):
-            if table.name == "layer":
-                for l in table.get_type("layer"):
-                    if l.name == name:
-                        if index: return l.color
-                        else:
-                            if (l.color == 7) and self.brightbg: return [0.0,0.0,0.0]
-                            else: return dxfColorMap.color_map[l.color]
 
 def vec(pt):
     "returns a rounded Vector from a dxf point"
@@ -1465,7 +1315,7 @@ def projectShape(shape,direction):
     try:
         groups = Drawing.projectEx(shape,direction)
     except:
-        print "unable to project shape"
+        print "unable to project shape on direction ",direction
         return shape
     else:
         for g in groups[0:5]:
@@ -1498,12 +1348,12 @@ def getArcData(edge):
         ve2 = edge.Vertexes[-1].Point
         ang1 = -math.degrees(DraftVecUtils.angle(ve1.sub(ce)))
         ang2 = -math.degrees(DraftVecUtils.angle(ve2.sub(ce)))
-        
-        a1 = -DraftVecUtils.angle(ve1.sub(ce))
-        a2 = -DraftVecUtils.angle(ve2.sub(ce))
-        if round(a1,Draft.precision()) == round(a2,Draft.precision()):
+
+        if round(ang1,Draft.precision()) == round(ang2,Draft.precision()):
             return None,None, None, None
-        pseudoarc = Part.ArcOfCircle(edge.Curve,a1,a2).toShape()
+        if edge.Curve.Axis.z < 0.0:
+            ang1, ang2 = ang2, ang1
+        pseudoarc = Part.ArcOfCircle(edge.Curve,math.radians(ang1),math.radians(ang2)).toShape()
         if round(pseudoarc.Length,Draft.precision()) != round(edge.Length,Draft.precision()):
             ang1, ang2 = ang2, ang1
         
@@ -1523,35 +1373,40 @@ def getArcData(edge):
         return DraftVecUtils.tup(ce), radius, ang1, ang2
 
 def getSplineSegs(edge):
-    "returns an array of vectors from a bSpline edge"
+    "returns an array of vectors from a Spline or Bezier edge"
     params = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft")
-    seglength = params.GetInt("maxsplinesegment")
+    seglength = params.GetFloat("maxsegmentlength",5.0)
     points = []
     if seglength == 0:
         points.append(edge.Vertexes[0].Point)
         points.append(edge.Vertexes[-1].Point)
     else:
-        l = edge.Length
-        points.append(edge.valueAt(0))
-        if l > seglength:
-            nbsegs = int(math.ceil(l/seglength))
-            step = l/nbsegs
+        points.append(edge.valueAt(edge.FirstParameter))
+        if (edge.Length > seglength):
+            nbsegs = int(math.ceil(edge.Length/seglength))
+            step = (edge.LastParameter-edge.FirstParameter)/nbsegs
             for nv in range(1,nbsegs):
-                v = edge.valueAt(nv*step)
+                #print "value at",nv*step,"=",edge.valueAt(nv*step)
+                v = edge.valueAt(edge.FirstParameter+(nv*step))
                 points.append(v)
-        points.append(edge.valueAt(edge.Length))
+        points.append(edge.valueAt(edge.LastParameter))
     return points
 
-def getWire(wire,nospline=False):
+def getWire(wire,nospline=False,lw=True):
     "returns an array of dxf-ready points and bulges from a wire"
+    def fmt(v,b=0.0):
+        if lw:
+            # LWpolyline format
+            return (v.x,v.y,v.z,None,None,b)
+        else:
+            # Polyline format
+            return ((v.x,v.y,v.z),None,[None,None],b)
     edges = DraftGeomUtils.sortEdges(wire.Edges)
     points = []
     # print "processing wire ",wire.Edges
     for edge in edges:
         v1 = edge.Vertexes[0].Point
-        if len(edge.Vertexes) < 2:
-            points.append((v1.x,v1.y,v1.z,None,None,0.0))
-        elif DraftGeomUtils.geomType(edge) == "Circle":
+        if DraftGeomUtils.geomType(edge) == "Circle":
             mp = DraftGeomUtils.findMidpoint(edge)
             v2 = edge.Vertexes[-1].Point
             c = edge.Curve.Center
@@ -1581,17 +1436,17 @@ def getWire(wire,nospline=False):
                 
             if not DraftGeomUtils.isClockwise(edge):
                 bul = -bul
-            points.append((v1.x,v1.y,v1.z,None,None,bul))
-        elif (DraftGeomUtils.geomType(edge) == "BSplineCurve") and (not nospline):
+            points.append(fmt(v1,bul))
+        elif (DraftGeomUtils.geomType(edge) in ["BSplineCurve","BezierCurve","Ellipse"]) and (not nospline):
             spline = getSplineSegs(edge)
             spline.pop()
             for p in spline:
-                points.append((p.x,p.y,p.z,None,None,0.0))
+                points.append(fmt(p))
         else:
-            points.append((v1.x,v1.y,v1.z,None,None,0.0))
+            points.append(fmt(v1))
     if not DraftGeomUtils.isReallyClosed(wire):
         v = edges[-1].Vertexes[-1].Point
-        points.append(DraftVecUtils.tup(v))
+        points.append(fmt(v))
     # print "wire verts: ",points
     return points
 
@@ -1627,7 +1482,7 @@ def writeShape(sh,ob,dxfobject,nospline=False,lwPoly=False):
                 else:
                     FreeCAD.Console.PrintWarning("LwPolyLine support not found. Please delete dxfLibrary.py from your FreeCAD user directory to force auto-update\n")
             else :
-                dxfobject.append(dxfLibrary.PolyLine(getWire(wire,nospline), [0.0,0.0,0.0],
+                dxfobject.append(dxfLibrary.PolyLine(getWire(wire,nospline,lw=False), [0.0,0.0,0.0],
                                                      int(DraftGeomUtils.isReallyClosed(wire)), color=getACI(ob),
                                                      layer=getGroup(ob)))
     if len(processededges) < len(sh.Edges): # lone edges
@@ -1636,7 +1491,7 @@ def writeShape(sh,ob,dxfobject,nospline=False,lwPoly=False):
             if not(e.hashCode() in processededges): loneedges.append(e)
         # print "lone edges ",loneedges
         for edge in loneedges:
-            if (DraftGeomUtils.geomType(edge) == "BSplineCurve") and ((not nospline) or (len(edge.Vertexes) == 1)): # splines
+            if (DraftGeomUtils.geomType(edge) in ["BSplineCurve","BezierCurve"]): # splines
                 if (len(edge.Vertexes) == 1) and (edge.Curve.isClosed()):
                     # special case: 1-vert closed spline, approximate as a circle
                     c = DraftGeomUtils.getCircleFromSpline(edge)
@@ -1648,7 +1503,7 @@ def writeShape(sh,ob,dxfobject,nospline=False,lwPoly=False):
                     points = []
                     spline = getSplineSegs(edge)
                     for p in spline:
-                        points.append((p.x,p.y,p.z,None,None,0.0))
+                        points.append(((p.x,p.y,p.z),None,[None,None],0.0))
                     dxfobject.append(dxfLibrary.PolyLine(points, [0.0,0.0,0.0],
                                                          0, color=getACI(ob),
                                                          layer=getGroup(ob)))
@@ -1670,7 +1525,7 @@ def writeShape(sh,ob,dxfobject,nospline=False,lwPoly=False):
                     points = []
                     spline = getSplineSegs(edge)
                     for p in spline:
-                        points.append((p.x,p.y,p.z,None,None,0.0))
+                        points.append(((p.x,p.y,p.z),None,[None,None],0.0))
                     dxfobject.append(dxfLibrary.PolyLine(points, [0.0,0.0,0.0],
                                                          0, color=getACI(ob),
                                                          layer=getGroup(ob)))
@@ -1745,7 +1600,8 @@ def export(objectslist,filename,nospline=False,lwPoly=False):
                         if not ob.Shape.isNull():
                             writeMesh(ob,dxf)
                     elif gui and FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft").GetBool("dxfproject"):
-                        direction = FreeCADGui.ActiveDocument.ActiveView.getViewDirection()
+                        direction = FreeCADGui.ActiveDocument.ActiveView.\
+                                getViewDirection().multiply(-1)
                         sh = projectShape(ob.Shape,direction)
                     else:
                         if ob.Shape.Volume > 0:
@@ -1803,8 +1659,112 @@ def export(objectslist,filename,nospline=False,lwPoly=False):
             dxf.saveas(filename)
         FreeCAD.Console.PrintMessage("successfully exported "+filename+"\r\n")
 
+
 def exportPage(page,filename):
     "special export for pages"
+    template = os.path.splitext(page.Template)[0]+".dxf"
+    global dxfhandle
+    dxfhandle = 1
+    if os.path.exists(template):
+        f = pythonopen(template,"rb")
+        template = f.read()
+        f.close()
+        # find & replace editable texts
+        import re
+        f = pythonopen(page.Template,"rb")
+        svgtemplate = f.read()
+        f.close()
+        editables = re.findall("freecad:editable=\"(.*?)\"",svgtemplate)
+        values = page.EditableTexts
+        for i in range(len(editables)):
+            if len(values) > i:
+                template = template.replace(editables[i],values[i])
+    else:
+        # dummy default template
+        print "DXF version of the template not found. Creating a default empty template."
+        template = "999\nFreeCAD DXF exporter v"+FreeCAD.Version()[0]+"."+FreeCAD.Version()[1]+"-"+FreeCAD.Version()[2]+"\n"
+        template += "0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n0\nENDSEC\n"
+        template += "0\nSECTION\n2\nBLOCKS\n$blocks\n0\nENDSEC\n"
+        template += "0\nSECTION\n2\nENTITIES\n$entities\n0\nENDSEC\n"
+        template += "0\nEOF"
+    blocks = ""
+    entities = ""
+    for view in page.Group:
+        b,e = getViewDXF(view)
+        blocks += b
+        entities += e
+    result = template.replace("$blocks",blocks[:-1])
+    result = result.replace("$entities",entities[:-1])
+    f = pythonopen(filename,"wb")
+    f.write(result)
+    f.close()
+
+
+def getViewDXF(view):
+    "returns a DXF fragment from a Drawing View"
+    global dxfhandle
+    block = ""
+    insert = ""
+    
+    if view.isDerivedFrom("App::DocumentObjectGroup"):
+        for child in view.Group:
+            b,e = getViewDXF(child)
+            block += b
+            insert += e
+            
+    elif view.isDerivedFrom("Drawing::FeatureViewPython"):
+        if hasattr(view.Proxy,"getDXF"):
+            r = view.Rotation
+            if r != 0: r = -r # fix rotation direction
+            count = 0
+            block = ""
+            insert = ""
+            geom = view.Proxy.getDXF(view)
+            if not isinstance(geom,list): geom = [geom]
+            for g in geom: # getDXF returns a list of entities
+                g = g.replace("sheet_layer\n","0\n6\nBYBLOCK\n62\n0\n") # change layer and set color and ltype to BYBLOCK (0)
+                block += "0\nBLOCK\n8\n0\n2\n"+view.Name+str(count)+"\n70\n0\n10\n0\n20\n0\n3\n"+view.Name+str(count)+"\n1\n\n"
+                block += g
+                block += "0\nENDBLK\n8\n0\n"
+                insert += "0\nINSERT\n5\naaaa"+hex(dxfhandle)[2:]+"\n8\n0\n6\nBYLAYER\n62\n256\n2\n"+view.Name+str(count)
+                insert += "\n10\n"+str(view.X)+"\n20\n"+str(-view.Y)
+                insert += "\n30\n0\n41\n"+str(view.Scale)+"\n42\n"+str(view.Scale)+"\n43\n"+str(view.Scale)
+                insert += "\n50\n"+str(r)+"\n"
+                dxfhandle += 1
+                count += 1
+                
+    elif view.isDerivedFrom("Drawing::FeatureViewPart"):
+        r = view.Rotation
+        if r != 0: r = -r # fix rotation direction
+        import Drawing
+        proj = Drawing.projectToDXF(view.Source.Shape,view.Direction)
+        proj = proj.replace("sheet_layer\n","0\n6\nBYBLOCK\n62\n0\n") # change layer and set color and ltype to BYBLOCK (0)
+        block = "0\nBLOCK\n8\n0\n2\n"+view.Name+"\n70\n0\n10\n0\n20\n0\n3\n"+view.Name+"\n1\n\n"
+        block += proj
+        block += "0\nENDBLK\n8\n0\n"
+        insert = "0\nINSERT\n5\naaaa"+hex(dxfhandle)[2:]+"\n8\n0\n6\nBYLAYER\n62\n256\n2\n"+view.Name
+        insert += "\n10\n"+str(view.X)+"\n20\n"+str(-view.Y)
+        insert += "\n30\n0\n41\n"+str(view.Scale)+"\n42\n"+str(view.Scale)+"\n43\n"+str(view.Scale)
+        insert += "\n50\n"+str(r)+"\n"
+        dxfhandle += 1
+        
+    elif view.isDerivedFrom("Drawing::FeatureViewAnnotation"):
+        r = view.Rotation
+        if r != 0: r = -r # fix rotation direction
+        insert ="0\nTEXT\n5\n"+hex(dxfhandle)[2:]+"\n8\n0"
+        insert += "\n10\n"+str(view.X)+"\n20\n"+str(-view.Y)
+        insert += "\n30\n0\n40\n"+str(view.Scale/2)
+        insert += "\n50\n"+str(r)
+        insert += "\n1\n"+view.Text[0]+"\n"
+        dxfhandle += 1
+        
+    else:
+        print "Unable to get DXF representation from view: ",view.Label
+    return block,insert
+    
+
+def exportPageLegacy(page,filename):
+    "exports the given page the old way, by converting its SVG code to DXF with the Draft module"
     import importSVG
     tempdoc = importSVG.open(page.PageResult)
     tempobj = tempdoc.Objects
@@ -1828,5 +1788,6 @@ dxfImportPoints = p.GetBool("dxfImportPoints",False)
 dxfImportHatches = p.GetBool("importDxfHatches",False)
 dxfUseStandardSize = p.GetBool("dxfStdSize",False)
 dxfGetColors = p.GetBool("dxfGetOriginalColors",False)
+dxfUseDraftVisGroups = p.GetBool("dxfUseDraftVisGroups",False)
 dxfBrightBackground = isBrightBackground()
 dxfDefaultColor = getColor()

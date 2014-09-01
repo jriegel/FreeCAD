@@ -63,7 +63,7 @@ PyDoc_STRVAR(module_PartDesign_doc,
 
 /* Python entry */
 extern "C" {
-void PartDesignExport initPartDesign()
+void PartDesignExport init_PartDesign()
 {
     // load dependent module
     try {
@@ -74,7 +74,7 @@ void PartDesignExport initPartDesign()
         PyErr_SetString(PyExc_ImportError, e.what());
         return;
     }
-    Py_InitModule3("PartDesign", PartDesign_methods, module_PartDesign_doc);   /* mod name, table ptr */
+    Py_InitModule3("_PartDesign", PartDesign_methods, module_PartDesign_doc);   /* mod name, table ptr */
     Base::Console().Log("Loading PartDesign module... done\n");
 
 

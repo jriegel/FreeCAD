@@ -80,15 +80,19 @@ UnitsApi::~UnitsApi()
 
 void UnitsApi::setSchema(UnitSystem s)
 {
-    if(UserPrefSystem){
+    if (UserPrefSystem) {
         UserPrefSystem->resetSchemaUnits(); // for schemas changed the Quantity constants
         delete UserPrefSystem;
+        UserPrefSystem = 0;
     }
     switch (s) {
         case SI1 : UserPrefSystem = new UnitsSchemaInternal(); break;
         case SI2 : UserPrefSystem = new UnitsSchemaMKS(); break;
         case Imperial1: UserPrefSystem = new UnitsSchemaImperial1(); break;
+        case ImperialDecimal: UserPrefSystem = new UnitsSchemaImperialDecimal(); break;
+        default  : UserPrefSystem = new UnitsSchemaInternal(); s = SI1; break;
     }
+
     actSystem = s;
     UserPrefSystem->setSchemaUnits(); // if necesarry a unit schema can change the constants in Quantity (e.g. mi=1.8km rather then 1.6km).
 }
@@ -132,26 +136,48 @@ QString UnitsApi::schemaTranslate(Base::Quantity quant,double &factor,QString &u
 //    return PyFloat_FromDouble(Value * UserPrefFactor[t]);
 //}
 //
-double UnitsApi::toDbl(PyObject *ArgObj,const Base::Unit &u)
-{
-    if (PyString_Check(ArgObj)) 
-        QString str = QString::fromAscii(PyString_AsString(ArgObj));
-    else if (PyFloat_Check(ArgObj))
-        double d = PyFloat_AsDouble(ArgObj);
-    else if (PyInt_Check(ArgObj))
-        double d = (double)PyInt_AsLong(ArgObj);
-    else
-        throw Base::Exception("Wrong parameter type!");
 
-    return 0.0;
+double UnitsApi::toDbl(PyObject *ArgObj, const Base::Unit &u)
+{
+    if (PyString_Check(ArgObj)) {
+        // Parse the string
+        QString str = QString::fromLatin1(PyString_AsString(ArgObj));
+        Quantity q = Quantity::parse(str);
+        if (q.getUnit() == u)
+            return q.getValue();
+        throw Base::Exception("Wrong unit type!");
+    }
+    else if (PyFloat_Check(ArgObj)) {
+        return PyFloat_AsDouble(ArgObj);
+    }
+    else if (PyInt_Check(ArgObj)) {
+        return static_cast<double>(PyInt_AsLong(ArgObj));
+    }
+    else {
+        throw Base::Exception("Wrong parameter type!");
+    }
 }
 
-Quantity UnitsApi::toQuantity(PyObject *ArgObj,const Base::Unit &u)
+Quantity UnitsApi::toQuantity(PyObject *ArgObj, const Base::Unit &u)
 {
+    double d;
+    if (PyString_Check(ArgObj)) {
+        // Parse the string
+        QString str = QString::fromLatin1(PyString_AsString(ArgObj));
+        Quantity q = Quantity::parse(str);
+        d = q.getValue();
+    }
+    else if (PyFloat_Check(ArgObj)) {
+        d = PyFloat_AsDouble(ArgObj);
+    }
+    else if (PyInt_Check(ArgObj)) {
+        d = static_cast<double>(PyInt_AsLong(ArgObj));
+    }
+    else {
+        throw Base::Exception("Wrong parameter type!");
+    }
 
-
-
-    return Quantity();
+    return Quantity(d,u);
 }
 
 void UnitsApi::setDecimals(int prec)

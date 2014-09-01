@@ -42,7 +42,8 @@ def makeRoof(baseobj=None,facenr=1,angle=45,name=translate("Arch","Roof")):
     = roof).'''
     obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython",name)
     _Roof(obj)
-    _ViewProviderRoof(obj.ViewObject)
+    if FreeCAD.GuiUp:
+        _ViewProviderRoof(obj.ViewObject)
     if baseobj:
         obj.Base = baseobj
     obj.Face = facenr
@@ -57,6 +58,9 @@ class _CommandRoof:
                 'Accel': "R, F",
                 'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Roof","Creates a roof object from the selected face of an object")}
 
+    def IsActive(self):
+        return not FreeCAD.ActiveDocument is None
+
     def Activated(self):
         sel = FreeCADGui.Selection.getSelectionEx()
         if sel:
@@ -67,7 +71,7 @@ class _CommandRoof:
                 if "Face" in sel.SubElementNames[0]:
                     idx = int(sel.SubElementNames[0][4:])
                     FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Roof"))
-                    FreeCADGui.doCommand("import Arch")
+                    FreeCADGui.addModule("Arch")
                     FreeCADGui.doCommand("Arch.makeRoof(FreeCAD.ActiveDocument."+obj.Name+","+str(idx)+")")
                     FreeCAD.ActiveDocument.commitTransaction()
                     FreeCAD.ActiveDocument.recompute()
@@ -75,7 +79,7 @@ class _CommandRoof:
             if obj.isDerivedFrom("Part::Feature"):
                 if obj.Shape.Wires:
                     FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Roof"))
-                    FreeCADGui.doCommand("import Arch")
+                    FreeCADGui.addModule("Arch")
                     FreeCADGui.doCommand("Arch.makeRoof(FreeCAD.ActiveDocument."+obj.Name+")")
                     FreeCAD.ActiveDocument.commitTransaction()
                     FreeCAD.ActiveDocument.recompute()

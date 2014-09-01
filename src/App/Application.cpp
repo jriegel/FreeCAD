@@ -34,6 +34,9 @@
 # include <unistd.h>
 # include <pwd.h>
 # include <sys/types.h>
+# elif defined(__MINGW32__)
+# define WINVER 0x502 // needed for SetDllDirectory
+# include <Windows.h>
 # endif
 # include <ctime>
 # include <csignal>
@@ -237,6 +240,8 @@ Application::Application(ParameterManager * /*pcSysParamMngr*/,
     PyObject* pUnitsModule = Py_InitModule3("Units", Base::UnitsApi::Methods,
           "The Unit API");
     Base::Interpreter().addType(&Base::QuantityPy  ::Type,pUnitsModule,"Quantity");
+    // make sure to set the 'nb_true_divide' slot
+    Base::QuantityPy::Type.tp_as_number->nb_true_divide = Base::QuantityPy::Type.tp_as_number->nb_divide;
     Base::Interpreter().addType(&Base::UnitPy      ::Type,pUnitsModule,"Unit");
 
     Py_INCREF(pUnitsModule);
@@ -922,7 +927,7 @@ void segmentation_fault_handler(int sig)
     switch (sig) {
         case SIGSEGV:
             std::cerr << "Illegal storage access..." << std::endl;
-            throw Base::Exception("Illegal storage access! Please save you work under a new file name and restart the application!");
+            throw Base::Exception("Illegal storage access! Please save your work under a new file name and restart the application!");
             break;
         case SIGABRT:
             std::cerr << "Abnormal program termination..." << std::endl;
@@ -945,7 +950,7 @@ void unexpection_error_handler()
 {
     std::cerr << "Unexpected error occurred..." << std::endl;
     // try to throw to give the user evantually a change to save 
-    throw Base::Exception("Unexpected error occurred! Please save you work under a new file name and restart the application!");
+    throw Base::Exception("Unexpected error occurred! Please save your work under a new file name and restart the application!");
 
     terminate();
 }
@@ -1206,7 +1211,12 @@ void Application::initApplication(void)
        ("User parameter:BaseApp/Preferences/Units");
     UnitsApi::setSchema((UnitSystem)hGrp->GetInt("UserSchema",0));
 
+#if defined (_DEBUG)
+    Console().Log("Application is built with debug information\n");
+#endif
+
     // starting the init script
+    Console().Log("Run App init script\n");
     Interpreter().runString(Base::ScriptFactory().ProduceScript("FreeCADInit"));
 }
 
@@ -2002,6 +2012,10 @@ std::string Application::FindHomePath(const char* sCall)
             *i = '/';
     }
 
+    // fixes #0001638 to avoid to load DLLs from Windows' system directories before FreeCAD's bin folder
+    std::string binPath = TempHomePath;
+    binPath += "bin";
+    SetDllDirectory(binPath.c_str());
     return TempHomePath;
 }
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2004 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 2004 Juergen Riegel <juergen.riegel@web.de>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -61,7 +61,7 @@ class SoFCUnifiedSelection;
 class GLGraphicsItem;
 class SoShapeScale;
 
-/** The Inventor viewer
+/** GUI view into a 3D scene provided by View3DInventor
  *
  */
 class GuiExport View3DInventorViewer : public SoQtViewer, public Gui::SelectionSingleton::ObserverType
@@ -96,6 +96,21 @@ public:
         DisallowRotation=8,/**< switch of the rotation. */
         DisallowPanning=16,/**< switch of the panning. */
         DisallowZooming=32,/**< switch of the zooming. */
+    };
+    //@}
+    
+    /** @name Anti-Aliasing modes of the rendered 3D scene
+      * Specifies Anti-Aliasing (AA) method
+      * - Smoothing enables OpenGL line and vertex smoothing (basicly depreciated)
+      * - MSAA is hardware multi sampling (with 2, 4 or 8 passes), a quite commom and efficient AA technique
+      */
+    //@{
+    enum AntiAliasing {
+        None,
+        Smoothing,
+        MSAA2x,
+        MSAA4x,
+        MSAA8x
     };
     //@}
 
@@ -188,6 +203,10 @@ public:
     std::vector<SbVec2f> getGLPolygon(const std::vector<SbVec2s>&) const;
     const std::vector<SbVec2s>& getPolygon(SbBool* clip_inner=0) const;
     //@}
+    
+    /// Returns the screen coordinates of the origin of the path's tail object
+    /*! Return value is in floating-point pixels, origin at bottom-left. */
+    SbVec2f screenCoordsOfPath(SoPath *path) const;
 
     /** @name Edit methods */
     //@{
@@ -263,6 +282,15 @@ public:
     void eraseAllDimensions();
     void addDimension3d(SoNode *node);
     void addDimensionDelta(SoNode *node);
+    //@}
+    
+    /** @name Anti-Aliasing Control
+     * the anti-aliasing mode is controled by parameters through view3dinventor.
+     * don't call them directly. Instead set the parameter View/AntiAliasing.
+     */
+    //@{
+    void setAntiAliasingMode(AntiAliasing mode);
+    AntiAliasing getAntiAliasingMode() const;
     //@}
 
     /**

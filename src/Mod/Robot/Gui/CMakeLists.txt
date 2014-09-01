@@ -7,6 +7,7 @@ endif(MSVC)
 
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Boost_INCLUDE_DIRS}
@@ -153,20 +154,7 @@ fc_target_copy_resource(RobotGui
     ${CMAKE_BINARY_DIR}/Mod/Robot
     InitGui.py MovieTool.py)
 
-if(MSVC)
-    set_target_properties(RobotGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(RobotGui PROPERTIES DEBUG_OUTPUT_NAME "RobotGui_d")
-    set_target_properties(RobotGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Robot)
-    set_target_properties(RobotGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(RobotGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(RobotGui PROPERTIES DEBUG_OUTPUT_NAME "RobotGui_d")
-    set_target_properties(RobotGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Robot)
-    set_target_properties(RobotGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(RobotGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Robot)
-    set_target_properties(RobotGui PROPERTIES PREFIX "")
-    set_target_properties(RobotGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(RobotGui RobotGui /Mod/Robot)
+SET_PYTHON_PREFIX_SUFFIX(RobotGui)
 
-INSTALL(TARGETS RobotGui DESTINATION lib)
+INSTALL(TARGETS RobotGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

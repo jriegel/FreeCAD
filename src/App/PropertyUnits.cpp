@@ -46,7 +46,8 @@ using namespace Base;
 using namespace std;
 
 
-
+const PropertyQuantityConstraint::Constraints LengthStandard = {0.0,(double)INT_MAX,1.0};
+const PropertyQuantityConstraint::Constraints AngleStandard = {-360,360,1.0};
 
 //**************************************************************************
 //**************************************************************************
@@ -82,7 +83,8 @@ Base::Quantity PropertyQuantity::createQuantityFromPy(PyObject *value)
         Str = PyString_AsString(unicode);
         quant = Quantity::parse(QString::fromUtf8(Str.c_str()));
         Py_DECREF(unicode);
-    }else if (PyFloat_Check(value))
+    }
+    else if (PyFloat_Check(value))
         quant = Quantity(PyFloat_AsDouble(value),_Unit);
     else if (PyInt_Check(value))
         quant = Quantity((double)PyInt_AsLong(value),_Unit);
@@ -90,8 +92,11 @@ Base::Quantity PropertyQuantity::createQuantityFromPy(PyObject *value)
         Base::QuantityPy  *pcObject = static_cast<Base::QuantityPy*>(value);
         quant = *(pcObject->getQuantityPtr());
     }
-    else
-        throw Base::Exception("Wrong type!");
+    else {
+        std::string error = std::string("wrong type as quantity: ");
+        error += value->ob_type->tp_name;
+        throw Base::TypeError(error);
+    }
 
     return quant;
 }
@@ -126,6 +131,12 @@ void PropertyQuantityConstraint::setConstraints(const Constraints* sConstrain)
 {
     _ConstStruct = sConstrain;
 }
+
+const char* PropertyQuantityConstraint::getEditorName(void) const
+{
+    return "Gui::PropertyEditor::PropertyUnitConstraintItem";
+}
+
 
 const PropertyQuantityConstraint::Constraints*  PropertyQuantityConstraint::getConstraints(void) const
 {
@@ -198,11 +209,12 @@ PropertyAcceleration::PropertyAcceleration()
 // PropertyLength
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-TYPESYSTEM_SOURCE(App::PropertyLength, App::PropertyQuantity);
+TYPESYSTEM_SOURCE(App::PropertyLength, App::PropertyQuantityConstraint);
 
 PropertyLength::PropertyLength()
 {
     setUnit(Base::Unit::Length);
+    setConstraints(&LengthStandard);
 }
 
 //**************************************************************************
@@ -215,6 +227,7 @@ TYPESYSTEM_SOURCE(App::PropertyAngle, App::PropertyQuantityConstraint);
 PropertyAngle::PropertyAngle()
 {
     setUnit(Base::Unit::Angle);
+    setConstraints(&AngleStandard);
 }
 
 //**************************************************************************

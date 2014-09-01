@@ -2,10 +2,18 @@ if(WIN32)
     add_definitions(-DFCAppPoints)
 endif(WIN32)
 
+if(PCL_IO_FOUND)
+    add_definitions(-DHAVE_PCL_IO)
+elseif(PCL_FOUND)
+    message(WARNING "pcl installed but io component not found")
+endif(PCL_IO_FOUND)
+
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${Boost_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIR}
+    ${PCL_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_PATH}
     ${XERCESC_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
@@ -13,6 +21,8 @@ include_directories(
 
 set(Points_LIBS
     FreeCADApp
+    ${PCL_COMMON_LIBRARIES}
+    ${PCL_IO_LIBRARIES}
 )
 
 generate_from_xml(PointsPy)
@@ -50,20 +60,7 @@ fc_target_copy_resource(Points
     ${CMAKE_BINARY_DIR}/Mod/Points
     Init.py)
 
-if(MSVC)
-    set_target_properties(Points PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Points PROPERTIES DEBUG_OUTPUT_NAME "Points_d")
-    set_target_properties(Points PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Points)
-    set_target_properties(Points PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Points PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Points PROPERTIES DEBUG_OUTPUT_NAME "Points_d")
-    set_target_properties(Points PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Points)
-    set_target_properties(Points PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Points PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Points)
-    set_target_properties(Points PROPERTIES PREFIX "")
-    set_target_properties(Points PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Points Points /Mod/Points)
+SET_PYTHON_PREFIX_SUFFIX(Points)
 
-INSTALL(TARGETS Points DESTINATION lib)
+INSTALL(TARGETS Points DESTINATION ${CMAKE_INSTALL_LIBDIR})

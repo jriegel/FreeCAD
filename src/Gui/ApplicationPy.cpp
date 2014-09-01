@@ -29,6 +29,8 @@
 # include <QPrinter>
 #endif
 
+#include <xercesc/util/XMLString.hpp>
+#include <xercesc/util/TranscodingException.hpp>
 
 #include "Application.h"
 #include "BitmapFactory.h"
@@ -134,6 +136,9 @@ PyMethodDef Application::Methods[] = {
   {"doCommand",               (PyCFunction) Application::sDoCommand,        1,
    "doCommand(string) -> None\n\n"
    "Prints the given string in the python console and runs it"},
+  {"doCommandGui",               (PyCFunction) Application::sDoCommandGui,  1,
+   "doCommandGui(string) -> None\n\n"
+   "Prints the given string in the python console and runs it but doesn't record it in macros"},
   {"addModule",               (PyCFunction) Application::sAddModule,        1,
    "addModule(string) -> None\n\n"
    "Prints the given module import only once in the macro recording"},
@@ -529,6 +534,18 @@ PyObject* Application::sActivateWorkbenchHandler(PyObject * /*self*/, PyObject *
         PyErr_SetString(PyExc_Exception, e.what());
         return 0;
     }
+    catch (const XERCES_CPP_NAMESPACE_QUALIFIER TranscodingException& e) {
+        std::stringstream err;
+        char *pMsg = XERCES_CPP_NAMESPACE_QUALIFIER XMLString::transcode(e.getMessage());
+        err << "Transcoding exception in Xerces-c:\n\n"
+            << "Transcoding exception raised in activateWorkbench.\n"
+            << "Check if your user configuration file is valid.\n"
+            << "  Exception message:"
+            << pMsg;
+        XERCES_CPP_NAMESPACE_QUALIFIER XMLString::release(&pMsg);
+        PyErr_SetString(PyExc_RuntimeError, err.str().c_str());
+        return 0;
+    }
     catch (...) {
         PyErr_SetString(PyExc_Exception, "Unknown C++ exception raised in activateWorkbench");
         return 0;
@@ -788,7 +805,17 @@ PyObject* Application::sAddCommand(PyObject * /*self*/, PyObject *args,PyObject 
 
     Application::Instance->commandManager().addCommand(new PythonCommand(pName,pcCmdObj,source.c_str()));
 #else
-    Application::Instance->commandManager().addCommand(new PythonCommand(pName,pcCmdObj,pSource));
+    try {
+		Application::Instance->commandManager().addCommand(new PythonCommand(pName,pcCmdObj,pSource));
+    }
+    catch (const Base::Exception& e) {
+        PyErr_SetString(PyExc_Exception, e.what());
+        return 0;
+    }
+    catch (...) {
+        PyErr_SetString(PyExc_Exception, "Unknown C++ exception raised in Application::sAddCommand()");
+        return 0;
+    }
 #endif
     Py_INCREF(Py_None);
     return Py_None;
@@ -821,10 +848,19 @@ PyObject* Application::sDoCommand(PyObject * /*self*/, PyObject *args,PyObject *
     return Py_None;
 }
 
+PyObject* Application::sDoCommandGui(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
+{
+    char *pstr=0;
+    if (!PyArg_ParseTuple(args, "s", &pstr))     // convert args: Python->C
+        return NULL;                             // NULL triggers exception
+    Command::runCommand(Command::Gui,pstr);
+    return Py_None;
+}
+
 PyObject* Application::sAddModule(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
     char *pstr=0;
-    if (!PyArg_ParseTuple(args, "s", &pstr))     // convert args: Python->C 
+    if (!PyArg_ParseTuple(args, "s", &pstr))     // convert args: Python->C
         return NULL;                             // NULL triggers exception
     Command::addModule(Command::Doc,pstr);
     return Py_None;

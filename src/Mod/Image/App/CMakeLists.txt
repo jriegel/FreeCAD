@@ -2,8 +2,12 @@ if(WIN32)
     add_definitions(-DFCAppImage)
 endif(WIN32)
 
+if(OPENCV2_FOUND)
+    add_definitions(-DHAVE_OPENCV2)
+endif(OPENCV2_FOUND)
+
 include_directories(
-    #${OPENCV_INCLUDE_DIR}
+    ${OPENCV_INCLUDE2_DIR}
     ${PYTHON_INCLUDE_PATH}
     ${Boost_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIR}
@@ -12,13 +16,11 @@ include_directories(
 )
 
 set(Image_LIBS
-    #${OPENCV_LIBRARIES}
+    ${OPENCV2_LIBRARIES}
     FreeCADApp
 )
 
 set(Image_SRCS
-    #CaptureClass.cpp
-    #CaptureClass.h
     ImageBase.cpp
     ImageBase.h
     ImagePlane.cpp
@@ -37,20 +39,7 @@ fc_target_copy_resource(Image
     ${CMAKE_BINARY_DIR}/Mod/Image
     Init.py)
 
-if(MSVC)
-    set_target_properties(Image PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Image PROPERTIES DEBUG_OUTPUT_NAME "Image_d")
-    set_target_properties(Image PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Image)
-    set_target_properties(Image PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Image PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Image PROPERTIES DEBUG_OUTPUT_NAME "Image_d")
-    set_target_properties(Image PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Image)
-    set_target_properties(Image PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Image PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Image)
-    set_target_properties(Image PROPERTIES PREFIX "")
-    set_target_properties(Image PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Image Image /Mod/Image)
+SET_PYTHON_PREFIX_SUFFIX(Image)
 
-INSTALL(TARGETS Image DESTINATION lib)
+INSTALL(TARGETS Image DESTINATION ${CMAKE_INSTALL_LIBDIR})

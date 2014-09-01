@@ -53,7 +53,9 @@ class ExplodeGroup:
             return (random.random(),random.random(),random.random(),transp)
 
         def explode(obj,color=True):
-            if obj.isDerivedFrom('Part::Fuse') or obj.isDerivedFrom('Part::MultiFuse'):
+            if obj.isDerivedFrom('Part::Fuse') or \
+                    obj.isDerivedFrom('Part::MultiFuse') or \
+                    obj.isDerivedFrom('Part::Compound'):
                 plm = obj.Placement
                 outlist = obj.OutList[:]
                 if plm.isNull() or all(len(oo.InList)==1 for oo in obj.OutList):
@@ -183,12 +185,17 @@ class ExpandPlacements:
 
 class ReplaceObject:
     def IsActive(self):
-        return FreeCADGui.Selection.countObjectsOfType('Part::Feature') == 3
+        nobj = FreeCADGui.Selection.countObjectsOfType('Part::Feature')
+        if nobj == 3: return True
+        elif nobj == 2: return tuple((len(obj.InList)) for obj in \
+                FreeCADGui.Selection.getSelection()) in ((0,1),(1,0))
+        #else: return False
+
     def Activated(self):
         import replaceobj
-        #objs=[selobj.Object for selobj in FreeCADGui.Selection.getSelectionEx()]
         objs=FreeCADGui.Selection.getSelection()
-        if len(objs)==3:
+        if len(objs)==3 or \
+                tuple((len(obj.InList)) for obj in objs) in ((0,1),(1,0)):
             replaceobj.replaceobjfromselection(objs)
         else:
             FreeCAD.Console.PrintError(unicode(translate('OpenSCAD',\

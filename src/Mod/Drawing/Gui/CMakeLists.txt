@@ -5,6 +5,7 @@ else(MSVC)
 endif(MSVC)
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Boost_INCLUDE_DIRS}
@@ -83,7 +84,7 @@ SOURCE_GROUP("TaskDialogs" FILES ${DrawingGuiTaskDlgs_SRCS})
 if(MSVC)
     add_definitions(-D_PreComp_)
     GET_MSVC_PRECOMPILED_SOURCE("PreCompiled.cpp" PCH_SRCS ${DrawingGui_SRCS} ${DrawingGuiView_SRCS} ${DrawingGuiViewProvider_SRCS})
-    ADD_MSVC_PRECOMPILED_HEADER("PreCompiled.h" "PreCompiled.cpp" PCH_SRCS)
+    ADD_MSVC_PRECOMPILED_HEADER(DrawingGui PreCompiled.h PreCompiled.cpp PCH_SRCS)
 endif(MSVC)
 
 add_library(DrawingGui SHARED ${DrawingGui_SRCS} ${DrawingGuiView_SRCS} ${DrawingGuiViewProvider_SRCS})
@@ -95,20 +96,7 @@ fc_target_copy_resource(DrawingGui
     ${CMAKE_BINARY_DIR}/Mod/Drawing
     InitGui.py)
 
-if(MSVC)
-    set_target_properties(DrawingGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(DrawingGui PROPERTIES DEBUG_OUTPUT_NAME "DrawingGui_d")
-    set_target_properties(DrawingGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Drawing)
-    set_target_properties(DrawingGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(DrawingGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(DrawingGui PROPERTIES DEBUG_OUTPUT_NAME "DrawingGui_d")
-    set_target_properties(DrawingGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Drawing)
-    set_target_properties(DrawingGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(DrawingGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Drawing)
-    set_target_properties(DrawingGui PROPERTIES PREFIX "")
-    set_target_properties(DrawingGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(DrawingGui DrawingGui /Mod/Drawing)
+SET_PYTHON_PREFIX_SUFFIX(DrawingGui)
 
-INSTALL(TARGETS DrawingGui DESTINATION lib)
+INSTALL(TARGETS DrawingGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

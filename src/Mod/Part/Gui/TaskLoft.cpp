@@ -26,6 +26,7 @@
 #ifndef _PreComp_
 # include <QMessageBox>
 # include <QTextStream>
+# include <TopoDS_Iterator.hxx>
 #endif
 
 #include "ui_TaskLoft.h"
@@ -95,8 +96,22 @@ void LoftWidget::findShapes()
     std::vector<Part::Feature*> objs = activeDoc->getObjectsOfType<Part::Feature>();
 
     for (std::vector<Part::Feature*>::iterator it = objs.begin(); it!=objs.end(); ++it) {
-        const TopoDS_Shape& shape = (*it)->Shape.getValue();
+        TopoDS_Shape shape = (*it)->Shape.getValue();
         if (shape.IsNull()) continue;
+
+        // also allow compounds with a single face, wire, edge or vertex
+        if (shape.ShapeType() == TopAbs_COMPOUND) {
+            TopoDS_Iterator it(shape);
+            int numChilds=0;
+            TopoDS_Shape child;
+            for (; it.More(); it.Next(), numChilds++) {
+                if (!it.Value().IsNull())
+                    child = it.Value();
+            }
+
+            if (numChilds == 1)
+                shape = child;
+        }
 
         if (shape.ShapeType() == TopAbs_FACE ||
             shape.ShapeType() == TopAbs_WIRE ||
@@ -118,7 +133,7 @@ void LoftWidget::findShapes()
 
 bool LoftWidget::accept()
 {
-    QString list, solid, ruled;
+    QString list, solid, ruled, closed;
     if (d->ui.checkSolid->isChecked())
         solid = QString::fromAscii("True");
     else
@@ -128,6 +143,11 @@ bool LoftWidget::accept()
         ruled = QString::fromAscii("True");
     else
         ruled = QString::fromAscii("False");
+
+    if (d->ui.checkClosed->isChecked())
+        closed = QString::fromAscii("True");
+    else
+        closed = QString::fromAscii("False");
 
     QTextStream str(&list);
 
@@ -145,11 +165,12 @@ bool LoftWidget::accept()
     try {
         QString cmd;
         cmd = QString::fromAscii(
-            "App.getDocument('%4').addObject('Part::Loft','Loft')\n"
-            "App.getDocument('%4').ActiveObject.Sections=[%1]\n"
-            "App.getDocument('%4').ActiveObject.Solid=%2\n"
-            "App.getDocument('%4').ActiveObject.Ruled=%3\n"
-            ).arg(list).arg(solid).arg(ruled).arg(QString::fromAscii(d->document.c_str()));
+            "App.getDocument('%5').addObject('Part::Loft','Loft')\n"
+            "App.getDocument('%5').ActiveObject.Sections=[%1]\n"
+            "App.getDocument('%5').ActiveObject.Solid=%2\n"
+            "App.getDocument('%5').ActiveObject.Ruled=%3\n"
+            "App.getDocument('%5').ActiveObject.Closed=%4\n"
+            ).arg(list).arg(solid).arg(ruled).arg(closed).arg(QString::fromAscii(d->document.c_str()));
 
         Gui::Document* doc = Gui::Application::Instance->getDocument(d->document.c_str());
         if (!doc) throw Base::Exception("Document doesn't exist anymore");

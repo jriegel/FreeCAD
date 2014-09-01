@@ -5,8 +5,9 @@ else(MSVC)
 endif(MSVC)
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${Boost_INCLUDE_DIRS}
     ${OCC_INCLUDE_DIR}
     ${QT_QTCORE_INCLUDE_DIR}
@@ -42,20 +43,7 @@ fc_target_copy_resource(Inspection
     ${CMAKE_BINARY_DIR}/Mod/Inspection
     Init.py)
 
-if(MSVC)
-    set_target_properties(Inspection PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Inspection PROPERTIES DEBUG_OUTPUT_NAME "Inspection_d")
-    set_target_properties(Inspection PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Inspection)
-    set_target_properties(Inspection PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Inspection PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Inspection PROPERTIES DEBUG_OUTPUT_NAME "Inspection_d")
-    set_target_properties(Inspection PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Inspection)
-    set_target_properties(Inspection PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Inspection PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Inspection)
-    set_target_properties(Inspection PROPERTIES PREFIX "")
-    set_target_properties(Inspection PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Inspection Inspection /Mod/Inspection)
+SET_PYTHON_PREFIX_SUFFIX(Inspection)
 
-INSTALL(TARGETS Inspection DESTINATION lib)
+INSTALL(TARGETS Inspection DESTINATION ${CMAKE_INSTALL_LIBDIR})

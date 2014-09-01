@@ -59,7 +59,7 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
     ui->setupUi(proxy);
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->doubleSpinBox, SIGNAL(valueChanged(double)),
+    connect(ui->chamferDistance, SIGNAL(valueChanged(double)),
             this, SLOT(onLengthChanged(double)));
     connect(ui->buttonRefAdd, SIGNAL(toggled(bool)),
             this, SLOT(onButtonRefAdd(bool)));
@@ -133,9 +133,8 @@ void TaskChamferParameters::onLengthChanged(double len)
 
 double TaskChamferParameters::getLength(void) const
 {
-    return ui->doubleSpinBox->value();
+    return ui->chamferDistance->getQuantity().getValue();
 }
-
 
 TaskChamferParameters::~TaskChamferParameters()
 {
@@ -170,6 +169,21 @@ TaskDlgChamferParameters::~TaskDlgChamferParameters()
 }
 
 //==== calls from the TaskView ===============================================================
+
+
+void TaskDlgChamferParameters::open()
+{
+    // a transaction is already open at creation time of the chamfer
+    if (!Gui::Command::hasPendingCommand()) {
+        QString msg = tr("Edit chamfer");
+        Gui::Command::openCommand((const char*)msg.toUtf8());
+    }
+}
+
+void TaskDlgChamferParameters::clicked(int)
+{
+
+}
 
 bool TaskDlgChamferParameters::accept()
 {

@@ -62,7 +62,7 @@ TaskRevolutionParameters::TaskRevolutionParameters(ViewProviderRevolution *Revol
     ui->setupUi(proxy);
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->doubleSpinBox, SIGNAL(valueChanged(double)),
+    connect(ui->revolveAngle, SIGNAL(valueChanged(double)),
             this, SLOT(onAngleChanged(double)));
     connect(ui->axis, SIGNAL(activated(int)),
             this, SLOT(onAxisChanged(int)));
@@ -76,7 +76,7 @@ TaskRevolutionParameters::TaskRevolutionParameters(ViewProviderRevolution *Revol
     this->groupLayout()->addWidget(proxy);
 
     // Temporarily prevent unnecessary feature recomputes
-    ui->doubleSpinBox->blockSignals(true);
+    ui->revolveAngle->blockSignals(true);
     ui->axis->blockSignals(true);
     ui->checkBoxMidplane->blockSignals(true);
     ui->checkBoxReversed->blockSignals(true);
@@ -86,15 +86,40 @@ TaskRevolutionParameters::TaskRevolutionParameters(ViewProviderRevolution *Revol
     bool mirrored = pcRevolution->Midplane.getValue();
     bool reversed = pcRevolution->Reversed.getValue();
 
-    ui->doubleSpinBox->setDecimals(Base::UnitsApi::getDecimals());
-    ui->doubleSpinBox->setValue(l);
-    blockUpdate = false;
-    updateUI();
+    ui->revolveAngle->setValue(l);
+
+    int count=pcRevolution->getSketchAxisCount();
+
+    for (int i=ui->axis->count()-1; i >= count+2; i--)
+        ui->axis->removeItem(i);
+    for (int i=ui->axis->count(); i < count+2; i++)
+        ui->axis->addItem(QString::fromAscii("Sketch axis %1").arg(i-2));
+
+    int pos=-1;
+
+    App::DocumentObject *pcReferenceAxis = pcRevolution->ReferenceAxis.getValue();
+    const std::vector<std::string> &subReferenceAxis = pcRevolution->ReferenceAxis.getSubValues();
+    if (pcReferenceAxis && pcReferenceAxis == pcRevolution->Sketch.getValue()) {
+        assert(subReferenceAxis.size()==1);
+        if (subReferenceAxis[0] == "V_Axis")
+            pos = 0;
+        else if (subReferenceAxis[0] == "H_Axis")
+            pos = 1;
+        else if (subReferenceAxis[0].size() > 4 && subReferenceAxis[0].substr(0,4) == "Axis")
+            pos = 2 + std::atoi(subReferenceAxis[0].substr(4,4000).c_str());
+    }
+
+    if (pos < 0 || pos >= ui->axis->count()) {
+        ui->axis->addItem(tr("Undefined"));
+        pos = ui->axis->count()-1;
+    }
+
+    ui->axis->setCurrentIndex(pos);
 
     ui->checkBoxMidplane->setChecked(mirrored);
     ui->checkBoxReversed->setChecked(reversed);
 
-    ui->doubleSpinBox->blockSignals(false);
+    ui->revolveAngle->blockSignals(false);
     ui->axis->blockSignals(false);
     ui->checkBoxMidplane->blockSignals(false);
     ui->checkBoxReversed->blockSignals(false);
@@ -250,12 +275,21 @@ void TaskRevolutionParameters::onReversed(bool on)
 {
     PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(vp->getObject());
     pcRevolution->Reversed.setValue(on);
-    recomputeFeature();
+    if (updateView())
+        pcRevolution->getDocument()->recomputeFeature(pcRevolution);
+}
+
+void TaskRevolutionParameters::onUpdateView(bool on)
+{
+    if (on) {
+        PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(RevolutionView->getObject());
+        pcRevolution->getDocument()->recomputeFeature(pcRevolution);
+    }
 }
 
 double TaskRevolutionParameters::getAngle(void) const
 {
-    return ui->doubleSpinBox->value();
+    return ui->revolveAngle->value().getValue();
 }
 
 void TaskRevolutionParameters::getReferenceAxis(App::DocumentObject*& obj, std::vector<std::string>& sub) const
@@ -334,6 +368,21 @@ TaskDlgRevolutionParameters::~TaskDlgRevolutionParameters()
 
 //==== calls from the TaskView ===============================================================
 
+
+void TaskDlgRevolutionParameters::open()
+{
+    // a transaction is already open at creation time of the revolve
+    if (!Gui::Command::hasPendingCommand()) {
+        QString msg = QObject::tr("Edit revolve");
+        Gui::Command::openCommand((const char*)msg.toUtf8());
+    }
+}
+
+void TaskDlgRevolutionParameters::clicked(int)
+{
+
+}
+
 bool TaskDlgRevolutionParameters::accept()
 {
     std::string name = vp->getObject()->getNameInDocument();
@@ -353,6 +402,36 @@ bool TaskDlgRevolutionParameters::accept()
 
     return true;
 }
+
+bool TaskDlgRevolutionParameters::reject()
+{
+    // get the support and Sketch
+    PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(RevolutionView->getObject());
+    Sketcher::SketchObject *pcSketch = 0;
+    App::DocumentObject    *pcSupport = 0;
+    if (pcRevolution->Sketch.getValue()) {
+        pcSketch = static_cast<Sketcher::SketchObject*>(pcRevolution->Sketch.getValue());
+        pcSupport = pcSketch->Support.getValue();
+    }
+
+    // role back the done things
+    Gui::Command::abortCommand();
+    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
+
+    // if abort command deleted the object the support is visible again
+    if (!Gui::Application::Instance->getViewProvider(pcRevolution)) {
+        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
+            Gui::Application::Instance->getViewProvider(pcSketch)->show();
+        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
+            Gui::Application::Instance->getViewProvider(pcSupport)->show();
+    }
+
+    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
+    //Gui::Command::commitCommand();
+
+    return true;
+}
+
 
 
 #include "moc_TaskRevolutionParameters.cpp"

@@ -153,7 +153,7 @@ App::DocumentObjectExecReturn *Draft::execute(void)
         TopoDS_Shape face = TopShape.getSubShape(SubVals[0].c_str());
         TopTools_IndexedMapOfShape mapOfEdges;
         TopExp::MapShapes(face, TopAbs_EDGE, mapOfEdges);
-        bool found;
+        bool found = false;
 
         for (int i = 1; i <= mapOfEdges.Extent(); i++) {
             // Note: What happens if mapOfEdges(i) is the degenerated edge of a cone?

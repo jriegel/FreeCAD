@@ -42,7 +42,9 @@ def makeRebar(baseobj,sketch,diameter=None,amount=1,offset=None,name=translate("
     p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Arch")
     obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython",name)
     _Rebar(obj)
-    _ViewProviderRebar(obj.ViewObject)
+    if FreeCAD.GuiUp:
+        _ViewProviderRebar(obj.ViewObject)
+        obj.ViewObject.ShapeColor = ArchCommands.getDefaultColor("Rebar")
     if hasattr(sketch,"Support"):
         if sketch.Support:
             if isinstance(sketch.Support,tuple):
@@ -51,7 +53,8 @@ def makeRebar(baseobj,sketch,diameter=None,amount=1,offset=None,name=translate("
             elif sketch.Support == baseobj:
                 sketch.Support = None
     obj.Base = sketch
-    sketch.ViewObject.hide()
+    if FreeCAD.GuiUp:
+        sketch.ViewObject.hide()
     a = baseobj.Armatures
     a.append(obj)
     baseobj.Armatures = a
@@ -66,7 +69,6 @@ def makeRebar(baseobj,sketch,diameter=None,amount=1,offset=None,name=translate("
     else:
         obj.OffsetStart = p.GetFloat("RebarOffset",30)
         obj.OffsetEnd = p.GetFloat("RebarOffset",30)
-    obj.ViewObject.ShapeColor = ArchCommands.getDefaultColor("Rebar")
     return obj
 
 
@@ -79,6 +81,9 @@ class _CommandRebar:
                 'Accel': "R, B",
                 'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Rebar","Creates a Reinforcement bar from the selected face of a structural object")}
 
+    def IsActive(self):
+        return not FreeCAD.ActiveDocument is None
+
     def Activated(self):
         sel = FreeCADGui.Selection.getSelectionEx()
         if sel:
@@ -89,7 +94,7 @@ class _CommandRebar:
                     if Draft.getType(sk) == "Sketch":
                         # we have a base object and a sketch: create the rebar now
                         FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Rebar"))
-                        FreeCADGui.doCommand("import Arch")
+                        FreeCADGui.addModule("Arch")
                         FreeCADGui.doCommand("Arch.makeRebar(FreeCAD.ActiveDocument."+obj.Name+",FreeCAD.ActiveDocument."+sk.Name+")")
                         FreeCAD.ActiveDocument.commitTransaction()
                         FreeCAD.ActiveDocument.recompute()
@@ -110,7 +115,7 @@ class _CommandRebar:
                         else:
                             sup = obj.Support
                         FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Rebar"))
-                        FreeCADGui.doCommand("import Arch")
+                        FreeCADGui.addModule("Arch")
                         FreeCADGui.doCommand("Arch.makeRebar(FreeCAD.ActiveDocument."+sup.Name+",FreeCAD.ActiveDocument."+obj.Name+")")
                         FreeCAD.ActiveDocument.commitTransaction()
                         FreeCAD.ActiveDocument.recompute()

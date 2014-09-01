@@ -401,6 +401,8 @@ def p_not_supported(p):
     not_supported : glide LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE
                   | offset LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE
                   | resize LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE
+                  | cut LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE
+                  | subdiv LPAREN keywordargument_list RPAREN OBRACE block_list EBRACE
                   '''
     if gui and not FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/OpenSCAD").\
             GetBool('usePlaceholderForUnsupported'):
@@ -984,7 +986,7 @@ def p_circle_action(p) :
     else :
         #mycircle = Draft.makePolygon(n,r) # would call doc.recompute
         mycircle = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython",'polygon')
-        Draft._Polygon(mycricle)
+        Draft._Polygon(mycircle)
         mycircle.FacesNumber = n
         mycircle.Radius = r
         mycircle.DrawMode = "inscribed"

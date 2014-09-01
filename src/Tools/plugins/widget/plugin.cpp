@@ -454,6 +454,166 @@ public:
 };
 
 /* XPM */
+static const char *inputfield_pixmap[]={
+"22 22 6 1",
+"a c #000000",
+"# c #000080",
+"b c #008080",
+"c c #808080",
+"d c #c0c0c0",
+". c #ffffff",
+"......................",
+"......................",
+"......................",
+"...#aaaaaaaaaaaaaa#...",
+".baccccccccccccccccab.",
+".acccddddddddddddddca.",
+"#ccd................d#",
+"acc.................da",
+"acd.......d....ca.ac.a",
+"acd......db......a...a",
+"acd.dbbb.dbbbd...a...a",
+"acd.ccdbddb.db...a...a",
+"acd.dbbbddb..b...a...a",
+"acd.bd.bddb..b...a...a",
+"acd.bbbbddbbbc...a...a",
+"acd..d.....dd..ca.acda",
+"#cd.................d#",
+".ac................da.",
+".badd............dda#.",
+"...#aaaaaaaaaaaaaa#...",
+"......................",
+"......................"};
+
+class InputFieldPlugin : public QDesignerCustomWidgetInterface
+{
+    Q_INTERFACES(QDesignerCustomWidgetInterface)
+public:
+    InputFieldPlugin()
+    {
+    }
+    QWidget *createWidget(QWidget *parent)
+    {
+        return new Gui::InputField(parent);
+    }
+    QString group() const
+    {
+        return QLatin1String("Input Widgets");
+    }
+    QIcon icon() const
+    {
+        return QIcon( QPixmap( inputfield_pixmap ) );
+    }
+    QString includeFile() const
+    {
+        return QLatin1String("Gui/InputField.h");
+    }
+    QString toolTip() const
+    {
+        return QLatin1String("Input Field");
+    }
+    QString whatsThis() const
+    {
+        return QLatin1String("A widget to work with quantities.");
+    }
+    bool isContainer() const
+    {
+        return false;
+    }
+    QString domXml() const
+    {
+        return "<ui language=\"c++\">\n"
+               " <widget class=\"Gui::InputField\" name=\"inputField\">\n"
+               " </widget>\n"
+               "</ui>";
+    }
+    QString name() const
+    {
+        return QLatin1String("Gui::InputField");
+    }
+};
+
+/* XPM */
+static const char *quantityspinbox_pixmap[]={
+"22 22 6 1",
+"a c #000000",
+"# c #000080",
+"b c #008080",
+"c c #808080",
+"d c #c0c0c0",
+". c #ffffff",
+"...#aaaaaaaaaaaaaa#...",
+".baccccccccccccccccab.",
+".acccddddddddddddddca.",
+"#ccd................d#",
+"acc.............dcd.da",
+"acd.............dbd..a",
+"acd............dcbbd.a",
+"acd.d..dd..d...dbbbc.a",
+"acddb.dbbdcbb.dbbb#bda",
+"acd.b.d.cc..b.bb###bda",
+"acd.b...bd.cb.dddccdda",
+"acd.b...b..db...dddd.a",
+"acd.b..cd...bdddccbbda",
+"acd.b.dbbccdb.ccbbbbda",
+"acddd.ddd.dd..dbbb#cda",
+"acd............bb##cda",
+"acd............db#cd.a",
+"acd.............bbcdda",
+"#cd.............ddd.d#",
+".ac................da.",
+".badd............dda#.",
+"...#aaaaaaaaaaaaaa#..."};
+
+class QuantitySpinBoxPlugin : public QDesignerCustomWidgetInterface
+{
+    Q_INTERFACES(QDesignerCustomWidgetInterface)
+public:
+    QuantitySpinBoxPlugin()
+    {
+    }
+    QWidget *createWidget(QWidget *parent)
+    {
+        return new Gui::QuantitySpinBox(parent);
+    }
+    QString group() const
+    {
+        return QLatin1String("Input Widgets");
+    }
+    QIcon icon() const
+    {
+        return QIcon( QPixmap( quantityspinbox_pixmap ) );
+    }
+    QString includeFile() const
+    {
+        return QLatin1String("Gui/QuantitySpinBox.h");
+    }
+    QString toolTip() const
+    {
+        return QLatin1String("Quantity spin box");
+    }
+    QString whatsThis() const
+    {
+        return QLatin1String("A widget to work with quantities.");
+    }
+    bool isContainer() const
+    {
+        return false;
+    }
+    QString domXml() const
+    {
+        return "<ui language=\"c++\">\n"
+               " <widget class=\"Gui::QuantitySpinBox\" name=\"quantitySpinBox\">\n"
+               " </widget>\n"
+               "</ui>";
+    }
+    QString name() const
+    {
+        return QLatin1String("Gui::QuantitySpinBox");
+    }
+};
+
+/* XPM */
 static const char *iconview_pixmap[]={
 "22 22 10 1",
 "# c #000000",
@@ -1252,6 +1412,8 @@ QList<QDesignerCustomWidgetInterface *> CustomWidgetPlugin::customWidgets () con
     cw.append(new FileChooserPlugin);
     cw.append(new AccelLineEditPlugin);
     cw.append(new ActionSelectorPlugin);
+    cw.append(new InputFieldPlugin);
+    cw.append(new QuantitySpinBoxPlugin);
     cw.append(new CommandIconViewPlugin);
     cw.append(new UIntSpinBoxPlugin);
     cw.append(new ColorButtonPlugin);

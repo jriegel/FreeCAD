@@ -61,7 +61,7 @@ TaskGrooveParameters::TaskGrooveParameters(ViewProviderGroove *GrooveView,QWidge
     ui->setupUi(proxy);
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->doubleSpinBox, SIGNAL(valueChanged(double)),
+    connect(ui->grooveAngle, SIGNAL(valueChanged(double)),
             this, SLOT(onAngleChanged(double)));
     connect(ui->axis, SIGNAL(activated(int)),
             this, SLOT(onAxisChanged(int)));
@@ -75,7 +75,7 @@ TaskGrooveParameters::TaskGrooveParameters(ViewProviderGroove *GrooveView,QWidge
     this->groupLayout()->addWidget(proxy);
 
     // Temporarily prevent unnecessary feature updates
-    ui->doubleSpinBox->blockSignals(true);
+    ui->grooveAngle->blockSignals(true);
     ui->axis->blockSignals(true);
     ui->checkBoxMidplane->blockSignals(true);
     ui->checkBoxReversed->blockSignals(true);
@@ -85,8 +85,7 @@ TaskGrooveParameters::TaskGrooveParameters(ViewProviderGroove *GrooveView,QWidge
     bool mirrored = pcGroove->Midplane.getValue();
     bool reversed = pcGroove->Reversed.getValue();
 
-    ui->doubleSpinBox->setDecimals(Base::UnitsApi::getDecimals());
-    ui->doubleSpinBox->setValue(l);
+    ui->grooveAngle->setValue(l);
 
     blockUpdate = false;
     updateUI();
@@ -94,7 +93,7 @@ TaskGrooveParameters::TaskGrooveParameters(ViewProviderGroove *GrooveView,QWidge
     ui->checkBoxMidplane->setChecked(mirrored);
     ui->checkBoxReversed->setChecked(reversed);
 
-    ui->doubleSpinBox->blockSignals(false);
+    ui->grooveAngle->blockSignals(false);
     ui->axis->blockSignals(false);
     ui->checkBoxMidplane->blockSignals(false);
     ui->checkBoxReversed->blockSignals(false);
@@ -254,7 +253,7 @@ void TaskGrooveParameters::onReversed(bool on)
 
 double TaskGrooveParameters::getAngle(void) const
 {
-    return ui->doubleSpinBox->value();
+    return ui->grooveAngle->value().getValue();
 }
 
 void TaskGrooveParameters::getReferenceAxis(App::DocumentObject*& obj, std::vector<std::string>& sub) const
@@ -333,6 +332,21 @@ TaskDlgGrooveParameters::~TaskDlgGrooveParameters()
 
 //==== calls from the TaskView ===============================================================
 
+
+void TaskDlgGrooveParameters::open()
+{
+    // a transaction is already open at creation time of the groove
+    if (!Gui::Command::hasPendingCommand()) {
+        QString msg = QObject::tr("Edit groove");
+        Gui::Command::openCommand((const char*)msg.toUtf8());
+    }
+}
+
+void TaskDlgGrooveParameters::clicked(int)
+{
+
+}
+
 bool TaskDlgGrooveParameters::accept()
 {
     std::string name = vp->getObject()->getNameInDocument();
@@ -352,6 +366,36 @@ bool TaskDlgGrooveParameters::accept()
 
     return true;
 }
+
+bool TaskDlgGrooveParameters::reject()
+{
+    // get the support and Sketch
+    PartDesign::Groove* pcGroove = static_cast<PartDesign::Groove*>(GrooveView->getObject());
+    Sketcher::SketchObject *pcSketch = 0;
+    App::DocumentObject    *pcSupport = 0;
+    if (pcGroove->Sketch.getValue()) {
+        pcSketch = static_cast<Sketcher::SketchObject*>(pcGroove->Sketch.getValue());
+        pcSupport = pcSketch->Support.getValue();
+    }
+
+    // role back the done things
+    Gui::Command::abortCommand();
+    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
+
+    // if abort command deleted the object the support is visible again
+    if (!Gui::Application::Instance->getViewProvider(pcGroove)) {
+        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
+            Gui::Application::Instance->getViewProvider(pcSketch)->show();
+        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
+            Gui::Application::Instance->getViewProvider(pcSupport)->show();
+    }
+
+    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
+    //Gui::Command::commitCommand();
+
+    return true;
+}
+
 
 
 #include "moc_TaskGrooveParameters.cpp"

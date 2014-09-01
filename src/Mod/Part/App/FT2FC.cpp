@@ -108,7 +108,7 @@ PyObject* FT2FC(const Py_UNICODE *PyUString,
    std::stringstream ErrorMsg;
    double PenPos = 0, scalefactor;
    UNICHAR prevchar = 0, currchar = 0;
-   int  cadv, PyErr;
+   int  cadv;
    size_t i;
    PyObject *WireList, *CharList;
    
@@ -165,10 +165,10 @@ PyObject* FT2FC(const Py_UNICODE *PyUString,
        if (!PyList_Size(WireList))                                  // empty ==> whitespace
            Base::Console().Log("FT2FC char '0x%04x'/'%d' has no Wires!\n", currchar, currchar);
        else
-           PyErr = PyList_Append(CharList, WireList);
+           PyList_Append(CharList, WireList);
        PenPos += (cadv + tracking);
        prevchar = currchar;
-       }
+   }
 
    error = FT_Done_FreeType(FTLib);
    if(error) {
@@ -266,10 +266,9 @@ static FT_Outline_Funcs FTcbFuncs = {
 PyObject* getGlyphContours(FT_Face FTFont, UNICHAR currchar, double PenPos, double Scale) {
    FT_Error error = 0;
    std::stringstream ErrorMsg;
-   int PyErr;
    gp_Pnt origin = gp_Pnt(0.0,0.0,0.0);
    FTDC_Ctx ctx;
- 
+
    ctx.currchar = currchar;
    ctx.surf = new Geom_Plane(origin,gp::DZ());
 
@@ -285,7 +284,7 @@ PyObject* getGlyphContours(FT_Face FTFont, UNICHAR currchar, double PenPos, doub
    if (!ctx.Edges.empty()){                    
        ctx.Wires.push_back(edgesToWire(ctx.Edges));
    }
-   FT_Orientation fontClass = FT_Outline_Get_Orientation(&FTFont->glyph->outline);
+   /*FT_Orientation fontClass =*/ FT_Outline_Get_Orientation(&FTFont->glyph->outline);
    PyObject* ret = PyList_New(0);
 
    gp_Vec pointer = gp_Vec(PenPos * Scale,0.0,0.0);
@@ -301,7 +300,7 @@ PyObject* getGlyphContours(FT_Face FTFont, UNICHAR currchar, double PenPos, doub
           ErrorMsg << "FT2FC OCC BRepScale failed \n";
           throw std::runtime_error(ErrorMsg.str());
        }
-       PyErr = PyList_Append(ret,new TopoShapeWirePy(new TopoShape(TopoDS::Wire(BRepScale.Shape()))));
+       PyList_Append(ret,new TopoShapeWirePy(new TopoShape(TopoDS::Wire(BRepScale.Shape()))));
    } 
    return(ret);
 }

@@ -1,7 +1,7 @@
 #add_defintions(-D_FC_GUI_ENABLED_)
 #add_defintions(-DFREECADMAINPY)
 
-if(FREECAD_BUILD_GUI)
+if(BUILD_GUI)
     include_directories(
         ${Boost_INCLUDE_DIRS}
         ${COIN3D_INCLUDE_DIR}
@@ -11,7 +11,7 @@ if(FREECAD_BUILD_GUI)
         ${PYTHON_INCLUDE_PATH}
         ${XERCESC_INCLUDE_DIR}
     )
-else(FREECAD_BUILD_GUI)
+else(BUILD_GUI)
     include_directories(
         ${Boost_INCLUDE_DIRS}
         ${ZLIB_INCLUDE_DIR}
@@ -19,10 +19,10 @@ else(FREECAD_BUILD_GUI)
         ${PYTHON_INCLUDE_PATH}
         ${XERCESC_INCLUDE_DIR}
     )
-endif(FREECAD_BUILD_GUI)
+endif(BUILD_GUI)
 
 ######################## FreeCADMain ########################
-if(FREECAD_BUILD_GUI)
+if(BUILD_GUI)
 
     SET(FreeCAD_SRCS
         freecad.rc
@@ -45,34 +45,19 @@ if(FREECAD_BUILD_GUI)
     add_executable(FreeCADMain WIN32 ${FreeCAD_SRCS})
     target_link_libraries(FreeCADMain ${FreeCAD_LIBS})
 
-    # Note this is IDE specific, not necessarily platform specific
-    if(MSVC)
-        set_target_properties(FreeCADMain PROPERTIES OUTPUT_NAME "FreeCAD")
-        set_target_properties(FreeCADMain PROPERTIES DEBUG_OUTPUT_NAME "FreeCADD")
-        # dirty hack to avoid Debug/Release subdirectory
-        set_target_properties(FreeCADMain PROPERTIES PREFIX "../")
-        set_target_properties(FreeCADMain PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    elseif(MINGW)
-        set_target_properties(FreeCADMain PROPERTIES OUTPUT_NAME "FreeCAD")
-        set_target_properties(FreeCADMain PROPERTIES DEBUG_OUTPUT_NAME "FreeCADD")
-        set_target_properties(FreeCADMain PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    else(MSVC)
-        set_target_properties(FreeCADMain PROPERTIES OUTPUT_NAME "FreeCAD")
-        set_target_properties(FreeCADMain PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-        set_target_properties(FreeCADMain PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-    endif(MSVC)
+    SET_BIN_DIR(FreeCADMain FreeCAD)
 
     if(WIN32)
         INSTALL(TARGETS FreeCADMain
             RUNTIME DESTINATION bin
-            LIBRARY DESTINATION lib
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         )
     else(WIN32)
         INSTALL(TARGETS FreeCADMain 
             RUNTIME DESTINATION bin
         )
     endif(WIN32)
-endif(FREECAD_BUILD_GUI)
+endif(BUILD_GUI)
 ######################## FreeCADMainCmd ########################
 
 SET(FreeCADMainCmd_SRCS
@@ -86,27 +71,12 @@ target_link_libraries(FreeCADMainCmd
     ${QT_LIBRARIES}
 )
 
-# Note this is IDE specific, not necessarily platform specific
-if(MSVC)
-    set_target_properties(FreeCADMainCmd PROPERTIES OUTPUT_NAME "FreeCADCmd")
-    set_target_properties(FreeCADMainCmd PROPERTIES DEBUG_OUTPUT_NAME "FreeCADCmdD")
-    # dirty hack to avoid Debug/Release subdirectory
-    set_target_properties(FreeCADMainCmd PROPERTIES PREFIX "../")
-    set_target_properties(FreeCADMainCmd PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-elseif(MINGW)
-    set_target_properties(FreeCADMainCmd PROPERTIES OUTPUT_NAME "FreeCADCmd")
-    set_target_properties(FreeCADMainCmd PROPERTIES DEBUG_OUTPUT_NAME "FreeCADCmdD")
-    set_target_properties(FreeCADMainCmd PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-else(MSVC)
-    set_target_properties(FreeCADMainCmd PROPERTIES OUTPUT_NAME "FreeCADCmd")
-    set_target_properties(FreeCADMainCmd PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    set_target_properties(FreeCADMainCmd PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(FreeCADMainCmd FreeCADCmd)
 
 if(WIN32)
     INSTALL(TARGETS FreeCADMainCmd
         RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 else(WIN32)
     INSTALL(TARGETS FreeCADMainCmd 
@@ -124,40 +94,22 @@ add_library(FreeCADMainPy SHARED ${FreeCADMainPy_SRCS})
 
 target_link_libraries(FreeCADMainPy FreeCADApp)
 
-# Note this is IDE specific, not necessarily platform specific
-if(MSVC)
-    set_target_properties(FreeCADMainPy PROPERTIES OUTPUT_NAME "FreeCAD")
-    set_target_properties(FreeCADMainPy PROPERTIES DEBUG_OUTPUT_NAME "FreeCAD_d")
-    set_target_properties(FreeCADMainPy PROPERTIES SUFFIX ".pyd")
-    # dirty hack to avoid Debug/Release subdirectory
-    set_target_properties(FreeCADMainPy PROPERTIES PREFIX "../")
-    set_target_properties(FreeCADMainPy PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-elseif(MINGW)
-    set_target_properties(FreeCADMainPy PROPERTIES OUTPUT_NAME "FreeCAD")
-    set_target_properties(FreeCADMainPy PROPERTIES DEBUG_OUTPUT_NAME "FreeCAD_d")
-    set_target_properties(FreeCADMainPy PROPERTIES SUFFIX ".pyd")
-    set_target_properties(FreeCADMainPy PROPERTIES PREFIX "")
-    set_target_properties(FreeCADMainPy PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-else(MSVC)
-    set_target_properties(FreeCADMainPy PROPERTIES OUTPUT_NAME "FreeCAD")
-    set_target_properties(FreeCADMainPy PROPERTIES PREFIX "")
-    set_target_properties(FreeCADMainPy PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set_target_properties(FreeCADMainPy PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(FreeCADMainPy FreeCAD)
+SET_PYTHON_PREFIX_SUFFIX(FreeCADMainPy)
 
 if(WIN32)
     INSTALL(TARGETS FreeCADMainPy
         RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 else(WIN32)
     INSTALL(TARGETS FreeCADMainPy
-        LIBRARY DESTINATION lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 endif(WIN32)
 
 ######################## FreeCADGuiPy ########################
-if(FREECAD_BUILD_GUI)
+if(BUILD_GUI)
 
     SET(FreeCADGuiPy_SRCS
         FreeCADGuiPy.cpp
@@ -167,35 +119,23 @@ if(FREECAD_BUILD_GUI)
 
     target_link_libraries(FreeCADGuiPy FreeCADGui)
 
-    # Note this is IDE specific, not necessarily platform specific
-    if(MSVC)
-        set_target_properties(FreeCADGuiPy PROPERTIES OUTPUT_NAME "FreeCADGui")
-        set_target_properties(FreeCADGuiPy PROPERTIES DEBUG_OUTPUT_NAME "FreeCADGui_d")
-        set_target_properties(FreeCADGuiPy PROPERTIES SUFFIX ".pyd")
-        # dirty hack to avoid Debug/Release subdirectory
-        set_target_properties(FreeCADGuiPy PROPERTIES PREFIX "../")
-        set_target_properties(FreeCADGuiPy PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    elseif(MINGW)
-        set_target_properties(FreeCADGuiPy PROPERTIES OUTPUT_NAME "FreeCADGui")
-        set_target_properties(FreeCADGuiPy PROPERTIES DEBUG_OUTPUT_NAME "FreeCADGui_d")
-        set_target_properties(FreeCADGuiPy PROPERTIES SUFFIX ".pyd")
-        set_target_properties(FreeCADGuiPy PROPERTIES PREFIX "")
-        set_target_properties(FreeCADGuiPy PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    else(MSVC)
-        set_target_properties(FreeCADGuiPy PROPERTIES OUTPUT_NAME "FreeCADGui")
-        set_target_properties(FreeCADGuiPy PROPERTIES PREFIX "")
-        set_target_properties(FreeCADGuiPy PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-        set_target_properties(FreeCADGuiPy PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-    endif(MSVC)
-
+    SET_BIN_DIR(FreeCADGuiPy FreeCADGui)
+    SET_PYTHON_PREFIX_SUFFIX(FreeCADGuiPy)
+    if(WIN32)
+        # Name clash with target "FreeCADGui"
+        # Must be called "FreeCADGuiPy_d" and "FreeCADGuiPy" to work so override default
+        set_target_properties(FreeCADGuiPy PROPERTIES PDB_NAME_DEBUG "FreeCADGuiPy_d")
+        set_target_properties(FreeCADGuiPy PROPERTIES PDB_NAME_RELEASE "FreeCADGuiPy")
+    endif(WIN32)
+    
     if(WIN32)
         INSTALL(TARGETS FreeCADGuiPy
             RUNTIME DESTINATION bin
-            LIBRARY DESTINATION lib
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         )
     else(WIN32)
         INSTALL(TARGETS FreeCADGuiPy
-            LIBRARY DESTINATION lib
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         )
     endif(WIN32)
-endif(FREECAD_BUILD_GUI)
+endif(BUILD_GUI)

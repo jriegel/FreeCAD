@@ -4,15 +4,16 @@ else(MSVC)
     add_definitions(-DHAVE_LIMITS_H -DHAVE_CONFIG_H)
 endif(MSVC)
 
-if (FREECAD_BUILD_SMESH)
+if (BUILD_SMESH)
     add_definitions(-DHAVE_SMESH -DHAVE_MEFISTO)
-endif(FREECAD_BUILD_SMESH)
+endif(BUILD_SMESH)
 
-if(FREECAD_BUILD_FEM_NETGEN)
+if(BUILD_FEM_NETGEN)
     add_definitions(-DHAVE_NETGEN)
-endif(FREECAD_BUILD_FEM_NETGEN)
+endif(BUILD_FEM_NETGEN)
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Boost_INCLUDE_DIRS}
@@ -69,20 +70,7 @@ fc_target_copy_resource(MeshPartGui
     ${CMAKE_BINARY_DIR}/Mod/MeshPart
     InitGui.py)
 
-if(MSVC)
-    set_target_properties(MeshPartGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(MeshPartGui PROPERTIES DEBUG_OUTPUT_NAME "MeshPartGui_d")
-    set_target_properties(MeshPartGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/MeshPart)
-    set_target_properties(MeshPartGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(MeshPartGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(MeshPartGui PROPERTIES DEBUG_OUTPUT_NAME "MeshPartGui_d")
-    set_target_properties(MeshPartGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/MeshPart)
-    set_target_properties(MeshPartGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(MeshPartGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/MeshPart)
-    set_target_properties(MeshPartGui PROPERTIES PREFIX "")
-    set_target_properties(MeshPartGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(MeshPartGui MeshPartGui /Mod/MeshPart)
+SET_PYTHON_PREFIX_SUFFIX(MeshPartGui)
 
-INSTALL(TARGETS MeshPartGui DESTINATION lib)
+INSTALL(TARGETS MeshPartGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

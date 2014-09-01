@@ -104,7 +104,7 @@ public:
   /// find a property by its name
   virtual Property *getPropertyByName(const char* name) const;
   /// get the name of a property
-  virtual const char* getName(const Property* prop) const;
+  virtual const char* getPropertyName(const Property* prop) const;
   /// get all properties of the class (including properties of the parent)
   virtual void getPropertyMap(std::map<std::string,Property*> &Map) const;
   /// get all properties of the class (including properties of the parent)
@@ -159,9 +159,9 @@ public:
 
 protected: 
   /// get called by the container when a property has changed
-  virtual void onChanged(const Property* /*prop*/){};
+  virtual void onChanged(const Property* /*prop*/){}
   /// get called before the value is changed
-  virtual void onBeforeChange(const Property* /*prop*/){};
+  virtual void onBeforeChange(const Property* /*prop*/){}
 
   //void hasChanged(Propterty* prop);
   static const  PropertyData * getPropertyDataPtr(void); 

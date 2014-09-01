@@ -54,6 +54,22 @@ def searchforopenscadexe():
         for testpath in testpaths:
             if os.path.isfile(testpath):
                 return testpath
+    elif sys.platform == 'darwin':
+        ascript = ('tell application "Finder"\n'
+        'POSIX path of (application file id "org.openscad.OpenSCAD"'
+        'as alias)\n'
+        'end tell')
+        p1=subprocess.Popen(['osascript','-'],stdin=subprocess.PIPE,\
+                stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        stdout,stderr = p1.communicate(ascript)
+        if p1.returncode == 0:
+            opathl=stdout.split('\n')
+            if len(opathl) >=1:
+                return opathl[0]+'Contents/MacOS/OpenSCAD'
+        #test the default path
+        testpath="/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD"
+        if os.path.isfile(testpath):
+            return testpath
     else: #unix
         p1=subprocess.Popen(['which','openscad'],stdout=subprocess.PIPE)
         if p1.wait() == 0:
@@ -131,6 +147,8 @@ def callopenscad(inputfilename,outputfilename=None,outputext='csg',keepname=Fals
                     (tempfilenamegen.next(),outputext))
         check_output2([osfilename,'-o',outputfilename, inputfilename])
         return outputfilename
+    else:
+        raise OpenSCADError('OpenSCAD executeable unavailable')
 
 def callopenscadstring(scadstr,outputext='csg'):
     '''create a tempfile and call the open scad binary
@@ -555,3 +573,21 @@ def removesubtree(objs):
             checkinlistcomplete = True
     for obj in toremove:
         obj.Document.removeObject(obj.Name)
+
+def applyPlacement(shape):
+    if shape.Placement.isNull():
+        return shape
+    else:
+        import Part
+        if shape.ShapeType == 'Solid':
+            return Part.Solid(shape.childShapes()[0])
+        elif shape.ShapeType == 'Face':
+            return Part.Face(shape.childShapes())
+        elif shape.ShapeType == 'Compound':
+            return Part.Compound(shape.childShapes())
+        elif shape.ShapeType == 'Wire':
+            return Part.Wire(shape.childShapes())
+        elif shape.ShapeType == 'Shell':
+            return Part.Shell(shape.childShapes())
+        else:
+            return Part.Compound([shape])

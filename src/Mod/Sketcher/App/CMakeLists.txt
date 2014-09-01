@@ -5,6 +5,7 @@ else(MSVC)
 endif(MSVC)
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
@@ -103,6 +104,10 @@ SET(Sketcher_Scripts
     Init.py
     SketcherExample.py
 	TestSketcherApp.py
+	Profiles.py
+	ProfileLib/Hexagon.py
+	ProfileLib/RegularPolygon.py
+	ProfileLib/__init__.py
 )
 
 add_library(Sketcher SHARED ${Sketcher_SRCS})
@@ -114,20 +119,7 @@ fc_target_copy_resource(Sketcher
     ${CMAKE_BINARY_DIR}/Mod/Sketcher
     ${Sketcher_Scripts})
 
-if(MSVC)
-    set_target_properties(Sketcher PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Sketcher PROPERTIES DEBUG_OUTPUT_NAME "Sketcher_d")
-    set_target_properties(Sketcher PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sketcher)
-    set_target_properties(Sketcher PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(Sketcher PROPERTIES SUFFIX ".pyd")
-    set_target_properties(Sketcher PROPERTIES DEBUG_OUTPUT_NAME "Sketcher_d")
-    set_target_properties(Sketcher PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sketcher)
-    set_target_properties(Sketcher PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(Sketcher PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sketcher)
-    set_target_properties(Sketcher PROPERTIES PREFIX "")
-    set_target_properties(Sketcher PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(Sketcher Sketcher /Mod/Sketcher)
+SET_PYTHON_PREFIX_SUFFIX(Sketcher)
 
-INSTALL(TARGETS Sketcher DESTINATION lib)
+INSTALL(TARGETS Sketcher DESTINATION ${CMAKE_INSTALL_LIBDIR})

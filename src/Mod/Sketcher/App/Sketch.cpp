@@ -174,10 +174,12 @@ int Sketch::addGeometry(const Part::Geometry *geo, bool fixed)
     }
 }
 
-void Sketch::addGeometry(const std::vector<Part::Geometry *> &geo, bool fixed)
+int Sketch::addGeometry(const std::vector<Part::Geometry *> &geo, bool fixed)
 {
+    int ret = -1;
     for (std::vector<Part::Geometry *>::const_iterator it=geo.begin(); it != geo.end(); ++it)
-        addGeometry(*it, fixed);
+        ret = addGeometry(*it, fixed);
+    return ret;
 }
 
 int Sketch::addPoint(const Part::GeomPoint &point, bool fixed)
@@ -1245,8 +1247,8 @@ int Sketch::addDistanceConstraint(int geoId, double value)
 // line to line distance constraint
 int Sketch::addDistanceConstraint(int geoId1, int geoId2, double value)
 {
-    geoId1 = checkGeoId(geoId1);
-    geoId2 = checkGeoId(geoId2);
+    //geoId1 = checkGeoId(geoId1);
+    //geoId2 = checkGeoId(geoId2);
 
     //assert(Geoms[geoId1].type == Line);
     //assert(Geoms[geoId2].type == Line);
@@ -1869,7 +1871,7 @@ int Sketch::setDatum(int constrId, double value)
 int Sketch::getPointId(int geoId, PointPos pos) const
 {
     // do a range check first
-    if (geoId < 0 || geoId >= Geoms.size())
+    if (geoId < 0 || geoId >= (int)Geoms.size())
         return -1;
     switch (pos) {
     case start:

@@ -1,2 +1,3 @@
-import PartDesign
-makeFilletArc = PartDesign.makeFilletArc
+import _PartDesign
+makeFilletArc = _PartDesign.makeFilletArc
+

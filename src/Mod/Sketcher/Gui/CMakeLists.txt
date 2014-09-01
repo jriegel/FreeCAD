@@ -5,6 +5,7 @@ else(MSVC)
 endif(MSVC)
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
@@ -28,6 +29,7 @@ set(SketcherGui_LIBS
 
 set(SketcherGui_MOC_HDRS
     TaskSketcherConstrains.h
+    TaskSketcherElements.h
     TaskSketcherCreateCommands.h
     TaskSketcherGeneral.h
     TaskSketcherMessages.h
@@ -35,6 +37,7 @@ set(SketcherGui_MOC_HDRS
     TaskDlgEditSketch.h
     SketchOrientationDialog.h
     SketcherSettings.h
+    PropertyConstraintListItem.h
 )
 fc_wrap_cpp(SketcherGui_MOC_SRCS ${SketcherGui_MOC_HDRS})
 SOURCE_GROUP("Moc" FILES ${SketcherGui_MOC_SRCS})
@@ -43,6 +46,7 @@ qt4_add_resources(SketcherGui_SRCS Resources/Sketcher.qrc)
 
 set(SketcherGui_UIC_SRCS
     TaskSketcherConstrains.ui
+    TaskSketcherElements.ui
     TaskSketcherGeneral.ui
     TaskSketcherMessages.ui
     TaskSketcherValidation.ui
@@ -60,7 +64,8 @@ SET(SketcherGui_SRCS
     Command.cpp
     CommandCreateGeo.cpp
     CommandConstraints.cpp
-	CommandAlterGeometry.cpp
+    CommandSketcherTools.cpp
+    CommandAlterGeometry.cpp
     Resources/Sketcher.qrc
     PreCompiled.cpp
     PreCompiled.h
@@ -68,9 +73,14 @@ SET(SketcherGui_SRCS
     SoZoomTranslation.h
     SoDatumLabel.cpp
     SoDatumLabel.h
+    PropertyConstraintListItem.h
+    PropertyConstraintListItem.cpp
     TaskSketcherConstrains.ui
     TaskSketcherConstrains.cpp
     TaskSketcherConstrains.h
+    TaskSketcherElements.ui
+    TaskSketcherElements.cpp
+    TaskSketcherElements.h
     TaskSketcherCreateCommands.cpp
     TaskSketcherCreateCommands.h
     TaskSketcherGeneral.ui
@@ -102,7 +112,7 @@ SET(SketcherGui_SRCS
 
 SET(SketcherGui_Scripts
     InitGui.py
-	TestSketcherGui.py
+    TestSketcherGui.py
 )
 
 add_library(SketcherGui SHARED ${SketcherGui_SRCS})
@@ -114,20 +124,7 @@ fc_target_copy_resource(SketcherGui
     ${CMAKE_BINARY_DIR}/Mod/Sketcher
     ${SketcherGui_Scripts})
 
-if(MSVC)
-    set_target_properties(SketcherGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(SketcherGui PROPERTIES DEBUG_OUTPUT_NAME "SketcherGui_d")
-    set_target_properties(SketcherGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sketcher)
-    set_target_properties(SketcherGui PROPERTIES PREFIX "../")
-elseif(MINGW)
-    set_target_properties(SketcherGui PROPERTIES SUFFIX ".pyd")
-    set_target_properties(SketcherGui PROPERTIES DEBUG_OUTPUT_NAME "SketcherGui_d")
-    set_target_properties(SketcherGui PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sketcher)
-    set_target_properties(SketcherGui PROPERTIES PREFIX "")
-else(MSVC)
-    set_target_properties(SketcherGui PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Mod/Sketcher)
-    set_target_properties(SketcherGui PROPERTIES PREFIX "")
-    set_target_properties(SketcherGui PROPERTIES INSTALL_RPATH ${INSTALL_RPATH})
-endif(MSVC)
+SET_BIN_DIR(SketcherGui SketcherGui /Mod/Sketcher)
+SET_PYTHON_PREFIX_SUFFIX(SketcherGui)
 
-INSTALL(TARGETS SketcherGui DESTINATION lib)
+INSTALL(TARGETS SketcherGui DESTINATION ${CMAKE_INSTALL_LIBDIR})

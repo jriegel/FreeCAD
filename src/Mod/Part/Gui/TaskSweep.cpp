@@ -24,8 +24,16 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <QEventLoop>
 # include <QMessageBox>
 # include <QTextStream>
+# include <BRepBuilderAPI_MakeWire.hxx>
+# include <Precision.hxx>
+# include <ShapeAnalysis_FreeBounds.hxx>
+# include <TopExp_Explorer.hxx>
+# include <TopoDS.hxx>
+# include <TopoDS_Iterator.hxx>
+# include <TopTools_HSequenceOfShape.hxx>
 #endif
 
 #include "ui_TaskSweep.h"
@@ -37,6 +45,7 @@
 #include <Gui/Selection.h>
 #include <Gui/SelectionFilter.h>
 #include <Gui/ViewProvider.h>
+#include <Gui/WaitCursor.h>
 
 #include <Base/Console.h>
 #include <Base/Interpreter.h>
@@ -52,6 +61,8 @@ class SweepWidget::Private
 {
 public:
     Ui_TaskSweep ui;
+    QEventLoop loop;
+    QString buttonText;
     std::string document;
     Private()
     {
@@ -59,6 +70,54 @@ public:
     ~Private()
     {
     }
+
+    class EdgeSelection : public Gui::SelectionFilterGate
+    {
+    public:
+        EdgeSelection()
+            : Gui::SelectionFilterGate((Gui::SelectionFilter*)0)
+        {
+        }
+        bool allow(App::Document*pDoc, App::DocumentObject*pObj, const char*sSubName)
+        {
+            if (pObj->getTypeId().isDerivedFrom(Part::Feature::getClassTypeId())) {
+                if (!sSubName) {
+                    // If selecting again the same edge the passed sub-element is empty. If the whole
+                    // shape is an edge or wire we can use it completely.
+                    const TopoDS_Shape& shape = static_cast<Part::Feature*>(pObj)->Shape.getValue();
+                    if (!shape.IsNull()) {
+                        // a single edge
+                        if (shape.ShapeType() == TopAbs_EDGE) {
+                            return true;
+                        }
+                        // a single wire
+                        if (shape.ShapeType() == TopAbs_WIRE) {
+                            return true;
+                        }
+                        // a compound of only edges or wires
+                        if (shape.ShapeType() == TopAbs_COMPOUND) {
+                            TopoDS_Iterator it(shape);
+                            for (; it.More(); it.Next()) {
+                                if (it.Value().IsNull())
+                                    return false;
+                                if ((it.Value().ShapeType() != TopAbs_EDGE) &&
+                                    (it.Value().ShapeType() != TopAbs_WIRE))
+                                    return false;
+                            }
+
+                            return true;
+                        }
+                    }
+                }
+                else {
+                    std::string element(sSubName);
+                    return element.substr(0,4) == "Edge";
+                }
+            }
+
+            return false;
+        }
+    };
 };
 
 /* TRANSLATOR PartGui::SweepWidget */
@@ -72,6 +131,7 @@ SweepWidget::SweepWidget(QWidget* parent)
     d->ui.setupUi(this);
     d->ui.selector->setAvailableLabel(tr("Vertex/Edge/Wire/Face"));
     d->ui.selector->setSelectedLabel(tr("Sweep"));
+    d->ui.labelPath->clear();
 
     connect(d->ui.selector->availableTreeWidget(), SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)),
             this, SLOT(onCurrentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)));
@@ -96,8 +156,22 @@ void SweepWidget::findShapes()
     std::vector<Part::Feature*> objs = activeDoc->getObjectsOfType<Part::Feature>();
 
     for (std::vector<Part::Feature*>::iterator it = objs.begin(); it!=objs.end(); ++it) {
-        const TopoDS_Shape& shape = (*it)->Shape.getValue();
+        TopoDS_Shape shape = (*it)->Shape.getValue();
         if (shape.IsNull()) continue;
+
+        // also allow compounds with a single face, wire, edge or vertex
+        if (shape.ShapeType() == TopAbs_COMPOUND) {
+            TopoDS_Iterator it(shape);
+            int numChilds=0;
+            TopoDS_Shape child;
+            for (; it.More(); it.Next(), numChilds++) {
+                if (!it.Value().IsNull())
+                    child = it.Value();
+            }
+
+            if (numChilds == 1)
+                shape = child;
+        }
 
         if (shape.ShapeType() == TopAbs_FACE ||
             shape.ShapeType() == TopAbs_WIRE ||
@@ -117,27 +191,85 @@ void SweepWidget::findShapes()
     }
 }
 
+bool SweepWidget::isPathValid(const Gui::SelectionObject& sel) const
+{
+    const App::DocumentObject* path = sel.getObject();
+    if (!(path && path->getTypeId().isDerivedFrom(Part::Feature::getClassTypeId())))
+        return false;
+    const std::vector<std::string>& sub = sel.getSubNames();
+
+
+    TopoDS_Shape pathShape;
+    const Part::TopoShape& shape = static_cast<const Part::Feature*>(path)->Shape.getValue();
+    if (!sub.empty()) {
+        try {
+            BRepBuilderAPI_MakeWire mkWire;
+            for (std::vector<std::string>::const_iterator it = sub.begin(); it != sub.end(); ++it) {
+                TopoDS_Shape subshape = shape.getSubShape(it->c_str());
+                mkWire.Add(TopoDS::Edge(subshape));
+            }
+            pathShape = mkWire.Wire();
+        }
+        catch (...) {
+            return false;
+        }
+    }
+    else if (shape._Shape.ShapeType() == TopAbs_EDGE) {
+        pathShape = shape._Shape;
+    }
+    else if (shape._Shape.ShapeType() == TopAbs_WIRE) {
+        BRepBuilderAPI_MakeWire mkWire(TopoDS::Wire(shape._Shape));
+        pathShape = mkWire.Wire();
+    }
+    else if (shape._Shape.ShapeType() == TopAbs_COMPOUND) {
+        try {
+            TopoDS_Iterator it(shape._Shape);
+            for (; it.More(); it.Next()) {
+                if ((it.Value().ShapeType() != TopAbs_EDGE) &&
+                    (it.Value().ShapeType() != TopAbs_WIRE)) {
+                    return false;
+                }
+            }
+            Handle(TopTools_HSequenceOfShape) hEdges = new TopTools_HSequenceOfShape();
+            Handle(TopTools_HSequenceOfShape) hWires = new TopTools_HSequenceOfShape();
+            for (TopExp_Explorer xp(shape._Shape, TopAbs_EDGE); xp.More(); xp.Next())
+                hEdges->Append(xp.Current());
+
+            ShapeAnalysis_FreeBounds::ConnectEdgesToWires(hEdges, Precision::Confusion(), Standard_True, hWires);
+            int len = hWires->Length();
+            if (len != 1)
+                return false;
+            pathShape = hWires->Value(1);
+        }
+        catch (...) {
+            return false;
+        }
+    }
+
+    return (!pathShape.IsNull());
+}
+
 bool SweepWidget::accept()
 {
+    if (d->loop.isRunning())
+        return false;
     Gui::SelectionFilter edgeFilter  ("SELECT Part::Feature SUBELEMENT Edge COUNT 1..");
     Gui::SelectionFilter partFilter  ("SELECT Part::Feature COUNT 1");
     bool matchEdge = edgeFilter.match();
     bool matchPart = partFilter.match();
     if (!matchEdge && !matchPart) {
-        QMessageBox::critical(this, tr("Sweep path"), tr("Select an edge or wire you want to sweep along."));
+        QMessageBox::critical(this, tr("Sweep path"), tr("Select one or more connected edges you want to sweep along."));
         return false;
     }
 
     // get the selected object
     std::string selection;
-    if (matchEdge) {
-        const std::vector<Gui::SelectionObject>& result = edgeFilter.Result[0];
-        selection = result.front().getAsPropertyLinkSubString();
-    }
-    else {
-        const std::vector<Gui::SelectionObject>& result = partFilter.Result[0];
-        selection = result.front().getAsPropertyLinkSubString();
-    }
+    std::string spineObject, spineLabel;
+    const std::vector<Gui::SelectionObject>& result = matchEdge
+        ? edgeFilter.Result[0] : partFilter.Result[0];
+    selection = result.front().getAsPropertyLinkSubString();
+    spineObject = result.front().getFeatName();
+    spineLabel = result.front().getObject()->Label.getValue();
 
     QString list, solid, frenet;
     if (d->ui.checkSolid->isChecked())
@@ -160,10 +292,16 @@ bool SweepWidget::accept()
     for (int i=0; i<count; i++) {
         QTreeWidgetItem* child = d->ui.selector->selectedTreeWidget()->topLevelItem(i);
         QString name = child->data(0, Qt::UserRole).toString();
+        if (name == QLatin1String(spineObject.c_str())) {
+            QMessageBox::critical(this, tr("Wrong selection"), tr("'%1' cannot be used as profile and path.")
+                .arg(QString::fromUtf8(spineLabel.c_str())));
+            return false;
+        }
         str << "App.getDocument('" << d->document.c_str() << "')." << name << ", ";
     }
 
     try {
+        Gui::WaitCursor wc;
         QString cmd;
         cmd = QString::fromAscii(
             "App.getDocument('%5').addObject('Part::Sweep','Sweep')\n"
@@ -201,6 +339,8 @@ bool SweepWidget::accept()
 
 bool SweepWidget::reject()
 {
+    if (d->loop.isRunning())
+        return false;
     return true;
 }
 
@@ -213,6 +353,54 @@ void SweepWidget::onCurrentItemChanged(QTreeWidgetItem* current, QTreeWidgetItem
     if (current) {
         Gui::Selection().addSelection(d->document.c_str(),
             (const char*)current->data(0,Qt::UserRole).toByteArray());
+    }
+}
+
+void SweepWidget::on_buttonPath_clicked()
+{
+    if (!d->loop.isRunning()) {
+        QList<QWidget*> c = this->findChildren<QWidget*>();
+        for (QList<QWidget*>::iterator it = c.begin(); it != c.end(); ++it)
+            (*it)->setEnabled(false);
+        d->buttonText = d->ui.buttonPath->text();
+        d->ui.buttonPath->setText(tr("Done"));
+        d->ui.buttonPath->setEnabled(true);
+        d->ui.labelPath->setText(tr("Select one or more connected edges in the 3d view and press 'Done'"));
+        d->ui.labelPath->setEnabled(true);
+
+        Gui::Selection().clearSelection();
+        Gui::Selection().addSelectionGate(new Private::EdgeSelection());
+        d->loop.exec();
+    }
+    else {
+        QList<QWidget*> c = this->findChildren<QWidget*>();
+        for (QList<QWidget*>::iterator it = c.begin(); it != c.end(); ++it)
+            (*it)->setEnabled(true);
+        d->ui.buttonPath->setText(d->buttonText);
+        d->ui.labelPath->clear();
+        Gui::Selection().rmvSelectionGate();
+        d->loop.quit();
+
+        Gui::SelectionFilter edgeFilter  ("SELECT Part::Feature SUBELEMENT Edge COUNT 1..");
+        Gui::SelectionFilter partFilter  ("SELECT Part::Feature COUNT 1");
+        bool matchEdge = edgeFilter.match();
+        bool matchPart = partFilter.match();
+        if (matchEdge) {
+            // check if path is valid
+            const std::vector<Gui::SelectionObject>& result = edgeFilter.Result[0];
+            if (!isPathValid(result.front())) {
+                QMessageBox::critical(this, tr("Sweep path"), tr("The selected sweep path is invalid."));
+                Gui::Selection().clearSelection();
+            }
+        }
+        else if (matchPart) {
+            // check if path is valid
+            const std::vector<Gui::SelectionObject>& result = partFilter.Result[0];
+            if (!isPathValid(result.front())) {
+                QMessageBox::critical(this, tr("Sweep path"), tr("The selected sweep path is invalid."));
+                Gui::Selection().clearSelection();
+            }
+        }
     }
 }
 

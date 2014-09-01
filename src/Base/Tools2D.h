@@ -124,6 +124,7 @@ public:
   // misc
   inline bool Contains (const Vector2D &rclV) const;
   bool Intersect (const Line2D& rclLine, Vector2D &rclV) const;
+  bool Intersect (const Vector2D &rclV, double eps) const;
   bool IntersectAndContain (const Line2D& rclLine, Vector2D &rclV) const;
   Vector2D FromPos (double fDistance) const;
 };
@@ -153,7 +154,8 @@ public:
   // misc
   BoundBox2D CalcBoundBox (void) const;
   bool Contains (const Vector2D &rclV) const;
-  void  Intersect (const Polygon2D &rclPolygon, std::list<Polygon2D> &rclResultPolygonList) const;
+  void Intersect (const Polygon2D &rclPolygon, std::list<Polygon2D> &rclResultPolygonList) const;
+  bool Intersect (const Vector2D &rclV, double eps) const;
 
 private:
   std::vector<Vector2D> _aclVct;

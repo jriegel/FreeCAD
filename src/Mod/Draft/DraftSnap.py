@@ -307,10 +307,14 @@ class Snapper:
                                 #snaps.extend(self.snapToOrtho(edge,lastpoint,constrain)) # now part of snapToPolar
                                 snaps.extend(self.snapToIntersection(edge))
                                 snaps.extend(self.snapToElines(edge,eline))
-
-                                if DraftGeomUtils.geomType(edge) == "Circle":
+                                
+                                et = DraftGeomUtils.geomType(edge)
+                                if et == "Circle":
                                     # the edge is an arc, we have extra options
                                     snaps.extend(self.snapToAngles(edge))
+                                    snaps.extend(self.snapToCenter(edge))
+                                elif et == "Ellipse":
+                                    # extra ellipse options
                                     snaps.extend(self.snapToCenter(edge))
 
                         elif "Vertex" in comp:
@@ -728,12 +732,16 @@ class Snapper:
         "returns a list of center snap locations"
         snaps = []
         if self.isEnabled("center"):
-            rad = shape.Curve.Radius
             pos = shape.Curve.Center
-            for i in [15,37.5,52.5,75,105,127.5,142.5,165,195,217.5,232.5,255,285,307.5,322.5,345]:
-                ang = math.radians(i)
-                cur = Vector(math.sin(ang)*rad+pos.x,math.cos(ang)*rad+pos.y,pos.z)
-                snaps.append([cur,'center',self.toWP(pos)])
+            c = self.toWP(pos)
+            if hasattr(shape.Curve,"Radius"):
+                rad = shape.Curve.Radius
+                for i in [15,37.5,52.5,75,105,127.5,142.5,165,195,217.5,232.5,255,285,307.5,322.5,345]:
+                    ang = math.radians(i)
+                    cur = Vector(math.sin(ang)*rad+pos.x,math.cos(ang)*rad+pos.y,pos.z)
+                    snaps.append([cur,'center',c])
+            else:
+                snaps.append([c,'center',c])
         return snaps
 
     def snapToIntersection(self,shape):
@@ -813,13 +821,13 @@ class Snapper:
         "setCursor(self,mode=None): sets or resets the cursor to the given mode or resets"
         if self.selectMode:
             mw = FreeCADGui.getMainWindow()
-            for w in mw.findChildren(QtGui.QWidget):
+            for w in mw.findChild(QtGui.QMdiArea).findChildren(QtGui.QWidget):
                 if w.metaObject().className() == "SoQtGLArea":
                     w.unsetCursor()
             self.cursorMode = None
         elif not mode:
             mw = FreeCADGui.getMainWindow()
-            for w in mw.findChildren(QtGui.QWidget):
+            for w in mw.findChild(QtGui.QMdiArea).findChildren(QtGui.QWidget):
                 if w.metaObject().className() == "SoQtGLArea":
                     w.unsetCursor()
             self.cursorMode = None
@@ -837,7 +845,7 @@ class Snapper:
                 qp.end()
                 cur = QtGui.QCursor(newicon,8,8)
                 mw = FreeCADGui.getMainWindow()
-                for w in mw.findChildren(QtGui.QWidget):
+                for w in mw.findChild(QtGui.QMdiArea).findChildren(QtGui.QWidget):
                     if w.metaObject().className() == "SoQtGLArea":
                         w.setCursor(cur)
                 self.cursorMode = mode
@@ -1032,7 +1040,7 @@ class Snapper:
             FreeCADGui.Snapper.off()
             self.ui.offUi()
             if callback:
-                if len(inspect.getargspec(callback).args) > 2:
+                if len(inspect.getargspec(callback).args) > 1:
                     callback(self.pt,obj)
                 else:
                     callback(self.pt)

@@ -38,7 +38,8 @@ namespace Base {
 enum UnitSystem {
     SI1 = 0 , /** internal (mm,kg,s) SI system (http://en.wikipedia.org/wiki/International_System_of_Units) */
     SI2 = 1 , /** MKS (m,kg,s) SI system */
-    Imperial1 = 2 /** the Imperial system (http://en.wikipedia.org/wiki/Imperial_units) */
+    Imperial1 = 2, /** the Imperial system (http://en.wikipedia.org/wiki/Imperial_units) */
+    ImperialDecimal = 3 /** Imperial with length in inch only */
 } ;
     
 
@@ -49,6 +50,7 @@ enum UnitSystem {
 class UnitsSchema 
 {
 public:
+    virtual ~UnitsSchema(){}
     /** get called if this schema gets activated.
       * Here its theoretical possible that you can change the static factors 
       * for certain Units (e.g. mi = 1,8km instead of mi=1.6km). 
@@ -58,7 +60,7 @@ public:
     virtual void resetSchemaUnits(void){}
 
     /// this methode translate the quantity in a string as the user may expect it
-	virtual QString schemaTranslate(Base::Quantity quant,double &factor,QString &unitString)=0;
+    virtual QString schemaTranslate(Base::Quantity quant,double &factor,QString &unitString)=0;
 };
 
 
