@@ -70,7 +70,10 @@ class PartDesignWorkbench ( Workbench ):
                     from WizardShaft import WizardShaft
                 except:
                     print "Wizard shaft not installed"
-                from FeatureHole import HoleGui
+                try:
+                    from FeatureHole import HoleGui
+                except:
+                    pass
                 import PartDesignGui
                 import PartDesign
                 import InvoluteGearFeature
