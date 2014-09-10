@@ -39,6 +39,9 @@ endif(WIN32)
 generate_from_xml(DocumentPy)
 generate_from_xml(DocumentObjectPy)
 generate_from_xml(DocumentObjectGroupPy)
+generate_from_xml(GeoFeaturePy)
+generate_from_xml(PartPy)
+
 generate_from_xml(ComplexGeoDataPy)
 generate_from_xml(PropertyContainerPy)
 generate_from_xml(MaterialPy)
@@ -49,6 +52,8 @@ generate_from_py(FreeCADTest TestScript.h)
 SET(FreeCADApp_XML_SRCS
     DocumentObjectGroupPy.xml
     DocumentObjectPy.xml
+    GeoFeaturePy.xml
+    PartPy.xml
     DocumentPy.xml
     PropertyContainerPy.xml
     ComplexGeoDataPy.xml
@@ -64,6 +69,8 @@ SET(Document_CPP_SRCS
     DocumentObjectFileIncluded.cpp
     DocumentObjectGroup.cpp
     DocumentObjectGroupPyImp.cpp
+    PartPyImp.cpp
+    GeoFeaturePyImp.cpp
     DocumentObjectPyImp.cpp
     DocumentObserver.cpp
     DocumentObserverPython.cpp
