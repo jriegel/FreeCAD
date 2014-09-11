@@ -98,6 +98,7 @@
 #include "MeasureDistance.h"
 #include "Placement.h"
 #include "Plane.h"
+#include "Part.h"
 #include "MaterialObject.h"
 
 // If you stumble here, run the target "BuildExtractRevision" on Windows systems
@@ -1087,6 +1088,7 @@ void Application::initTypes(void)
     App ::MaterialObjectPython      ::init();
     App ::Placement                 ::init();
     App ::Plane                     ::init();
+    App ::Part                      ::init();
 }
 
 void Application::initConfig(int argc, char ** argv)

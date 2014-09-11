@@ -98,6 +98,7 @@
 #include "ViewProviderMeasureDistance.h"
 #include "ViewProviderPlacement.h"
 #include "ViewProviderPlane.h"
+#include "ViewProviderPart.h"
 #include "ViewProviderMaterialObject.h"
 
 #include "Language/Translator.h"
@@ -1487,6 +1488,7 @@ void Application::initTypes(void)
     Gui::ViewProviderPythonGeometry             ::init();
     Gui::ViewProviderPlacement                  ::init();
     Gui::ViewProviderPlane                      ::init();
+    Gui::ViewProviderPart                       ::init();
     Gui::ViewProviderMaterialObject             ::init();
     Gui::ViewProviderMaterialObjectPython       ::init();
 
