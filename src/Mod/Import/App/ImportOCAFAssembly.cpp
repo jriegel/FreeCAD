@@ -138,7 +138,7 @@ void ImportOCAFAssembly::loadShapes(const TDF_Label& label, const TopLoc_Locatio
     }
 
 #ifdef FC_DEBUG
-    char *s;
+    const char *s;
     if( !hLoc.IsNull() )
         s = hLoc->Get().IsIdentity()?"0":"1";
     else
