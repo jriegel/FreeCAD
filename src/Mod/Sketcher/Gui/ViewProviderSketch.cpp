@@ -256,10 +256,10 @@ ViewProviderSketch::ViewProviderSketch()
     PointSize.setValue(4);
 
     zCross=0.001f;
-    zConstr=0.003f; // constraint not construction
     zLines=0.005f;
-    zHighLine=0.006f;
-    zPoints=0.007f;
+    zConstr=0.006f; // constraint not construction
+    zHighLine=0.007f;
+    zPoints=0.008f;
     zHighlight=0.009f;
     zText=0.011f;
     zEdit=0.001f;
@@ -451,8 +451,6 @@ void ViewProviderSketch::getProjectingLine(const SbVec2s& pnt, const Gui::View3D
     SoCamera* pCam = viewer->getCamera();
     if (!pCam) return;
     SbViewVolume  vol = pCam->getViewVolume();
-
-    float focalDist = pCam->focalDistance.getValue();
 
     vol.projectPointToLine(SbVec2f(pX,pY), line);
 }
@@ -1485,7 +1483,9 @@ std::set<int> ViewProviderSketch::detectPreselectionConstr(const SoPickedPoint *
 
                 } else {
                     // Assume second icon was hit
-                    constrIds = static_cast<SoInfo *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_SECOND_CONSTRAINTID));
+                    if(CONSTRAINT_SEPARATOR_INDEX_SECOND_CONSTRAINTID<sep->getNumChildren()){
+                        constrIds = static_cast<SoInfo *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_SECOND_CONSTRAINTID));
+                    }
                 }
                 if(constrIds) {
                     QString constrIdsStr = QString::fromAscii(constrIds->string.getValue().getString());
@@ -2266,6 +2266,33 @@ void ViewProviderSketch::drawConstraintIcons()
         thisIcon.position = absPos;
         thisIcon.destination = coinIconPtr;
         thisIcon.infoPtr = infoPtr;
+        
+        
+        if((*it)->Type==Symmetric) {
+            
+            Base::Vector3d startingpoint = getSketchObject()->getPoint((*it)->First,(*it)->FirstPos);
+            Base::Vector3d endpoint = getSketchObject()->getPoint((*it)->Second,(*it)->SecondPos);
+                       
+            double x0,y0,x1,y1;
+            SbVec3f pos0(startingpoint.x,startingpoint.y,startingpoint.z);
+            SbVec3f pos1(endpoint.x,endpoint.y,endpoint.z);
+            
+            Gui::MDIView *mdi = Gui::Application::Instance->activeDocument()->getActiveView();
+            Gui::View3DInventorViewer *viewer = static_cast<Gui::View3DInventor *>(mdi)->getViewer();
+            SoCamera* pCam = viewer->getCamera();
+            if (!pCam) return;
+            
+            SbViewVolume  vol = pCam->getViewVolume();
+            
+            getCoordsOnSketchPlane(x0,y0,pos0,vol.getProjectionDirection());
+            getCoordsOnSketchPlane(x1,y1,pos1,vol.getProjectionDirection());
+            
+            thisIcon.iconRotation = -atan2f((y1-y0),(x1-x0))*180/M_PI;
+            
+        }
+        else {
+            thisIcon.iconRotation = 0;
+        }
 
         if(multipleIcons) {
             if((*it)->Name.empty())
@@ -2313,39 +2340,46 @@ void ViewProviderSketch::combineConstraintIcons(IconQueue iconQueue)
         // A group starts with an item popped off the back of our initial queue
         IconQueue thisGroup;
         thisGroup.push_back(iconQueue.back());
+        ViewProviderSketch::constrIconQueueItem init = iconQueue.back();
         iconQueue.pop_back();
+        
+        // we group only icons not being Symmetry icons, because we want those on the line
+        if(init.type != QString::fromLatin1("small/Constraint_Symmetric_sm")){
+            
+            IconQueue::iterator i = iconQueue.begin();
+            while(i != iconQueue.end()) {
+                bool addedToGroup = false;
+                
+                for(IconQueue::iterator j = thisGroup.begin();
+                    j != thisGroup.end(); ++j)
+                    if(i->position.equals(j->position, maxDistSquared) && (*i).type != QString::fromLatin1("small/Constraint_Symmetric_sm")) {
+                        // Found an icon in iconQueue that's close enough to
+                        // a member of thisGroup, so move it into thisGroup
+                        thisGroup.push_back(*i);
+                        i = iconQueue.erase(i);
+                        addedToGroup = true;
+                        break;
+                    }
 
-        IconQueue::iterator i = iconQueue.begin();
-        while(i != iconQueue.end()) {
-            bool addedToGroup = false;
-
-            for(IconQueue::iterator j = thisGroup.begin();
-                j != thisGroup.end(); ++j)
-                if(i->position.equals(j->position, maxDistSquared)) {
-                    // Found an icon in iconQueue that's close enough to
-                    // a member of thisGroup, so move it into thisGroup
-                    thisGroup.push_back(*i);
-                    i = iconQueue.erase(i);
-                    addedToGroup = true;
-                    break;
-                }
-
-            if(addedToGroup) {
-                if(i == iconQueue.end())
-                    // We just got the last icon out of iconQueue
-                    break;
-                else
-                    // Start looking through the iconQueue again, in case
-                    // we have an icon that's now close enough to thisGroup
-                    i = iconQueue.begin();
-            } else
-                ++i;
+                if(addedToGroup) {
+                    if(i == iconQueue.end())
+                        // We just got the last icon out of iconQueue
+                        break;
+                    else
+                        // Start looking through the iconQueue again, in case
+                        // we have an icon that's now close enough to thisGroup
+                        i = iconQueue.begin();
+                } else
+                    ++i;
+            }
         }
 
-        if(thisGroup.size() == 1)
+        if(thisGroup.size() == 1) {
             drawTypicalConstraintIcon(thisGroup[0]);
-        else
+        }
+        else {
             drawMergedConstraintIcons(thisGroup);
+        }
     }
 }
 
@@ -2373,6 +2407,7 @@ void ViewProviderSketch::drawMergedConstraintIcons(IconQueue iconQueue)
     QColor iconColor;
     QList<QColor> labelColors;
     int maxColorPriority;
+    double iconRotation;
 
     ConstrIconBBVec boundingBoxes;
     while(!iconQueue.empty()) {
@@ -2388,6 +2423,7 @@ void ViewProviderSketch::drawMergedConstraintIcons(IconQueue iconQueue)
         iconColor = constrColor(i->constraintId);
         labelColors.clear();
         labelColors.append(iconColor);
+        iconRotation= i->iconRotation;
 
         maxColorPriority = constrColorPriority(i->constraintId);
 
@@ -2439,6 +2475,7 @@ void ViewProviderSketch::drawMergedConstraintIcons(IconQueue iconQueue)
                                              iconColor,
                                              labels,
                                              labelColors,
+                                             iconRotation,
                                              &boundingBoxesVec,
                                              &lastVPad);
         } else {
@@ -2447,6 +2484,7 @@ void ViewProviderSketch::drawMergedConstraintIcons(IconQueue iconQueue)
                                                   iconColor,
                                                   labels,
                                                   labelColors,
+                                                  iconRotation,
                                                   &boundingBoxesVec,
                                                   &thisVPad);
 
@@ -2507,6 +2545,7 @@ QImage ViewProviderSketch::renderConstrIcon(const QString &type,
                                             const QColor &iconColor,
                                             const QStringList &labels,
                                             const QList<QColor> &labelColors,
+                                            double iconRotation,
                                             std::vector<QRect> *boundingBoxes,
                                             int *vPad)
 {
@@ -2527,17 +2566,21 @@ QImage ViewProviderSketch::renderConstrIcon(const QString &type,
     if(vPad)
         *vPad = pxBelowBase;
 
-    QImage image = icon.copy(0, 0, icon.width() + labelWidth,
-                                   icon.height() + pxBelowBase);
+    QTransform rotation;
+    rotation.rotate(iconRotation);
+       
+    QImage roticon = icon.transformed(rotation);
+    QImage image = roticon.copy(0, 0, roticon.width() + labelWidth,
+                                                        roticon.height() + pxBelowBase);
 
     // Make a bounding box for the icon
     if(boundingBoxes)
-        boundingBoxes->push_back(QRect(0, 0, icon.width(), icon.height()));
+        boundingBoxes->push_back(QRect(0, 0, roticon.width(), roticon.height()));
 
     // Render the Icons
     QPainter qp(&image);
     qp.setCompositionMode(QPainter::CompositionMode_SourceIn);
-    qp.fillRect(icon.rect(), iconColor);
+    qp.fillRect(roticon.rect(), iconColor);
 
     // Render constraint label if necessary
     if (!labels.join(QString()).isEmpty()) {
@@ -2589,7 +2632,8 @@ void ViewProviderSketch::drawTypicalConstraintIcon(const constrIconQueueItem &i)
     QImage image = renderConstrIcon(i.type,
                                     color,
                                     QStringList(i.label),
-                                    QList<QColor>() << color);
+                                    QList<QColor>() << color,
+                                    i.iconRotation);
 
     i.infoPtr->string.setValue(QString::number(i.constraintId).toAscii().data());
     sendConstraintIconToCoin(image, i.destination);
@@ -3691,8 +3735,8 @@ QString ViewProviderSketch::appendConflictMsg(const std::vector<int> &conflictin
     if (conflicting.size() > 0) {
         if (conflicting.size() == 1)
             ss << tr("Please remove the following constraint:");
-        else
-            ss << tr("Please remove at least one of the following constraints:");
+        else 
+            ss << tr("Please remove at least one of the following constraints:");        
         ss << "\n";
         ss << conflicting[0];
         for (unsigned int i=1; i < conflicting.size(); i++)
@@ -3715,9 +3759,20 @@ QString ViewProviderSketch::appendRedundantMsg(const std::vector<int> &redundant
         ss << redundant[0];
         for (unsigned int i=1; i < redundant.size(); i++)
             ss << ", " << redundant[i];
+        
         ss << "\n";
     }
     return msg;
+}
+
+const std::vector<int> &ViewProviderSketch::getConflicting(void) const
+{
+    return edit->ActSketch.getConflicting();
+}
+
+const std::vector<int> &ViewProviderSketch::getRedundant(void) const
+{
+    return edit->ActSketch.getRedundant();  
 }
 
 void ViewProviderSketch::solveSketch(void)
@@ -3733,29 +3788,33 @@ void ViewProviderSketch::solveSketch(void)
     else if (dofs < 0) { // over-constrained sketch
         std::string msg;
         SketchObject::appendConflictMsg(edit->ActSketch.getConflicting(), msg);
-        signalSetUp(QString::fromLatin1("<font color='red'>%1<br/>%2</font>")
-                    .arg(tr("Over-constrained sketch"))
-                    .arg(QString::fromStdString(msg)));
+        signalSetUp(QString::fromLatin1("<font color='red'>%1<a href=\"#conflicting\"><span style=\" text-decoration: underline; color:#0000ff;\">%2</span></a><br/>%3</font><br/>")
+                    .arg(tr("Over-constrained sketch "))
+                    .arg(tr("(click to select)"))
+                    .arg(QString::fromStdString(msg)));        
         signalSolved(QString());
     }
     else if (edit->ActSketch.hasConflicts()) { // conflicting constraints
-        signalSetUp(QString::fromLatin1("<font color='red'>%1<br/>%2</font>")
-                    .arg(tr("Sketch contains conflicting constraints"))
+        signalSetUp(QString::fromLatin1("<font color='red'>%1<a href=\"#conflicting\"><span style=\" text-decoration: underline; color:#0000ff;\">%2</span></a><br/>%3</font><br/>")
+                    .arg(tr("Sketch contains conflicting constraints "))
+                    .arg(tr("(click to select)"))
                     .arg(appendConflictMsg(edit->ActSketch.getConflicting())));
         signalSolved(QString());
     }
     else {
         if (edit->ActSketch.hasRedundancies()) { // redundant constraints
-            signalSetUp(QString::fromLatin1("<font color='orange'>%1<br/>%2</font>")
-                        .arg(tr("Sketch contains redundant constraints"))
+            signalSetUp(QString::fromLatin1("<font color='orangered'>%1<a href=\"#redundant\"><span style=\" text-decoration: underline; color:#0000ff;\">%2</span></a><br/>%3</font><br/>")
+                        .arg(tr("Sketch contains redundant constraints "))
+                        .arg(tr("(click to select)"))
                         .arg(appendRedundantMsg(edit->ActSketch.getRedundant())));
         }
         if (edit->ActSketch.solve() == 0) { // solving the sketch
             if (dofs == 0) {
                 // color the sketch as fully constrained
                 edit->FullyConstrained = true;
-                if (!edit->ActSketch.hasRedundancies())
+                if (!edit->ActSketch.hasRedundancies()) {
                     signalSetUp(QString::fromLatin1("<font color='green'>%1</font>").arg(tr("Fully constrained sketch")));
+                }
             }
             else if (!edit->ActSketch.hasRedundancies()) {
                 if (dofs == 1)
@@ -3763,6 +3822,7 @@ void ViewProviderSketch::solveSketch(void)
                 else
                     signalSetUp(tr("Under-constrained sketch with %1 degrees of freedom").arg(dofs));
             }
+            
             signalSolved(tr("Solved in %1 sec").arg(edit->ActSketch.SolveTime));
         }
         else {

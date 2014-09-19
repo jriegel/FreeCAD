@@ -220,7 +220,7 @@ PyObject* Application::sSetActiveDocument(PyObject * /*self*/, PyObject *args,Py
         GetApplication().setActiveDocument(pstr);
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(PyExc_Exception, e.what());
+        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
         return NULL;
     }
 
@@ -260,7 +260,7 @@ PyObject* Application::sSaveDocument(PyObject * /*self*/, PyObject *args,PyObjec
     Document* doc = GetApplication().getDocument(pDoc);
     if ( doc ) {
         if ( doc->save() == false ) {
-            PyErr_Format(PyExc_Exception, "Cannot save document '%s'", pDoc);
+            PyErr_Format(Base::BaseExceptionFreeCADError, "Cannot save document '%s'", pDoc);
             return 0L;
         }
     }

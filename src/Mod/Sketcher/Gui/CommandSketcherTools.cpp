@@ -448,7 +448,239 @@ bool CmdSketcherSelectHorizontalAxis::isActive(void)
     return isSketcherAcceleratorActive( getActiveGuiDocument(), false );
 }
 
-// Add Accelerator Commands
+DEF_STD_CMD_A(CmdSketcherSelectRedundantConstraints);
+
+CmdSketcherSelectRedundantConstraints::CmdSketcherSelectRedundantConstraints()
+    :Command("Sketcher_SelectRedundantConstraints")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = QT_TR_NOOP("Sketcher");
+    sMenuText       = QT_TR_NOOP("Select Redundant Constraints");
+    sToolTipText    = QT_TR_NOOP("Select Redundant Constraints");
+    sWhatsThis      = sToolTipText;
+    sStatusTip      = sToolTipText;
+    sPixmap         = "Sketcher_SelectRedundantConstraints";
+    sAccel          = "CTRL+SHIFT+R";
+    eType           = ForEdit;
+}
+
+void CmdSketcherSelectRedundantConstraints::activated(int iMsg)
+{
+    Gui::Document * doc= getActiveGuiDocument();
+    
+    SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+    
+    Sketcher::SketchObject* Obj= vp->getSketchObject();
+        
+    std::string doc_name = Obj->getDocument()->getName();
+    std::string obj_name = Obj->getNameInDocument();
+    std::stringstream ss;
+    
+    // get the needed lists and objects
+    const std::vector< int > &solverredundant = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit())->getRedundant();
+    const std::vector< Sketcher::Constraint * > &vals = Obj->Constraints.getValues();
+       
+    getSelection().clearSelection();
+    
+    // push the constraints
+    int i=1;
+    for (std::vector< Sketcher::Constraint * >::const_iterator it= vals.begin();it != vals.end(); ++it,++i) {
+        for(std::vector< int >::const_iterator itc= solverredundant.begin();itc != solverredundant.end(); ++itc) {
+            if ( (*itc) == i){
+                ss.str(std::string());
+                ss << "Constraint" << i;
+                Gui::Selection().addSelection(doc_name.c_str(), obj_name.c_str(), ss.str().c_str());
+                break;
+            }
+        }
+        
+        
+    }
+}
+
+bool CmdSketcherSelectRedundantConstraints::isActive(void)
+{
+    return isSketcherAcceleratorActive( getActiveGuiDocument(), false );
+}
+
+DEF_STD_CMD_A(CmdSketcherSelectConflictingConstraints);
+
+CmdSketcherSelectConflictingConstraints::CmdSketcherSelectConflictingConstraints()
+    :Command("Sketcher_SelectConflictingConstraints")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = QT_TR_NOOP("Sketcher");
+    sMenuText       = QT_TR_NOOP("Select Conflicting Constraints");
+    sToolTipText    = QT_TR_NOOP("Select Conflicting Constraints");
+    sWhatsThis      = sToolTipText;
+    sStatusTip      = sToolTipText;
+    sPixmap         = "Sketcher_SelectConflictingConstraints";
+    sAccel          = "CTRL+SHIFT+E";
+    eType           = ForEdit;
+}
+
+void CmdSketcherSelectConflictingConstraints::activated(int iMsg)
+{
+    Gui::Document * doc= getActiveGuiDocument();
+    
+    SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+    
+    Sketcher::SketchObject* Obj= vp->getSketchObject();
+        
+    std::string doc_name = Obj->getDocument()->getName();
+    std::string obj_name = Obj->getNameInDocument();
+    std::stringstream ss;
+    
+    // get the needed lists and objects
+    const std::vector< int > &solverconflicting = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit())->getConflicting();
+    const std::vector< Sketcher::Constraint * > &vals = Obj->Constraints.getValues();
+    
+    getSelection().clearSelection();
+    
+    // push the constraints
+    int i=1;
+    for (std::vector< Sketcher::Constraint * >::const_iterator it= vals.begin();it != vals.end(); ++it,++i) {
+        for(std::vector< int >::const_iterator itc= solverconflicting.begin();itc != solverconflicting.end(); ++itc) {
+            if ( (*itc) == i){
+                ss.str(std::string());
+                ss << "Constraint" << i;
+                Gui::Selection().addSelection(doc_name.c_str(), obj_name.c_str(), ss.str().c_str());
+                break;
+            }
+        }
+    }
+}
+
+bool CmdSketcherSelectConflictingConstraints::isActive(void)
+{
+    return isSketcherAcceleratorActive( getActiveGuiDocument(), false );
+}
+
+DEF_STD_CMD_A(CmdSketcherSelectElementsAssociatedWithConstraints);
+
+CmdSketcherSelectElementsAssociatedWithConstraints::CmdSketcherSelectElementsAssociatedWithConstraints()
+    :Command("Sketcher_SelectElementsAssociatedWithConstraints")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = QT_TR_NOOP("Sketcher");
+    sMenuText       = QT_TR_NOOP("Select Elements associated with constraints");
+    sToolTipText    = QT_TR_NOOP("Select Elements associated with constraints");
+    sWhatsThis      = sToolTipText;
+    sStatusTip      = sToolTipText;
+    sPixmap         = "Sketcher_SelectElementsAssociatedWithConstraints";
+    sAccel          = "CTRL+SHIFT+E";
+    eType           = ForEdit;
+}
+
+void CmdSketcherSelectElementsAssociatedWithConstraints::activated(int iMsg)
+{
+    std::vector<Gui::SelectionObject> selection = Gui::Selection().getSelectionEx();
+    
+    
+    
+    Gui::Document * doc= getActiveGuiDocument();
+    
+    SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+    
+    Sketcher::SketchObject* Obj= vp->getSketchObject();
+    
+    const std::vector<std::string> &SubNames = selection[0].getSubNames();
+    const std::vector< Sketcher::Constraint * > &vals = Obj->Constraints.getValues();
+    
+    getSelection().clearSelection();
+        
+    std::string doc_name = Obj->getDocument()->getName();
+    std::string obj_name = Obj->getNameInDocument();
+    std::stringstream ss;
+    
+    int selected=0;
+    
+    // go through the selected subelements
+    for (std::vector<std::string>::const_iterator it=SubNames.begin(); it != SubNames.end(); ++it) {
+        // only handle constraints
+        if (it->size() > 10 && it->substr(0,10) == "Constraint") {
+            int ConstrId = std::atoi(it->substr(10,4000).c_str()) - 1;
+            
+            if(ConstrId<vals.size()){
+                if(vals[ConstrId]->First!=Constraint::GeoUndef){
+                    ss.str(std::string());
+                    
+                    switch(vals[ConstrId]->FirstPos)
+                    {
+                        case Sketcher::none:
+                            ss << "Edge" << vals[ConstrId]->First + 1;
+                            break;
+                        case Sketcher::start:
+                        case Sketcher::end:
+                        case Sketcher::mid: 
+                            int vertex = Obj->getVertexIndexGeoPos(vals[ConstrId]->First,vals[ConstrId]->FirstPos);
+                            if(vertex>-1)
+                                ss << "Vertex" <<  vertex + 1;
+                            break;                      
+                    }
+                
+                    Gui::Selection().addSelection(doc_name.c_str(), obj_name.c_str(), ss.str().c_str());
+                    selected++;
+                }
+                
+                if(vals[ConstrId]->Second!=Constraint::GeoUndef){
+                    ss.str(std::string());
+                    
+                    switch(vals[ConstrId]->SecondPos)
+                    {
+                        case Sketcher::none:
+                            ss << "Edge" << vals[ConstrId]->Second + 1;
+                            vals[ConstrId]->Second;
+                            break;
+                        case Sketcher::start:
+                        case Sketcher::end:
+                        case Sketcher::mid: 
+                            int vertex = Obj->getVertexIndexGeoPos(vals[ConstrId]->Second,vals[ConstrId]->SecondPos);
+                            if(vertex>-1)
+                                ss << "Vertex" << vertex + 1;
+                            break;                      
+                    }
+                
+                    Gui::Selection().addSelection(doc_name.c_str(), obj_name.c_str(), ss.str().c_str());
+                    selected++;
+                }
+                
+                if(vals[ConstrId]->Third!=Constraint::GeoUndef){
+                    ss.str(std::string());
+                    
+                    switch(vals[ConstrId]->ThirdPos)
+                    {
+                        case Sketcher::none:
+                            ss << "Edge" << vals[ConstrId]->Third + 1;
+                            vals[ConstrId]->Third;
+                            break;
+                        case Sketcher::start:
+                        case Sketcher::end:
+                        case Sketcher::mid: 
+                            int vertex = Obj->getVertexIndexGeoPos(vals[ConstrId]->Third,vals[ConstrId]->ThirdPos);
+                            if(vertex>-1)
+                                ss << "Vertex" <<  vertex + 1;
+                            break;                      
+                    }
+                
+                    Gui::Selection().addSelection(doc_name.c_str(), obj_name.c_str(), ss.str().c_str());
+                    selected++;
+                }
+            }
+        }
+    }
+    
+    if ( selected == 0 ) {
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("No constraint selected"),
+                                     QObject::tr("At least one constraint must be selected"));
+    }
+}
+
+bool CmdSketcherSelectElementsAssociatedWithConstraints::isActive(void)
+{
+    return isSketcherAcceleratorActive( getActiveGuiDocument(), true );
+}
+
 void CreateSketcherCommandsConstraintAccel(void)
 {
     Gui::CommandManager &rcCmdMgr = Gui::Application::Instance->commandManager();
@@ -459,4 +691,7 @@ void CreateSketcherCommandsConstraintAccel(void)
     rcCmdMgr.addCommand(new CmdSketcherSelectOrigin());
     rcCmdMgr.addCommand(new CmdSketcherSelectVerticalAxis());
     rcCmdMgr.addCommand(new CmdSketcherSelectHorizontalAxis());
+    rcCmdMgr.addCommand(new CmdSketcherSelectRedundantConstraints());
+    rcCmdMgr.addCommand(new CmdSketcherSelectConflictingConstraints());
+    rcCmdMgr.addCommand(new CmdSketcherSelectElementsAssociatedWithConstraints());
 }

@@ -76,7 +76,10 @@ class PartDesignWorkbench ( Workbench ):
                     pass
                 import PartDesignGui
                 import PartDesign
-                import InvoluteGearFeature
+                try:
+                    import InvoluteGearFeature
+                except:
+                    print "Involute gear module cannot be loaded"
         def GetClassName(self):
                 return "PartDesignGui::Workbench"
 

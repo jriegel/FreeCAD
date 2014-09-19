@@ -39,8 +39,17 @@ typesmap = { "Site":       ["IfcSite"],
              "Roof":       ["IfcRoof"],
              "Stairs":     ["IfcStair", "IfcStairFlight", "IfcRamp", "IfcRampFlight"],
              "Space":      ["IfcSpace"],
-             "Rebar":      ["IfcReinforcingBar"]
+             "Rebar":      ["IfcReinforcingBar"],
+             "Equipment":  ["IfcFurnishingElement","IfcSanitaryTerminal","IfcFlowTerminal","IfcElectricAppliance"]
            }
+           
+translationtable = { "Foundation":"Footing",
+                     "Floor":"BuildingStorey",
+                     "Rebar":"ReinforcingBar",
+                     "HydroEquipment":"SanitaryTerminal",
+                     "ElectricEquipment":"ElectricAppliance",
+                     "Furniture":"FurnishingElement"
+                   }
 
 ifctemplate = """ISO-10303-21;
 HEADER;
@@ -72,14 +81,6 @@ DATA;
 ENDSEC;
 END-ISO-10303-21;
 """
-
-ifctypes = ["IfcSite", "IfcBuilding", "IfcBuildingStorey", "IfcBeam", "IfcBeamStandardCase",
-            "IfcChimney", "IfcColumn", "IfcColumnStandardCase", "IfcCovering", "IfcCurtainWall",
-            "IfcDoor", "IfcDoorStandardCase", "IfcMember", "IfcMemberStandardCase", "IfcPlate",
-            "IfcPlateStandardCase", "IfcRailing", "IfcRamp", "IfcRampFlight", "IfcRoof",
-            "IfcSlab", "IfcStair", "IfcStairFlight", "IfcWall","IfcSpace",
-            "IfcWallStandardCase", "IfcWindow", "IfcWindowStandardCase", "IfcBuildingElementProxy",
-            "IfcPile", "IfcFooting", "IfcReinforcingBar", "IfcTendon", "IfcGroup"]
 
 
 def explore(filename=None):
@@ -184,6 +185,15 @@ def insert(filename,docname,skip=[]):
             if ptype in ifctypes:
                 obj = getattr(Arch,"make"+freecadtype)(baseobj=baseobj,name=name)
                 obj.Label = name
+                # setting role
+                try:
+                    r = ptype[3:]
+                    tr = dict((v,k) for k, v in translationtable.iteritems())
+                    if r in tr.keys():
+                        r = tr[r]
+                    obj.Role = r
+                except:
+                    pass
                 # setting uid
                 if hasattr(obj,"IfcAttributes"):
                     a = obj.IfcAttributes
@@ -291,15 +301,14 @@ def export(exportList,filename):
             ifctype = obj.Role.replace(" ","")
         else:
             ifctype = Draft.getType(obj)
-        if ifctype == "Foundation":
-            ifctype = "Footing"
-        elif ifctype == "Floor":
-            ifctype = "BuildingStorey"
-        elif ifctype == "Rebar":
-            ifctype = "ReinforcingBar"
+        if ifctype in translationtable.keys():
+            ifctype = translationtable[ifctype]
         ifctype = "Ifc" + ifctype
         if ifctype == "IfcGroup":
             continue
+        ifctypes = []
+        for v in typesmap.values():
+            ifctypes.extend(v)
         if not ifctype in ifctypes:
             ifctype = "IfcBuildingElementProxy"
         

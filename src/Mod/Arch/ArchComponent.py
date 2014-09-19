@@ -312,7 +312,7 @@ class Component:
         pass
         
     def getSiblings(self,obj):
-        "returns a list of objects with the same base as this object"
+        "returns a list of objects with the same type and same base as this object"
         if not hasattr(obj,"Base"):
             return []
         if not obj.Base:
@@ -323,7 +323,8 @@ class Component:
                 if o.Base:
                     if o.Base.Name == obj.Base.Name:
                         if o.Name != obj.Name:
-                            siblings.append(o)
+                            if Draft.getType(o) == Draft.getType(obj):
+                                siblings.append(o)
         return siblings
 
     def getAxis(self,obj):
@@ -638,6 +639,10 @@ class ViewProviderComponent:
         return
 
     def onChanged(self,vobj,prop):
+        if prop == "Visibility":
+            for obj in vobj.Object.Additions+vobj.Object.Subtractions:
+                if Draft.getType(obj) == "Window":
+                    obj.ViewObject.Visibility = vobj.Visibility
         return
 
     def attach(self,vobj):
@@ -676,6 +681,8 @@ class ViewProviderComponent:
                     c.append(s)
             if hasattr(self.Object,"Armatures"):
                 c.extend(self.Object.Armatures)
+            if hasattr(self.Object,"Group"):
+                c.extend(self.Object.Group)
             if hasattr(self.Object,"Tool"):
                 if self.Object.Tool:
                     c.append(self.Object.Tool)

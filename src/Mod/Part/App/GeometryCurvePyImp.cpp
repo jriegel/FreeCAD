@@ -67,6 +67,7 @@
 #include "PointPy.h"
 #include "BSplineCurvePy.h"
 
+#include "OCCError.h"
 #include "TopoShape.h"
 #include "TopoShapePy.h"
 #include "TopoShapeEdgePy.h"
@@ -114,11 +115,11 @@ PyObject* GeometryCurvePy::toShape(PyObject *args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 
-    PyErr_SetString(PyExc_Exception, "Geometry is not a curve");
+    PyErr_SetString(PartExceptionOCCError, "Geometry is not a curve");
     return 0;
 }
 
@@ -128,7 +129,7 @@ PyObject* GeometryCurvePy::discretize(PyObject *args, PyObject *kwds)
         Handle_Geom_Geometry g = getGeometryPtr()->handle();
         Handle_Geom_Curve c = Handle_Geom_Curve::DownCast(g);
         if (c.IsNull()) {
-            PyErr_SetString(PyExc_Exception, "Geometry is not a curve");
+            PyErr_SetString(PartExceptionOCCError, "Geometry is not a curve");
             return 0;
         }
 
@@ -191,7 +192,7 @@ PyObject* GeometryCurvePy::discretize(PyObject *args, PyObject *kwds)
                 return Py::new_reference_to(points);
             }
             else {
-                PyErr_SetString(PyExc_Exception, "Discretization of curve failed");
+                PyErr_SetString(PartExceptionOCCError, "Discretization of curve failed");
                 return 0;
             }
         }
@@ -213,7 +214,7 @@ PyObject* GeometryCurvePy::discretize(PyObject *args, PyObject *kwds)
                 return Py::new_reference_to(points);
             }
             else {
-                PyErr_SetString(PyExc_Exception, "Discretization of curve failed");
+                PyErr_SetString(PartExceptionOCCError, "Discretization of curve failed");
                 return 0;
             }
         }
@@ -237,7 +238,7 @@ PyObject* GeometryCurvePy::discretize(PyObject *args, PyObject *kwds)
                 return Py::new_reference_to(points);
             }
             else {
-                PyErr_SetString(PyExc_Exception, "Discretization of curve failed");
+                PyErr_SetString(PartExceptionOCCError, "Discretization of curve failed");
                 return 0;
             }
         }
@@ -259,7 +260,7 @@ PyObject* GeometryCurvePy::discretize(PyObject *args, PyObject *kwds)
                 return Py::new_reference_to(points);
             }
             else {
-                PyErr_SetString(PyExc_Exception, "Discretization of curve failed");
+                PyErr_SetString(PartExceptionOCCError, "Discretization of curve failed");
                 return 0;
             }
         }
@@ -281,17 +282,17 @@ PyObject* GeometryCurvePy::discretize(PyObject *args, PyObject *kwds)
                 return Py::new_reference_to(points);
             }
             else {
-                PyErr_SetString(PyExc_Exception, "Discretization of curve failed");
+                PyErr_SetString(PartExceptionOCCError, "Discretization of curve failed");
                 return 0;
             }
         }
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(PyExc_Exception, e.what());
+        PyErr_SetString(PartExceptionOCCError, e.what());
         return 0;
     }
 
-    PyErr_SetString(PyExc_Exception,"Wrong arguments");
+    PyErr_SetString(PartExceptionOCCError,"Wrong arguments");
     return 0;
 }
 
@@ -313,11 +314,11 @@ PyObject* GeometryCurvePy::length(PyObject *args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 
-    PyErr_SetString(PyExc_Exception, "Geometry is not a curve");
+    PyErr_SetString(PartExceptionOCCError, "Geometry is not a curve");
     return 0;
 }
 
@@ -336,11 +337,11 @@ PyObject* GeometryCurvePy::value(PyObject *args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 
-    PyErr_SetString(PyExc_Exception, "Geometry is not a curve");
+    PyErr_SetString(PartExceptionOCCError, "Geometry is not a curve");
     return 0;
 }
 
@@ -366,11 +367,11 @@ PyObject* GeometryCurvePy::tangent(PyObject *args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 
-    PyErr_SetString(PyExc_Exception, "Geometry is not a curve");
+    PyErr_SetString(PartExceptionOCCError, "Geometry is not a curve");
     return 0;
 }
 
@@ -392,11 +393,11 @@ PyObject* GeometryCurvePy::parameter(PyObject *args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 
-    PyErr_SetString(PyExc_Exception, "Geometry is not a curve");
+    PyErr_SetString(PartExceptionOCCError, "Geometry is not a curve");
     return 0;
 }
 
@@ -412,7 +413,7 @@ PyObject* GeometryCurvePy::makeRuledSurface(PyObject *args)
         Handle_Geom_Curve aCrv2 = Handle_Geom_Curve::DownCast(c->getGeometryPtr()->handle());
         Handle_Geom_Surface aSurf = GeomFill::Surface (aCrv1, aCrv2);
         if (aSurf.IsNull()) {
-            PyErr_SetString(PyExc_Exception, "Failed to create ruled surface");
+            PyErr_SetString(PartExceptionOCCError, "Failed to create ruled surface");
             return 0;
         }
         // check the result surface type
@@ -434,11 +435,11 @@ PyObject* GeometryCurvePy::makeRuledSurface(PyObject *args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 
-    PyErr_SetString(PyExc_Exception, "Geometry is not a curve");
+    PyErr_SetString(PartExceptionOCCError, "Geometry is not a curve");
     return 0;
 }
 
@@ -472,7 +473,7 @@ PyObject* GeometryCurvePy::intersect2d(PyObject *args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 }
@@ -497,11 +498,11 @@ PyObject* GeometryCurvePy::toBSpline(PyObject * args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 
-    PyErr_SetString(PyExc_Exception, "Geometry is not a curve");
+    PyErr_SetString(PartExceptionOCCError, "Geometry is not a curve");
     return 0;
 }
 
@@ -551,7 +552,7 @@ PyObject* GeometryCurvePy::approximateBSpline(PyObject *args)
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();
-        PyErr_SetString(PyExc_Exception, e->GetMessageString());
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
         return 0;
     }
 }

@@ -151,6 +151,7 @@ Base::ConsoleObserverStd  *Application::_pConsoleObserverStd =0;
 Base::ConsoleObserverFile *Application::_pConsoleObserverFile =0;
 
 AppExport std::map<std::string,std::string> Application::mConfig;
+BaseExport extern PyObject* Base::BaseExceptionFreeCADError;
 
 
 //**************************************************************************
@@ -224,6 +225,11 @@ Application::Application(ParameterManager * /*pcSysParamMngr*/,
     PyObject* pBaseModule = Py_InitModule3("__FreeCADBase__", NULL,
         "The Base module contains the classes for the geometric basics\n"
         "like vector, matrix, bounding box, placement, rotation, axis, ...");
+    Base::BaseExceptionFreeCADError = PyErr_NewException(
+            "Base.FreeCADError", PyExc_RuntimeError, NULL);
+    Py_INCREF(Base::BaseExceptionFreeCADError);
+    PyModule_AddObject(pBaseModule, "FreeCADError",
+            Base::BaseExceptionFreeCADError);
     Base::Interpreter().addType(&Base::VectorPy     ::Type,pBaseModule,"Vector");
     Base::Interpreter().addType(&Base::MatrixPy     ::Type,pBaseModule,"Matrix");
     Base::Interpreter().addType(&Base::BoundBoxPy   ::Type,pBaseModule,"BoundBox");
@@ -315,7 +321,7 @@ Document* Application::newDocument(const char * Name, const char * UserName)
     if (UserName)
         _pActiveDoc->Label.setValue(UserName);
     else
-        _pActiveDoc->Label.setValue(name);
+        _pActiveDoc->Label.setValue(Name);
 
     return _pActiveDoc;
 }
@@ -1374,7 +1380,7 @@ void Application::LoadParameters(void)
     catch (const Base::Exception& e) {
         // try to proceed with an empty XML document
         Base::Console().Error("%s in file %s.\n"
-                              "Continue with an empty configuration.",
+                              "Continue with an empty configuration.\n",
                               e.what(), mConfig["SystemParameter"].c_str());
         _pcSysParamMngr->CreateDocument();
     }
@@ -1393,7 +1399,7 @@ void Application::LoadParameters(void)
     catch (const Base::Exception& e) {
         // try to proceed with an empty XML document
         Base::Console().Error("%s in file %s.\n"
-                              "Continue with an empty configuration.",
+                              "Continue with an empty configuration.\n",
                               e.what(), mConfig["UserParameter"].c_str());
         _pcUserParamMngr->CreateDocument();
     }

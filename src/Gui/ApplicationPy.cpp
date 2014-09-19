@@ -44,6 +44,7 @@
 #include "Workbench.h"
 #include "WorkbenchManager.h"
 #include "Language/Translator.h"
+#include "DownloadManager.h"
 #include <App/DocumentObjectPy.h>
 #include <App/PropertyFile.h>
 #include <Base/Interpreter.h>
@@ -142,6 +143,9 @@ PyMethodDef Application::Methods[] = {
   {"addModule",               (PyCFunction) Application::sAddModule,        1,
    "addModule(string) -> None\n\n"
    "Prints the given module import only once in the macro recording"},
+  {"showDownloads",               (PyCFunction) Application::sShowDownloads,1,
+   "showDownloads() -> None\n\n"
+   "Shows the downloads manager window"},
 
   {NULL, NULL}		/* Sentinel */
 };
@@ -376,7 +380,7 @@ PyObject* Application::sExport(PyObject * /*self*/, PyObject *args,PyObject * /*
                 Gui::Document* gui_doc = Application::Instance->getDocument(doc);
                 std::list<MDIView*> view3d = gui_doc->getMDIViewsOfType(View3DInventor::getClassTypeId());
                 if (view3d.empty()) {
-                    PyErr_SetString(PyExc_Exception, "Cannot export to SVG because document doesn't have a 3d view");
+                    PyErr_SetString(Base::BaseExceptionFreeCADError, "Cannot export to SVG because document doesn't have a 3d view");
                     return 0;
                 }
                 else {
@@ -531,7 +535,7 @@ PyObject* Application::sActivateWorkbenchHandler(PyObject * /*self*/, PyObject *
         Instance->activateWorkbench(psKey);
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(PyExc_Exception, e.what());
+        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
         return 0;
     }
     catch (const XERCES_CPP_NAMESPACE_QUALIFIER TranscodingException& e) {
@@ -547,7 +551,7 @@ PyObject* Application::sActivateWorkbenchHandler(PyObject * /*self*/, PyObject *
         return 0;
     }
     catch (...) {
-        PyErr_SetString(PyExc_Exception, "Unknown C++ exception raised in activateWorkbench");
+        PyErr_SetString(Base::BaseExceptionFreeCADError, "Unknown C++ exception raised in activateWorkbench");
         return 0;
     }
 
@@ -759,7 +763,7 @@ PyObject* Application::sAddIcon(PyObject * /*self*/, PyObject *args,PyObject * /
     }
 
     if (icon.isNull()) {
-        PyErr_SetString(PyExc_Exception, "Invalid icon added to application");
+        PyErr_SetString(Base::BaseExceptionFreeCADError, "Invalid icon added to application");
         return NULL;
     }
 
@@ -809,11 +813,11 @@ PyObject* Application::sAddCommand(PyObject * /*self*/, PyObject *args,PyObject 
 		Application::Instance->commandManager().addCommand(new PythonCommand(pName,pcCmdObj,pSource));
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(PyExc_Exception, e.what());
+        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
         return 0;
     }
     catch (...) {
-        PyErr_SetString(PyExc_Exception, "Unknown C++ exception raised in Application::sAddCommand()");
+        PyErr_SetString(Base::BaseExceptionFreeCADError, "Unknown C++ exception raised in Application::sAddCommand()");
         return 0;
     }
 #endif
@@ -834,7 +838,7 @@ PyObject* Application::sRunCommand(PyObject * /*self*/, PyObject *args,PyObject 
         return Py_None;
     }
     else {
-        PyErr_Format(PyExc_Exception, "No such command '%s'", pName);
+        PyErr_Format(Base::BaseExceptionFreeCADError, "No such command '%s'", pName);
         return 0;
     }
 } 
@@ -865,3 +869,11 @@ PyObject* Application::sAddModule(PyObject * /*self*/, PyObject *args,PyObject *
     Command::addModule(Command::Doc,pstr);
     return Py_None;
 }
+
+PyObject* Application::sShowDownloads(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
+{
+    if (!PyArg_ParseTuple(args, ""))             // convert args: Python->C 
+        return NULL;                             // NULL triggers exception 
+    Gui::Dialog::DownloadManager::getInstance();
+    return Py_None;
+} 

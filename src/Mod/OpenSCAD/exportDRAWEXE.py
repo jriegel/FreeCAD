@@ -29,7 +29,7 @@ if open.__module__ == '__builtin__':
         pythonopen = open
 
 # unsupported primitives
-# Part:: Plane, Helix, Spiral, Wedge, Elipsoid
+# Part:: Wedge, Helix, Spiral, Elipsoid
 # Draft: Rectangle, BSpline, BezCurve
 
 def f2s(n,angle=False):
@@ -95,9 +95,10 @@ def saveShape(csg,filename,shape,name,hasplacement = True,cleanshape=False):
     breppath=os.path.join(spath,'%s.brep'%uname)
     csg.write("restore %s.brep %s\n" % (uname,name))
     if cleanshape:
+        import Part
         try:
             shape = shape.cleaned()
-        except:
+        except Part.OCCError:
             shape = shape.copy()
     if hasplacement is None:  # saved with placement
         hasplacement = False # saved with placement
@@ -322,6 +323,21 @@ class Drawexporter(object):
             self.process_object(ob.Base)
             self.process_object(ob.Tool)
             self.csg.write("%(command)s %(name)s %(part)s %(tool)s\n"%d1)
+        elif ob.TypeId == "Part::Plane" :
+            if checksupported: return True # The object is supported
+            d1.update({'uname':'%s-untrimmed' % d1['name'],\
+                    'length': f2s(ob.Length),'width': f2s(ob.Width)})
+            self.csg.write("plane %s 0 0 0\n"%d1['uname'])
+            self.csg.write(\
+                    "mkface %(name)s %(uname)s 0 %(length)s 0 %(width)s\n"%d1)
+        elif ob.TypeId == "Part::Ellipse" :
+            if checksupported: return True # The object is supported
+            d1.update({'uname':'%s-untrimmed'%d1['name'], 'maj':\
+                    f2s(ob.MajorRadius), 'min': f2s(ob.MinorRadius),\
+                    'pf':f2s(ob.Angle0.getValueAs('rad').Value), \
+                    'pl':f2s(ob.Angle1.getValueAs('rad').Value)})
+            self.csg.write("ellipse %(uname)s 0 0 0 %(maj)s %(min)s\n"%d1)
+            self.csg.write('mkedge %(name)s %(uname)s %(pf)s %(pl)s\n' % d1)
         elif ob.TypeId == "Part::Sphere" :
             if checksupported: return True # The object is supported
             d1.update({'radius':f2s(ob.Radius),'angle1':f2s(ob.Angle1),\

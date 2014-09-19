@@ -697,6 +697,9 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     // For 0.13 a couple of python packages like numpy, matplotlib and others
     // are not deployed with the installer on Windows. Thus, the WizardShaft is
     // not deployed either hence the check for the existence of the command.
+    if (Gui::Application::Instance->commandManager().getCommandByName("PartDesign_InvoluteGear")) {
+        *part << "PartDesign_InvoluteGear";
+    }
     if (Gui::Application::Instance->commandManager().getCommandByName("PartDesign_WizardShaft")) {
         *part << "Separator" << "PartDesign_WizardShaft";
     }

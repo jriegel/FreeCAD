@@ -182,7 +182,7 @@ FreeCADGui_embedToWindow(PyObject * /*self*/, PyObject *args)
 
     QWidget* widget = Gui::getMainWindow();
     if (!widget) {
-        PyErr_SetString(PyExc_Exception, "No main window");
+        PyErr_SetString(Base::BaseExceptionFreeCADError, "No main window");
         return 0;
     }
 
@@ -271,7 +271,7 @@ QWidget* setupMainWindow()
                 Base::Interpreter().runString(Base::ScriptFactory().ProduceScript("FreeCADGuiInit"));
             }
             catch (const Base::Exception& e) {
-                PyErr_Format(PyExc_Exception, "Error in FreeCADGuiInit.py: %s\n", e.what());
+                PyErr_Format(Base::BaseExceptionFreeCADError, "Error in FreeCADGuiInit.py: %s\n", e.what());
                 return 0;
             }
             init = true;
