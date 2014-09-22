@@ -26,6 +26,7 @@ set(AssemblyGui_LIBS
     #${ODE_LIBRARIES}
     Assembly
     PartGui
+    PartDesignGui
     FreeCADGui
 )
 
