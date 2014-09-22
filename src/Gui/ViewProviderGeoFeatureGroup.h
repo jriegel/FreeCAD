@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2006 Werner Mayer <wmayer[at]users.sourceforge.net>     *
+ *   Copyright (c) 2011 Juergen Riegel <FreeCAD@juergen-riegel.net>        *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -21,34 +21,30 @@
  ***************************************************************************/
 
 
-#ifndef GUI_VIEWPROVIDER_ViewProviderPart_H
-#define GUI_VIEWPROVIDER_ViewProviderPart_H
+#ifndef GUI_VIEWPROVIDER_ViewProviderGeoFeatureGroup_H
+#define GUI_VIEWPROVIDER_ViewProviderGeoFeatureGroup_H
 
 
-#include "ViewProviderGeoFeatureGroup.h"
+#include "ViewProviderGeometryObject.h"
 #include "ViewProviderPythonFeature.h"
 
 namespace Gui {
 
-class GuiExport ViewProviderPart : public ViewProviderGeoFeatureGroup
+class GuiExport ViewProviderGeoFeatureGroup : public ViewProviderGeometryObject
 {
-    PROPERTY_HEADER(Gui::ViewProviderPart);
+    PROPERTY_HEADER(Gui::ViewProviderGeoFeatureGroup);
 
 public:
     /// constructor.
-    ViewProviderPart();
+    ViewProviderGeoFeatureGroup();
     /// destructor.
-    virtual ~ViewProviderPart();
+    virtual ~ViewProviderGeoFeatureGroup();
 
-    void attach(App::DocumentObject *pcObject);
-    void updateData(const App::Property*);
-    void Restore(Base::XMLReader &reader);
+    virtual std::vector<App::DocumentObject*> claimChildren(void)const;
+    virtual std::vector<App::DocumentObject*> claimChildren3D(void)const;
+
+
     QIcon getIcon(void) const;
-    /// returns a list of all possible modes
-    std::vector<std::string> getDisplayModes(void) const;
-    void hide(void);
-    void show(void);
-    bool isShow(void) const;
 
     virtual bool onDelete(const std::vector<std::string> &);
 
@@ -57,17 +53,10 @@ public:
     /// get called if the user drops some objects
     //virtual void drop(const std::vector<const App::DocumentObject*> &objList,Qt::KeyboardModifiers keys,Qt::MouseButtons mouseBts,const QPoint &pos);
 
-protected:
-    /// get called by the container whenever a property has been changed
-    void onChanged(const App::Property* prop);
-    void getViewProviders(std::vector<ViewProviderDocumentObject*>&) const;
 
-private:
-    bool visible; // helper variable
-    std::vector<ViewProvider*> nodes;
 };
 
-typedef ViewProviderPythonFeatureT<ViewProviderPart> ViewProviderPartPython;
+typedef ViewProviderPythonFeatureT<ViewProviderGeoFeatureGroup> ViewProviderGeoFeatureGroupPython;
 
 } // namespace Gui
 

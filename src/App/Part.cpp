@@ -33,7 +33,7 @@
 using namespace App;
 
 
-PROPERTY_SOURCE(App::Part, App::GeoFeature)
+PROPERTY_SOURCE(App::Part, App::GeoFeatureGroup)
 
 
 //===========================================================================
@@ -47,119 +47,6 @@ Part::Part(void)
 
 Part::~Part(void)
 {
-}
-
-DocumentObject* Part::addObject(const char* sType, const char* pObjectName)
-{
-    DocumentObject* obj = getDocument()->addObject(sType, pObjectName);
-    if (obj) addObject(obj);
-    return obj;
-}
-
-void Part::addObject(DocumentObject* obj)
-{
-    if (!hasObject(obj)) {
-        std::vector<DocumentObject*> grp = Member.getValues();
-        grp.push_back(obj);
-        Member.setValues(grp);
-    }
-}
-
-void Part::removeObject(DocumentObject* obj)
-{
-    std::vector<DocumentObject*> grp = Member.getValues();
-    for (std::vector<DocumentObject*>::iterator it = grp.begin(); it != grp.end(); ++it) {
-        if (*it == obj) {
-            grp.erase(it);
-            Member.setValues(grp);
-            break;
-        }
-    }
-}
-
-void Part::removeObjectsFromDocument()
-{
-    std::vector<DocumentObject*> grp = Member.getValues();
-    for (std::vector<DocumentObject*>::iterator it = grp.begin(); it != grp.end(); ++it) {
-        removeObjectFromDocument(*it);
-    }
-}
-
-void Part::removeObjectFromDocument(DocumentObject* obj)
-{
-    // remove all children
-    if (obj->getTypeId().isDerivedFrom(Part::getClassTypeId())) {
-        std::vector<DocumentObject*> grp = static_cast<Part*>(obj)->Member.getValues();
-        for (std::vector<DocumentObject*>::iterator it = grp.begin(); it != grp.end(); ++it) {
-            // recursive call to remove all subgroups
-            removeObjectFromDocument(*it);
-        }
-    }
-
-    this->getDocument()->remObject(obj->getNameInDocument());
-}
-
-DocumentObject *Part::getObject(const char *Name) const
-{
-    DocumentObject* obj = getDocument()->getObject(Name);
-    if (obj && hasObject(obj))
-        return obj;
-    return 0;
-}
-
-bool Part::hasObject(const DocumentObject* obj) const
-{
-    const std::vector<DocumentObject*>& grp = Member.getValues();
-    for (std::vector<DocumentObject*>::const_iterator it = grp.begin(); it != grp.end(); ++it) {
-        if (*it == obj)
-            return true;
-    }
-
-    return false;
-}
-
-bool Part::isChildOf(const Part* group) const
-{
-    const std::vector<DocumentObject*>& grp = group->Member.getValues();
-    for (std::vector<DocumentObject*>::const_iterator it = grp.begin(); it != grp.end(); ++it) {
-        if (*it == this)
-            return true;
-        if ((*it)->getTypeId().isDerivedFrom(Part::getClassTypeId())) {
-            if (this->isChildOf(static_cast<Part*>(*it)))
-                return true;
-        }
-    }
-
-    return false;
-}
-
-std::vector<DocumentObject*> Part::getObjects() const
-{
-    return Member.getValues();
-}
-
-std::vector<DocumentObject*> Part::getObjectsOfType(const Base::Type& typeId) const
-{
-    std::vector<DocumentObject*> type;
-    const std::vector<DocumentObject*>& grp = Member.getValues();
-    for (std::vector<DocumentObject*>::const_iterator it = grp.begin(); it != grp.end(); ++it) {
-        if ( (*it)->getTypeId().isDerivedFrom(typeId))
-            type.push_back(*it);
-    }
-
-    return type;
-}
-
-int Part::countObjectsOfType(const Base::Type& typeId) const
-{
-    int type=0;
-    const std::vector<DocumentObject*>& grp = Member.getValues();
-    for (std::vector<DocumentObject*>::const_iterator it = grp.begin(); it != grp.end(); ++it) {
-        if ( (*it)->getTypeId().isDerivedFrom(typeId))
-            type++;
-    }
-
-    return type;
 }
 
 

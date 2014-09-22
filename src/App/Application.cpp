@@ -80,6 +80,7 @@
 #include <Base/UnitPy.h>
 
 #include "GeoFeature.h"
+#include "GeoFeatureGroup.h"
 #include "FeatureTest.h"
 #include "FeaturePython.h"
 #include "ComplexGeoData.h"
@@ -1077,6 +1078,8 @@ void Application::initTypes(void)
     // Document classes
     App ::DocumentObject            ::init();
     App ::GeoFeature                ::init();
+    App ::GeoFeatureGroup           ::init();
+    App ::GeoFeatureGroupPython     ::init();
     App ::FeatureTest               ::init();
     App ::FeatureTestException      ::init();
     App ::FeaturePython             ::init();
