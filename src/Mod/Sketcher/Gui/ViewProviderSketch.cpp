@@ -157,7 +157,7 @@ struct EditData {
     CurvesMaterials(0),
     PointsCoordinate(0),
     CurvesCoordinate(0),
-    CurveSet(0), EditCurveSet(0), RootCrossSet(0),
+    CurveSet(0), RootCrossSet(0), EditCurveSet(0),
     PointSet(0), pickStyleAxes(0)
     {}
 
@@ -284,10 +284,14 @@ ViewProviderSketch::ViewProviderSketch()
     color = hGrp->GetUnsigned("SketchVertexColor", color);
     vertexColor.setPackedValue((uint32_t)color);
     PointColor.setValue(vertexColor);
+    
+    //rubberband selection
+    rubberband = new Gui::Rubberband();
 }
 
 ViewProviderSketch::~ViewProviderSketch()
 {
+    delete rubberband;
 }
 
 // handler management ***************************************************************
@@ -429,7 +433,7 @@ void ViewProviderSketch::snapToGrid(double &x, double &y)
 
 void ViewProviderSketch::getProjectingLine(const SbVec2s& pnt, const Gui::View3DInventorViewer *viewer, SbLine& line) const
 {
-    const SbViewportRegion& vp = viewer->getViewportRegion();
+    const SbViewportRegion& vp = viewer->getSoRenderManager()->getViewportRegion();
 
     short x,y; pnt.getValue(x,y);
     SbVec2f siz = vp.getViewportSize();
@@ -448,7 +452,7 @@ void ViewProviderSketch::getProjectingLine(const SbVec2s& pnt, const Gui::View3D
         pY = (pY - 0.5f*dY) / fRatio + 0.5f*dY;
     }
 
-    SoCamera* pCam = viewer->getCamera();
+    SoCamera* pCam = viewer->getSoRenderManager()->getCamera();
     if (!pCam) return;
     SbViewVolume  vol = pCam->getViewVolume();
 
@@ -741,6 +745,13 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                     return true;
                 case STATUS_SKETCH_UseRubberBand:
                     doBoxSelection(prvCursorPos, cursorPos, viewer);
+                    rubberband->setWorking(false);
+                    
+                    //disable framebuffer drawing in viewer
+                    if(Gui::Application::Instance->activeDocument()->getActiveView()) {
+                        static_cast<Gui::View3DInventor *>(Gui::Application::Instance->activeDocument()->getActiveView())->getViewer()->setRenderFramebuffer(false);
+                    }
+                    
                     // a redraw is required in order to clear the rubberband
                     draw(true);
                     Mode = STATUS_NONE;
@@ -798,7 +809,7 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                             //Create the Context Menu using the Main View Qt Widget
                             QMenu contextMenu(viewer->getGLWidget());
                             Gui::MenuManager::getInstance()->setupContextMenu(geom, contextMenu);
-                            QAction *used = contextMenu.exec(QCursor::pos());
+                            contextMenu.exec(QCursor::pos());
 
                             return true;
                         }
@@ -859,7 +870,7 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                         //Create the Context Menu using the Main View Qt Widget
                         QMenu contextMenu(viewer->getGLWidget());
                         Gui::MenuManager::getInstance()->setupContextMenu(geom, contextMenu);
-                        QAction *used = contextMenu.exec(QCursor::pos());
+                        contextMenu.exec(QCursor::pos());
 
                         return true;
                     }
@@ -1064,27 +1075,17 @@ bool ViewProviderSketch::mouseMove(const SbVec2s &cursorPos, Gui::View3DInventor
             return true;
         case STATUS_SKETCH_StartRubberBand: {
             Mode = STATUS_SKETCH_UseRubberBand;
+            rubberband->setWorking(true);
+            viewer->setRenderFramebuffer(true);
             return true;
         }
         case STATUS_SKETCH_UseRubberBand: {
-            Gui::GLPainter p;
-            p.begin(viewer);
-            p.setColor(1.0, 1.0, 0.0, 0.0);
-            p.setLogicOp(GL_XOR);
-            p.setLineWidth(3.0f);
-            p.setLineStipple(2, 0x3F3F);
-            // first redraw the old rectangle with XOR to restore the correct colors
-            p.drawRect(prvCursorPos.getValue()[0],
-                       viewer->getGLWidget()->height() - prvCursorPos.getValue()[1],
-                       newCursorPos.getValue()[0],
-                       viewer->getGLWidget()->height() - newCursorPos.getValue()[1]);
             newCursorPos = cursorPos;
-            // now draw the new rectangle
-            p.drawRect(prvCursorPos.getValue()[0],
+            rubberband->setCoords(prvCursorPos.getValue()[0],
                        viewer->getGLWidget()->height() - prvCursorPos.getValue()[1],
                        newCursorPos.getValue()[0],
                        viewer->getGLWidget()->height() - newCursorPos.getValue()[1]);
-            p.end();
+            viewer->redraw();
             return true;
         }
         default:
@@ -1241,7 +1242,7 @@ Base::Vector3d ViewProviderSketch::seekConstraintPosition(const Base::Vector3d &
     assert(edit);
     Gui::MDIView *mdi = Gui::Application::Instance->activeDocument()->getActiveView();
     Gui::View3DInventorViewer *viewer = static_cast<Gui::View3DInventor *>(mdi)->getViewer();
-    SoRayPickAction rp(viewer->getViewportRegion());
+    SoRayPickAction rp(viewer->getSoRenderManager()->getViewportRegion());
 
     float scaled_step = step * getScaleFactor();
 
@@ -1542,9 +1543,7 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point,
         //Base::Console().Log("Point pick\n");
         SoPath *path = Point->getPath();
         SoNode *tail = path->getTail();
-        SoNode *tailFather = path->getNode(path->getLength()-2);
         SoNode *tailFather2 = path->getNode(path->getLength()-3);
-
 
         // checking for a hit in the points
         if (tail == edit->PointSet) {
@@ -1739,7 +1738,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
     polygon.Add(Base::Vector2D(corners[1].getValue()[0], corners[1].getValue()[1]));
     polygon.Add(Base::Vector2D(corners[1].getValue()[0], corners[0].getValue()[1]));
 
-    Gui::ViewVolumeProjection proj(viewer->getCamera()->getViewVolume());
+    Gui::ViewVolumeProjection proj(viewer->getSoRenderManager()->getCamera()->getViewVolume());
 
     Sketcher::SketchObject *sketchObject = getSketchObject();
     App::Document *doc = sketchObject->getDocument();
@@ -1943,7 +1942,7 @@ void ViewProviderSketch::updateColor(void)
     SbColor *crosscolor = edit->RootCrossMaterials->diffuseColor.startEditing();
     
     SbVec3f *verts = edit->CurvesCoordinate->point.startEditing();
-    int32_t *index = edit->CurveSet->numVertices.startEditing();
+  //int32_t *index = edit->CurveSet->numVertices.startEditing();
     
     // colors of the point set
     if (edit->FullyConstrained)
@@ -1961,11 +1960,11 @@ void ViewProviderSketch::updateColor(void)
     for (std::set<int>::iterator it=edit->SelPointSet.begin();
          it != edit->SelPointSet.end(); it++)
         pcolor[*it] = (*it==(edit->PreselectPoint + 1) && (edit->PreselectPoint != -1))?
-	     PreselectSelectedColor:SelectColor;
+        PreselectSelectedColor:SelectColor;
 
     // colors of the curves
-    int intGeoCount = getSketchObject()->getHighestCurveIndex() + 1;
-    int extGeoCount = getSketchObject()->getExternalGeometryCount();
+  //int intGeoCount = getSketchObject()->getHighestCurveIndex() + 1;
+  //int extGeoCount = getSketchObject()->getExternalGeometryCount();
     
     float x,y,z;
     
@@ -1973,65 +1972,62 @@ void ViewProviderSketch::updateColor(void)
     
     for (int  i=0; i < CurvNum; i++) {
         int GeoId = edit->CurvIdToGeoId[i];
-	// CurvId has several vertex a ssociated to 1 material
-	//edit->CurveSet->numVertices => [i] indicates number of vertex for line i.
-	int indexes=(edit->CurveSet->numVertices[i]);
-	
-	bool selected=(edit->SelCurvSet.find(GeoId) != edit->SelCurvSet.end());
-	bool preselected=(edit->PreselectCurve == GeoId);
-	
-	if (selected && preselected){
+        // CurvId has several vertex a ssociated to 1 material
+        //edit->CurveSet->numVertices => [i] indicates number of vertex for line i.
+        int indexes=(edit->CurveSet->numVertices[i]);
+
+        bool selected=(edit->SelCurvSet.find(GeoId) != edit->SelCurvSet.end());
+        bool preselected=(edit->PreselectCurve == GeoId);
+
+        if (selected && preselected){
             color[i] = PreselectSelectedColor;
-	    for(int k=j; j<k+indexes; j++){
-	      verts[j].getValue(x,y,z);
-	      verts[j]=SbVec3f(x,y,zHighLine);
-	    }
-	}
+            for(int k=j; j<k+indexes; j++){
+              verts[j].getValue(x,y,z);
+              verts[j]=SbVec3f(x,y,zHighLine);
+            }
+        }
         else if (selected){
             color[i] = SelectColor;
-	    for(int k=j; j<k+indexes; j++){
-	      verts[j].getValue(x,y,z);
-	      verts[j]=SbVec3f(x,y,zHighLine);
-	    }
-	}
+            for(int k=j; j<k+indexes; j++){
+              verts[j].getValue(x,y,z);
+              verts[j]=SbVec3f(x,y,zHighLine);
+            }
+        }
         else if (preselected){
             color[i] = PreselectColor;
-	    for(int k=j; j<k+indexes; j++){
-	      verts[j].getValue(x,y,z);
-	      verts[j]=SbVec3f(x,y,zHighLine);
-	    }
-	}
+            for(int k=j; j<k+indexes; j++){
+              verts[j].getValue(x,y,z);
+              verts[j]=SbVec3f(x,y,zHighLine);
+            }
+        }
         else if (GeoId < -2) {  // external Geometry
             color[i] = CurveExternalColor;
-	    for(int k=j; j<k+indexes; j++){
-	      verts[j].getValue(x,y,z);
-	      verts[j]=SbVec3f(x,y,zConstr);
-	    }
-	}
-        else if (getSketchObject()->getGeometry(GeoId)->Construction)
-	{
+            for(int k=j; j<k+indexes; j++){
+              verts[j].getValue(x,y,z);
+              verts[j]=SbVec3f(x,y,zConstr);
+            }
+        }
+        else if (getSketchObject()->getGeometry(GeoId)->Construction) {
             color[i] = CurveDraftColor;
-	    for(int k=j; j<k+indexes; j++){
-	      verts[j].getValue(x,y,z);
-	      verts[j]=SbVec3f(x,y,zLines);
-	    }
-	}
-        else if (edit->FullyConstrained)
-	{
+            for(int k=j; j<k+indexes; j++){
+              verts[j].getValue(x,y,z);
+              verts[j]=SbVec3f(x,y,zLines);
+            }
+        }
+        else if (edit->FullyConstrained) {
             color[i] = FullyConstrainedColor;
-	    for(int k=j; j<k+indexes; j++){
-	      verts[j].getValue(x,y,z);
-	      verts[j]=SbVec3f(x,y,zLines);
-	    }
-	}
-        else
-	{
+            for(int k=j; j<k+indexes; j++){
+              verts[j].getValue(x,y,z);
+              verts[j]=SbVec3f(x,y,zLines);
+            }
+        }
+        else {
             color[i] = CurveColor;
-	    for(int k=j; j<k+indexes; j++){
-	      verts[j].getValue(x,y,z);
-	      verts[j]=SbVec3f(x,y,zLines);
-	    }
-	}
+            for(int k=j; j<k+indexes; j++){
+              verts[j].getValue(x,y,z);
+              verts[j]=SbVec3f(x,y,zLines);
+            }
+        }
     }
 
     // colors of the cross
@@ -2279,7 +2275,7 @@ void ViewProviderSketch::drawConstraintIcons()
             
             Gui::MDIView *mdi = Gui::Application::Instance->activeDocument()->getActiveView();
             Gui::View3DInventorViewer *viewer = static_cast<Gui::View3DInventor *>(mdi)->getViewer();
-            SoCamera* pCam = viewer->getCamera();
+            SoCamera* pCam = viewer->getSoRenderManager()->getCamera();
             if (!pCam) return;
             
             SbViewVolume  vol = pCam->getViewVolume();
@@ -2644,7 +2640,7 @@ float ViewProviderSketch::getScaleFactor()
     Gui::MDIView *mdi = Gui::Application::Instance->activeDocument()->getActiveView();
     if (mdi && mdi->isDerivedFrom(Gui::View3DInventor::getClassTypeId())) {
         Gui::View3DInventorViewer *viewer = static_cast<Gui::View3DInventor *>(mdi)->getViewer();
-        return viewer->getCamera()->getViewVolume(viewer->getCamera()->aspectRatio.getValue()).getWorldToScreenScale(SbVec3f(0.f, 0.f, 0.f), 0.1f) / 3;
+        return viewer->getSoRenderManager()->getCamera()->getViewVolume(viewer->getSoRenderManager()->getCamera()->aspectRatio.getValue()).getWorldToScreenScale(SbVec3f(0.f, 0.f, 0.f), 0.1f) / 3;
     } else {
         return 1.f;
     }
@@ -3414,8 +3410,8 @@ Restart:
         for (std::vector<Part::Geometry *>::iterator it=tempGeo.begin(); it != tempGeo.end(); ++it)
             if (*it) delete *it;
 
-    if (mdi && mdi->isDerivedFrom(Gui::View3DInventor::getClassTypeId())) {
-        static_cast<Gui::View3DInventor *>(mdi)->getViewer()->render();
+    if (mdi && mdi->isDerivedFrom(Gui::View3DInventor::getClassTypeId())) { 
+        static_cast<Gui::View3DInventor *>(mdi)->getViewer()->redraw();
     }
 }
 
@@ -4043,16 +4039,14 @@ void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int Mo
     viewer->setEditing(TRUE);
     SoNode* root = viewer->getSceneGraph();
     static_cast<Gui::SoFCUnifiedSelection*>(root)->selectionRole.setValue(FALSE);
-    antiAliasing = (int)viewer->getAntiAliasingMode();
-    if (antiAliasing != Gui::View3DInventorViewer::None)
-        viewer->setAntiAliasingMode(Gui::View3DInventorViewer::None);
- 
+    
+    viewer->addGraphicsItem(rubberband);
+    rubberband->setViewer(viewer);
 }
 
 void ViewProviderSketch::unsetEditViewer(Gui::View3DInventorViewer* viewer)
 {
-    if (antiAliasing != Gui::View3DInventorViewer::None)
-        viewer->setAntiAliasingMode(Gui::View3DInventorViewer::AntiAliasing(antiAliasing));
+    viewer->removeGraphicsItem(rubberband);
     viewer->setEditing(FALSE);
     SoNode* root = viewer->getSceneGraph();
     static_cast<Gui::SoFCUnifiedSelection*>(root)->selectionRole.setValue(TRUE);

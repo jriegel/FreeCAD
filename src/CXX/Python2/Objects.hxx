@@ -1889,13 +1889,6 @@ namespace Py
             validate();
         }
 
-        String( const std::string &v, std::string::size_type vsize )
-        : SeqBase<Char>(PyString_FromStringAndSize( const_cast<char*>(v.data()),
-                    static_cast<int>( vsize ) ), true)
-        {
-            validate();
-        }
-
         String( const char *v, int vsize )
         : SeqBase<Char>(PyString_FromStringAndSize( const_cast<char*>(v), vsize ), true )
         {
@@ -2019,12 +2012,6 @@ namespace Py
             validate();
         }
 
-        Bytes( const std::string& v, std::string::size_type vsize )
-        : SeqBase<Char>(PyString_FromStringAndSize( const_cast<char*>(v.data()), static_cast<int>( vsize ) ), true)
-        {
-            validate();
-        }
-
         Bytes( const char *v, int vsize )
         : SeqBase<Char>(PyString_FromStringAndSize( const_cast<char*>(v), vsize ), true )
         {
@@ -2072,7 +2059,7 @@ namespace Py
 
         String decode( const char *encoding, const char *error="strict" )
         {
-            return Object( PyString_AsDecodedObject( ptr(), encoding, error ) );
+            return Object( PyString_AsDecodedObject( ptr(), encoding, error ), true );
         }
 
         // Queries
@@ -2170,13 +2157,6 @@ namespace Py
             validate();
         }
 
-        String( const std::string& v, std::string::size_type vsize )
-            : SeqBase<Char>(PyString_FromStringAndSize( const_cast<char*>(v.data()),
-                    static_cast<int>( vsize ) ), true)
-        {
-            validate();
-        }
-
         String( const char *v, int vsize )
             : SeqBase<Char>(PyString_FromStringAndSize( const_cast<char*>(v), vsize ), true )
         {
@@ -2228,17 +2208,17 @@ namespace Py
         {
             if( isUnicode() )
             {
-                return String( PyUnicode_AsEncodedString( ptr(), encoding, error ) );
+                return String( PyUnicode_AsEncodedString( ptr(), encoding, error ), true );
             }
             else
             {
-                return String( PyString_AsEncodedObject( ptr(), encoding, error ) );
+                return String( PyString_AsEncodedObject( ptr(), encoding, error ), true );
             }
         }
 
         String decode( const char *encoding, const char *error="strict" )
         {
-            return Object( PyString_AsDecodedObject( ptr(), encoding, error ) );
+            return Object( PyString_AsDecodedObject( ptr(), encoding, error ), true );
         }
 
         // Queries

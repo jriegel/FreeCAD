@@ -30,13 +30,18 @@
 #include <vector>
 
 #include <Base/Type.h>
-#include <Inventor/Qt/viewers/SoQtViewer.h>
 #include <Inventor/nodes/SoEventCallback.h>
-#include <Inventor/Qt/SoQtCursor.h>
+#include <Inventor/nodes/SoSwitch.h>
+#include <Inventor/SbRotation.h>
+#include "Gui/Quarter/SoQTQuarterAdaptor.h"
 #include <QCursor>
 
 #include <Gui/Selection.h>
 
+class SoTranslation;
+class SoTransform;
+class SoText2;
+namespace Quarter = SIM::Coin3D::Quarter;
 
 class SoSeparator;
 class SoShapeHints;
@@ -60,14 +65,15 @@ class Document;
 class SoFCUnifiedSelection;
 class GLGraphicsItem;
 class SoShapeScale;
+class ViewerEventFilter;
 
 /** GUI view into a 3D scene provided by View3DInventor
  *
  */
-class GuiExport View3DInventorViewer : public SoQtViewer, public Gui::SelectionSingleton::ObserverType
+class GuiExport View3DInventorViewer : public Quarter::SoQTQuarterAdaptor, public Gui::SelectionSingleton::ObserverType
 {
-    SOQT_OBJECT_ABSTRACT_HEADER(View3DInventorViewer, SoQtViewer);
-
+    typedef Quarter::SoQTQuarterAdaptor inherited;
+    
 public:
     /// Background modes for the savePicture() method
     enum eBackgroundType { 
@@ -114,9 +120,11 @@ public:
     };
     //@}
 
-    View3DInventorViewer (QWidget *parent, const char *name=NULL, SbBool embed=true, 
-                          Type type= SoQtViewer::BROWSER, SbBool build=true);
+    View3DInventorViewer (QWidget *parent);
+    View3DInventorViewer (const QGLFormat& format, QWidget *parent);
     virtual ~View3DInventorViewer();
+    
+    void init();
 
     /// Observer message from the Selection
     virtual void OnChange(Gui::SelectionSingleton::SubjectType &rCaller,
@@ -212,13 +220,14 @@ public:
     //@{
     void setEditing(SbBool edit);
     SbBool isEditing() const { return this->editing; }
-    void setEditingCursor (const SoQtCursor& cursor);
     void setEditingCursor (const QCursor& cursor);
     void setRedirectToSceneGraph(SbBool redirect) { this->redirected = redirect; }
     SbBool isRedirectedToSceneGraph() const { return this->redirected; }
     void setRedirectToSceneGraphEnabled(SbBool enable) { this->allowredir = enable; }
     SbBool isRedirectToSceneGraphEnabled(void) const { return this->allowredir; }
     //@}
+    
+    void setComponentCursor(QCursor cursor);
 
     /** @name Pick actions */
     //@{
@@ -247,6 +256,7 @@ public:
      * The vector is normalized to length of 1.
      */
     SbVec3f getViewDirection() const;
+    void    setViewDirection(SbVec3f);
     /** Returns the up direction */
     SbVec3f getUpDirection() const;
     /** Returns the orientation of the camera. */
@@ -310,6 +320,10 @@ public:
      */
     void viewAll();
     void viewAll(float factor);
+
+	/// Breaks out a VR window for a Rift
+	void viewVR(void);
+
     /**
      * Reposition the current camera so we can see all selected objects 
      * of the scene. Therefore we search for all SOFCSelection nodes, if
@@ -324,15 +338,18 @@ public:
     void setGradientBackgroundColor(const SbColor& fromColor,
                                     const SbColor& toColor,
                                     const SbColor& midColor);
-    void setEnabledFPSCounter(bool b);
     void setNavigationType(Base::Type);
 
     void setAxisCross(bool b);
     bool hasAxisCross(void);
+    
+    void setEnabledFPSCounter(bool b);
 
     NavigationStyle* navigationStyle() const;
 
     void setDocument(Gui::Document *pcDocument);
+    
+    virtual PyObject *getPyObject(void);
 
 protected:
     void renderScene();
@@ -341,8 +358,7 @@ protected:
     virtual void actualRedraw(void);
     virtual void setSeekMode(SbBool enable);
     virtual void afterRealizeHook(void);
-    virtual void processEvent(QEvent * event);
-    virtual SbBool processSoEvent(const SoEvent * const ev);
+    virtual bool processSoEvent(const SoEvent * ev);
     SbBool processSoEventBase(const SoEvent * const ev);
     void printDimension();
     void selectAll();
@@ -350,8 +366,8 @@ protected:
     static void clearBuffer(void * userdata, SoAction * action);
     static void setGLWidget(void * userdata, SoAction * action);
     static void handleEventCB(void * userdata, SoEventCallback * n);
-    static void interactionStartCB(void * data, SoQtViewer * viewer);
-    static void interactionFinishCB(void * data, SoQtViewer * viewer);
+    static void interactionStartCB(void * data, Quarter::SoQTQuarterAdaptor * viewer);
+    static void interactionFinishCB(void * data, Quarter::SoQTQuarterAdaptor * viewer);
     static void interactionLoggerCB(void * ud, SoAction* action);
 
 private:
@@ -387,18 +403,26 @@ private:
     // big one in the middle
     SoShapeScale* axisCross;
     SoGroup* axisGroup;
-
+    
+    //stuff needed to draw the fps counter
+    bool fpsEnabled;
+    SoSeparator* fpsRoot;
 
     SbBool editing;
-    QCursor editCursor;
+    QCursor editCursor, zoomCursor, panCursor, spinCursor;
     SbBool redirected;
     SbBool allowredir;
 
     std::string overrideMode;
+    
+    ViewerEventFilter* viewerEventFilter;
+    
+    PyObject *_viewerPy;
 
     // friends
     friend class NavigationStyle;
     friend class GLPainter;
+    friend class ViewerEventFilter;
 };
 
 } // namespace Gui

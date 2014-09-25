@@ -151,6 +151,7 @@ OPTION(BUILD_SPREADSHEET "Build the FreeCAD spreadsheet module" ON)
 OPTION(BUILD_START "Build the FreeCAD start module" ON)
 OPTION(BUILD_TEST "Build the FreeCAD test module" ON)
 OPTION(BUILD_WEB "Build the FreeCAD web module" ON)
+OPTION(BUILD_VR "Build the FreeCAD Oculus Rift support (need Oculus SDK 4.x or higher)" OFF)
 
 if(MSVC)
 OPTION(FREECAD_USE_3DCONNEXION "Use the 3D connexion SDK to support 3d mouse." ON)
@@ -338,7 +339,6 @@ if(FREECAD_LIBPACK_USE)
         set(FREECAD_USE_EXTERNAL_PIVY ON CACHE BOOL "Switch off local pivy" FORCE)
         set(FREECAD_LIBPACK_PYSIDEUIC_REL   "${FREECAD_LIBPACK_DIR}/pyside-tools/Lib/site-packages")
         file(GLOB FREECAD_LIBPACK_PIVY_COIN "${FREECAD_LIBPACK_DIR}/pivy/*.*")
-        file(GLOB FREECAD_LIBPACK_PIVY_SOQT "${FREECAD_LIBPACK_DIR}/pivy/gui/*.*")
         file(GLOB FREECAD_LIBPACK_SHIBOKEN  "${FREECAD_LIBPACK_DIR}/shiboken-1.2.1/lib/site-packages/*.pyd")
         file(GLOB FREECAD_LIBPACK_PYSIDE    "${FREECAD_LIBPACK_DIR}/pyside/lib/site-packages/PySide/*.py*")
         file(GLOB_RECURSE FREECAD_LIBPACK_PYSIDEUIC RELATIVE "${FREECAD_LIBPACK_PYSIDEUIC_REL}" "${FREECAD_LIBPACK_PYSIDEUIC_REL}/pysideuic/*.py")
@@ -612,7 +612,6 @@ else(FREECAD_LIBPACK_USE)
 # -------------------------------- Coin3D --------------------------------
 
         find_package(Coin3D REQUIRED)
-        find_package(SoQt REQUIRED)
 
 # ------------------------------ Spaceball -------------------------------
 
@@ -647,6 +646,10 @@ else(FREECAD_LIBPACK_USE)
 
 endif(FREECAD_LIBPACK_USE)
 
+if(BUILD_VR)
+    find_package(Rift)
+endif(BUILD_VR)
+
 # copy build convenient files for M$
 if(WIN32)
     if (EXISTS BuildAll.bat)
@@ -680,7 +683,7 @@ IF(MSVC)
 	SET (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHa")
 	SET (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFC_DEBUG")
 	# set default libs
-	SET (CMAKE_C_STANDARD_LIBRARIES "kernel32.lib user32.lib gdi32.lib winspool.lib SHFolder.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib ")
+	SET (CMAKE_C_STANDARD_LIBRARIES "kernel32.lib user32.lib gdi32.lib winspool.lib SHFolder.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib winmm.lib comsupp.lib Ws2_32.lib dbghelp.lib ")
 	set (CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES}")
 	# set linker flag /nodefaultlib
 	set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB")
@@ -752,7 +755,7 @@ if(FREECAD_MAINTAINERS_BUILD AND NOT WIN32)
 		set(PKG_ARCH amd64)
 	ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 4 )
 	set(CPACK_DEBIAN_PACKAGE_SECTION "science")
-	set(CPACK_DEBIAN_PACKAGE_DEPENDS "python, oce | opencascade, libqtgui4, libcoin60, libsoqt4-20, libxerces-c3.1, zlib1g, libboost-dev, libeigen2-dev")
+	set(CPACK_DEBIAN_PACKAGE_DEPENDS "python, oce | opencascade, libqtgui4, libcoin60, libxerces-c3.1, zlib1g, libboost-dev, libeigen2-dev")
 	set(CPACK_PACKAGE_CONTACT "<root@localhost>")
 	set(CPACK_PACKAGE_FILE_NAME "${PACKAGE_NAME}-${PACKAGE_VERSION}_${PKG_ARCH}")
 	

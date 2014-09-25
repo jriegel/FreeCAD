@@ -31,7 +31,6 @@
 #include <QApplication>
 #include <QIcon>
 #include <QThread>
-#include <Inventor/Qt/SoQt.h>
 #if defined(Q_OS_WIN)
 #include <windows.h>
 #elif defined(Q_WS_X11)
@@ -46,7 +45,8 @@
 #include <Gui/BitmapFactory.h>
 #include <Gui/MainWindow.h>
 #include <Gui/SoFCDB.h>
-
+#include <Gui/Quarter/Quarter.h>
+#include <Inventor/SoDB.h>
 
 static
 QWidget* setupMainWindow();
@@ -163,7 +163,7 @@ FreeCADGui_setupWithoutGUI(PyObject * /*self*/, PyObject *args)
     if (!SoDB::isInitialized()) {
         // init the Inventor subsystem
         SoDB::init();
-        SoQt::init("FreeCAD");
+        SIM::Coin3D::Quarter::Quarter::init();
     }
     if (!Gui::SoFCDB::isInitialized()) {
         Gui::SoFCDB::init();
@@ -260,7 +260,7 @@ QWidget* setupMainWindow()
         if (!SoDB::isInitialized()) {
             // init the Inventor subsystem
             SoDB::init();
-            SoQt::init(mw);
+            SIM::Coin3D::Quarter::Quarter::init();
             Gui::SoFCDB::init();
         }
 
@@ -310,7 +310,7 @@ PyMODINIT_FUNC initFreeCADGui()
         Base::Interpreter().loadModule("FreeCAD");
         App::Application::Config()["AppIcon"] = "freecad";
         App::Application::Config()["SplashScreen"] = "freecadsplash";
-        App::Application::Config()["CopyrightInfo"] = "\xc2\xa9 Juergen Riegel, Werner Mayer, Yorik van Havre 2001-2011\n";
+        App::Application::Config()["CopyrightInfo"] = "\xc2\xa9 Juergen Riegel, Werner Mayer, Yorik van Havre 2001-2014\n";
         Gui::Application::initApplication();
         Py_InitModule("FreeCADGui", FreeCADGui_methods);
     }

@@ -463,7 +463,6 @@ void ViewProviderFemMesh::setHighlightNodes(const std::set<long>& HighlightedNod
 {
 
     if(HighlightedNodes.size()){
-        const Fem::PropertyFemMesh* mesh = &(dynamic_cast<Fem::FemMeshObject*>(this->pcObject)->FemMesh);
         SMESHDS_Mesh* data = const_cast<SMESH_Mesh*>((dynamic_cast<Fem::FemMeshObject*>(this->pcObject)->FemMesh).getValue().getSMesh())->GetMeshDS();
 
         pcAnoCoords->point.setNum(HighlightedNodes.size());
@@ -623,8 +622,6 @@ void ViewProviderFemMesh::animateNodes(double factor)
 
 void ViewProviderFemMesh::setColorByElementId(const std::map<long,App::Color> &ElementColorMap)
 {
-    pcShapeMaterial->diffuseColor;
-
     pcMatBinding->value = SoMaterialBinding::PER_FACE ;
 
     // resizing and writing the color vector:
@@ -715,16 +712,16 @@ void ViewProviderFEMMeshBuilder::createMesh(const App::Property* prop, SoCoordin
     Base::Console().Log("Start: ViewProviderFEMMeshBuilder::createMesh() =================================\n");
 
 	const SMDS_MeshInfo& info = data->GetMeshInfo();
-    int numNode = info.NbNodes();
+  //int numNode = info.NbNodes();
     int numTria = info.NbTriangles();
     int numQuad = info.NbQuadrangles();
     int numPoly = info.NbPolygons();
-    int numVolu = info.NbVolumes();
+  //int numVolu = info.NbVolumes();
     int numTetr = info.NbTetras();
     int numHexa = info.NbHexas();
     int numPyrd = info.NbPyramids();
     int numPris = info.NbPrisms();
-    int numHedr = info.NbPolyhedrons();
+  //int numHedr = info.NbPolyhedrons();
 
 
     bool ShowFaces = false;
@@ -896,13 +893,15 @@ void ViewProviderFEMMeshBuilder::createMesh(const App::Property* prop, SoCoordin
 
     // sort out double nodes and build up index map
     std::map<const SMDS_MeshNode*, int> mapNodeIndex;
-    for(int l=0; l< FaceSize;l++){
-        if(!facesHelper[l].hide)
-            for(int i=0; i<8;i++)
+    for(int l=0; l< FaceSize;l++) {
+        if(!facesHelper[l].hide) {
+            for(int i=0; i<8;i++) {
                 if(facesHelper[l].Nodes[i])
                     mapNodeIndex[facesHelper[l].Nodes[i]]=0;
                 else
                     break;
+            }
+        }
     }
     Base::Console().Log("    %f: Start set point vector\n",Base::TimeInfo::diffTimeF(Start,Base::TimeInfo()));
 

@@ -1,25 +1,30 @@
 #add_subdirectory(Icons)
 
 if(WIN32)
-add_definitions(-DFCGui -DQIIS_MAKEDLL)
+add_definitions(-DFCGui -DQIIS_MAKEDLL -DOVR_OS_WIN32 -DQUARTER_INTERNAL -DQUARTER_MAKE_DLL -DCOIN_DLL)
 endif(WIN32)
 
 if (FREECAD_USE_3DCONNEXION)
-add_definitions(-D_USE_3DCONNEXION_SDK)
+    add_definitions(-D_USE_3DCONNEXION_SDK)
 endif(FREECAD_USE_3DCONNEXION)
+
+if (BUILD_VR)
+    add_definitions(-DBUILD_VR )
+endif(BUILD_VR)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/Quarter
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/..
     ${CMAKE_CURRENT_BINARY_DIR}/..
     ${CMAKE_CURRENT_BINARY_DIR}/Language
     ${CMAKE_CURRENT_BINARY_DIR}/propertyeditor
     ${CMAKE_CURRENT_BINARY_DIR}/TaskView
+    ${CMAKE_CURRENT_BINARY_DIR}/Quarter
     ${Boost_INCLUDE_DIRS}
     ${COIN3D_INCLUDE_DIR}
     ${PYTHON_INCLUDE_PATH}
-    ${SOQT_INCLUDE_DIR}
     ${XERCESC_INCLUDE_DIR}
     ${QT_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
@@ -30,8 +35,6 @@ if(MSVC)
          FreeCADApp
          debug ${COIN3D_LIBRARY_DEBUG}
          optimized ${COIN3D_LIBRARY_RELEASE}
-         debug ${SOQT_LIBRARY_DEBUG}
-         optimized ${SOQT_LIBRARY_RELEASE}
          ${QT_DEBUG_LIBRARIES}
          ${QT_LIBRARIES}
          optimized QtUiTools.lib
@@ -43,7 +46,6 @@ else(MSVC)
         FreeCADBase
         FreeCADApp
         ${COIN3D_LIBRARY}
-        ${SOQT_LIBRARIES}
         ${QT_LIBRARIES}
         ${Boost_LIBRARIES}
         ${OPENGL_gl_LIBRARY}
@@ -60,6 +62,17 @@ IF(SPNAV_FOUND)
         ${SPNAV_LIBRARIES}
     )
 ENDIF(SPNAV_FOUND)
+
+IF(OCULUS_FOUND)
+    add_definitions(-DOCULUS_FOUND)
+    include_directories(
+        ${OCULUS_INCLUDE_DIRS}
+    )
+    set(FreeCADGui_LIBS
+        ${FreeCADGui_LIBS}
+        ${OCULUS_LIBRARIES}
+    )
+ENDIF(OCULUS_FOUND)
 
 if(SHIBOKEN_INCLUDE_DIR)
     add_definitions(-DHAVE_SHIBOKEN)
@@ -650,7 +663,10 @@ SET(View3D_CPP_SRCS
     View3DInventor.cpp
     View3DInventorExamples.cpp
     View3DInventorViewer.cpp
+    View3DInventorRiftViewer.cpp
+	CoinRiftWidget.cpp
     View3DPy.cpp
+    View3DViewerPy.cpp
 )
 SET(View3D_SRCS
     ${View3D_CPP_SRCS}
@@ -664,8 +680,34 @@ SET(View3D_SRCS
     View3DInventorExamples.h
     View3DInventorViewer.h
     View3DPy.h
+    View3DInventorRiftViewer.h
+    CoinRiftWidget.h
+    View3DViewerPy.h
 )
 SOURCE_GROUP("View3D" FILES ${View3D_SRCS})
+
+#quarter sources
+FILE(GLOB_RECURSE Quarter_CPP_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} Quarter/*.cpp)
+FILE(GLOB_RECURSE Quarter_H_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} Quarter/*.h)
+
+SET(Quarter_MOC_HDR
+    Quarter/SignalThread.h
+    Quarter/InteractionMode.h
+    Quarter/SensorManager.h
+    Quarter/ContextMenu.h
+    Quarter/eventhandlers/FocusHandler.h
+    Quarter/eventhandlers/DragDropHandler.h
+    Quarter/eventhandlers/EventFilter.h
+    Quarter/QuarterWidget.h
+)  
+qt4_wrap_cpp(Quarter_MOC_SRCS ${Quarter_MOC_HDR})
+
+SET(Quarter_SRCS 
+    ${Quarter_CPP_SRC} 
+    ${Quarter_H_SRC}
+    ${Quarter_MOC_SRCS}
+)
+SOURCE_GROUP("Quarter" FILES ${Quarter_SRCS})
 
 # The view provider sources
 SET(Viewprovider_CPP_SRCS
@@ -861,7 +903,7 @@ SET(FreeCADGui_CPP_SRCS
     WaitCursor.cpp
     ManualAlignment.cpp
 )
-SET(FreeCADGui_SRCS
+SET(FreeCADGui_SRCS 
     Application.h
     BitmapFactory.h
     Document.h
@@ -903,6 +945,7 @@ SET(FreeCADGui_SRCS
     ${Task_View_SRCS}
     ${iisTaskPanel_SRCS}
     ${Resource_SRCS}
+    ${Quarter_SRCS}
     ${View3D_SRCS}
     ${Viewprovider_SRCS}
     ${Widget_SRCS}
