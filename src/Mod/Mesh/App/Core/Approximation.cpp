@@ -211,6 +211,13 @@ float PlaneFit::Fit()
         return FLOAT_MAX;
     }
 
+    // We know the Eigenvalues are ordered
+    // rkDiag(0,0) <= rkDiag(1,1) <= rkDiag(2,2)
+    //
+    // points describe a line or even are identical
+    if (rkDiag(1,1) <= 0)
+        return FLOAT_MAX;
+
     Wm4::Vector3<double> U = rkRot.GetColumn(1);
     Wm4::Vector3<double> V = rkRot.GetColumn(2);
     Wm4::Vector3<double> W = rkRot.GetColumn(0);
@@ -230,6 +237,15 @@ float PlaneFit::Fit()
     float sigma = (float)W.Dot(akMat * W);
 #endif
 
+    // In case sigma is nan
+    if (boost::math::isnan(sigma))
+        return FLOAT_MAX;
+
+    // This must be caused by some round-off errors. Theoretically it's impossible
+    // that 'sigma' becomes negative because the covariance matrix is positive semi-definite.
+    if (sigma < 0)
+        sigma = 0;
+
     // make a right-handed system
     if ((_vDirU % _vDirV) * _vDirW < 0.0f) {
         Base::Vector3f tmp = _vDirU;
@@ -239,6 +255,9 @@ float PlaneFit::Fit()
 
     if (nSize > 3)
         sigma = sqrt(sigma/(nSize-3));
+    else
+        sigma = 0;
+
     _fLastResult = sigma;
     return _fLastResult;
 }

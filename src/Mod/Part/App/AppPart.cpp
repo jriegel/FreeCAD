@@ -287,24 +287,49 @@ void PartExport initPart()
 
     IGESControl_Controller::Init();
     STEPControl_Controller::Init();
-    // set the user-defined units
+    // set the user-defined settings
     Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
         .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/Part");
-    int unit = hGrp->GetInt("Unit", 0);
-    switch (unit) {
+
+    //IGES handling
+    Base::Reference<ParameterGrp> hIgesGrp = hGrp->GetGroup("IGES");
+    int value = Interface_Static::IVal("write.iges.brep.mode");
+    bool brep = hIgesGrp->GetBool("BrepMode", value > 0);
+    Interface_Static::SetIVal("write.iges.brep.mode",brep ? 1 : 0);
+    Interface_Static::SetCVal("write.iges.header.company", hIgesGrp->GetASCII("Company").c_str());
+    Interface_Static::SetCVal("write.iges.header.author", hIgesGrp->GetASCII("Author").c_str());
+  //Interface_Static::SetCVal("write.iges.header.product", hIgesGrp->GetASCII("Product").c_str());
+
+    int unitIges = hIgesGrp->GetInt("Unit", 0);
+    switch (unitIges) {
         case 1:
             Interface_Static::SetCVal("write.iges.unit","M");
-            Interface_Static::SetCVal("write.step.unit","M");
             break;
         case 2:
             Interface_Static::SetCVal("write.iges.unit","IN");
-            Interface_Static::SetCVal("write.step.unit","IN");
             break;
         default:
             Interface_Static::SetCVal("write.iges.unit","MM");
+            break;
+    }
+
+    //STEP handling
+    Base::Reference<ParameterGrp> hStepGrp = hGrp->GetGroup("STEP");
+    int unitStep = hStepGrp->GetInt("Unit", 0);
+    switch (unitStep) {
+        case 1:
+            Interface_Static::SetCVal("write.step.unit","M");
+            break;
+        case 2:
+            Interface_Static::SetCVal("write.step.unit","IN");
+            break;
+        default:
             Interface_Static::SetCVal("write.step.unit","MM");
             break;
     }
+
+    std::string ap = hStepGrp->GetASCII("Scheme", Interface_Static::CVal("write.step.schema"));
+    Interface_Static::SetCVal("write.step.schema", ap.c_str());
 }
 
 } // extern "C"

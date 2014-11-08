@@ -39,9 +39,11 @@
 static PyObject * 
 open(PyObject *self, PyObject *args) 
 {
-    const char* Name;
-    if (! PyArg_ParseTuple(args, "s",&Name))
-        return NULL; 
+    char* Name;
+    if (!PyArg_ParseTuple(args, "et","utf-8",&Name))
+        return NULL;
+    std::string EncodedName = std::string(Name);
+    PyMem_Free(Name);
     
     PY_TRY {
      } PY_CATCH;

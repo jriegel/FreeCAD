@@ -98,7 +98,8 @@ void GLOverlayWidget::paintEvent(QPaintEvent* ev)
 
 TYPESYSTEM_SOURCE_ABSTRACT(Gui::View3DInventor,Gui::MDIView);
 
-View3DInventor::View3DInventor(Gui::Document* pcDocument, QWidget* parent, Qt::WFlags wflags)
+View3DInventor::View3DInventor(Gui::Document* pcDocument, QWidget* parent,
+                               const QGLWidget* sharewidget, Qt::WFlags wflags)
     : MDIView(pcDocument, parent, wflags), _viewerPy(0)
 {
     stack = new QStackedWidget(this);
@@ -106,35 +107,49 @@ View3DInventor::View3DInventor(Gui::Document* pcDocument, QWidget* parent, Qt::W
     setMouseTracking(true);
     // accept drops on the window, get handled in dropEvent, dragEnterEvent   
     setAcceptDrops(true);
-  
+
     // attach parameter Observer
     hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/View");
     hGrp->Attach(this);
 
-    //anti aliasing settings
+    //anti-aliasing settings
     QGLFormat f;
+    bool smoothing = false;
+    bool glformat = false;
     switch( hGrp->GetInt("AntiAliasing",0) ) {
       case View3DInventorViewer::MSAA2x:
+          glformat = true;
           f.setSampleBuffers(true);
-	  f.setSamples(2);
+          f.setSamples(2);
           break;
       case View3DInventorViewer::MSAA4x:
-	  f.setSampleBuffers(true);
+          glformat = true;
+          f.setSampleBuffers(true);
           f.setSamples(4);
           break;
       case View3DInventorViewer::MSAA8x:
-	  f.setSampleBuffers(true);
+          glformat = true;
+          f.setSampleBuffers(true);
           f.setSamples(8);
+          break;
+      case View3DInventorViewer::Smoothing:
+          smoothing = true;
           break;
       case View3DInventorViewer::None:
       default:
-          f.setSamples(1);
           break;
-    };
-    
+    }
+
+    if (glformat)
+        _viewer = new View3DInventorViewer(f, this, sharewidget);
+    else
+        _viewer = new View3DInventorViewer(this, sharewidget);
+
+    if (smoothing)
+        _viewer->getSoRenderManager()->getGLRenderAction()->setSmoothing(true);
+
     // create the inventor widget and set the defaults
-#if !defined (NO_USE_QT_MDI_AREA)    
-    _viewer = new View3DInventorViewer(f,this);
+#if !defined (NO_USE_QT_MDI_AREA)
     _viewer->setDocument(this->_pcDocument);
     stack->addWidget(_viewer->getWidget());
     // http://forum.freecadweb.org/viewtopic.php?f=3&t=6055&sid=150ed90cbefba50f1e2ad4b4e6684eba
@@ -145,7 +160,6 @@ View3DInventor::View3DInventor(Gui::Document* pcDocument, QWidget* parent, Qt::W
     //_viewer->getGLWidget()->setAttribute(Qt::WA_NoMousePropagation);
     setCentralWidget(stack);
 #else
-    _viewer = new View3DInventorViewer(f,this);
     _viewer->setDocument(this->_pcDocument);
 #endif
     
@@ -360,23 +374,23 @@ void View3DInventor::OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::M
     else if (strcmp(Reason, "DimensionsVisible") == 0)
     {
       if (rGrp.GetBool("DimensionsVisible", true))
-	_viewer->turnAllDimensionsOn();
+        _viewer->turnAllDimensionsOn();
       else
-	_viewer->turnAllDimensionsOff();
+        _viewer->turnAllDimensionsOff();
     }
     else if (strcmp(Reason, "Dimensions3dVisible") == 0)
     {
       if (rGrp.GetBool("Dimensions3dVisible", true))
-	_viewer->turn3dDimensionsOn();
+        _viewer->turn3dDimensionsOn();
       else
-	_viewer->turn3dDimensionsOff();
+        _viewer->turn3dDimensionsOff();
     }
     else if (strcmp(Reason, "DimensionsDeltaVisible") == 0)
     {
       if (rGrp.GetBool("DimensionsDeltaVisible", true))
-	_viewer->turnDeltaDimensionsOn();
+        _viewer->turnDeltaDimensionsOn();
       else
-	_viewer->turnDeltaDimensionsOff();
+        _viewer->turnDeltaDimensionsOff();
     } 
     else{
         unsigned long col1 = rGrp.GetUnsigned("BackgroundColor",3940932863UL);
@@ -388,7 +402,7 @@ void View3DInventor::OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::M
         r2 = ((col2 >> 24) & 0xff) / 255.0; g2 = ((col2 >> 16) & 0xff) / 255.0; b2 = ((col2 >> 8) & 0xff) / 255.0;
         r3 = ((col3 >> 24) & 0xff) / 255.0; g3 = ((col3 >> 16) & 0xff) / 255.0; b3 = ((col3 >> 8) & 0xff) / 255.0;
         r4 = ((col4 >> 24) & 0xff) / 255.0; g4 = ((col4 >> 16) & 0xff) / 255.0; b4 = ((col4 >> 8) & 0xff) / 255.0;
-	_viewer->setBackgroundColor(QColor::fromRgbF(r1, g1, b1));
+        _viewer->setBackgroundColor(QColor::fromRgbF(r1, g1, b1));
         if (rGrp.GetBool("UseBackgroundColorMid",false) == false)
             _viewer->setGradientBackgroundColor(SbColor(r2, g2, b2), SbColor(r3, g3, b3));
         else
@@ -557,8 +571,8 @@ bool View3DInventor::onMsg(const char* pMsg, const char** ppReturn)
         return true;
     }
     else if (strcmp("ViewVR",pMsg) == 0) {
-		// call the VR portion of the viewer
-		_viewer->viewVR();
+        // call the VR portion of the viewer
+        _viewer->viewVR();
         return true;
     }
     else if(strcmp("ViewSelection",pMsg) == 0) {
@@ -566,23 +580,23 @@ bool View3DInventor::onMsg(const char* pMsg, const char** ppReturn)
         return true;
     }
     else if(strcmp("SetStereoRedGreen",pMsg) == 0 ) {
-        _viewer->setProperty("StereoMode", Quarter::SoQTQuarterAdaptor::ANAGLYPH);
+        _viewer->setStereoMode(Quarter::SoQTQuarterAdaptor::ANAGLYPH);
         return true;
     }
     else if(strcmp("SetStereoQuadBuff",pMsg) == 0 ) {
-        _viewer->setProperty("StereoMode", Quarter::SoQTQuarterAdaptor::QUAD_BUFFER );
+        _viewer->setStereoMode(Quarter::SoQTQuarterAdaptor::QUAD_BUFFER );
         return true;
     }
     else if(strcmp("SetStereoInterleavedRows",pMsg) == 0 ) {
-        _viewer->setProperty("StereoMode", Quarter::SoQTQuarterAdaptor::INTERLEAVED_ROWS );
+        _viewer->setStereoMode(Quarter::SoQTQuarterAdaptor::INTERLEAVED_ROWS );
         return true;
     }
     else if(strcmp("SetStereoInterleavedColumns",pMsg) == 0 ) {
-        _viewer->setProperty("StereoMode", Quarter::SoQTQuarterAdaptor::INTERLEAVED_COLUMNS  );
+        _viewer->setStereoMode(Quarter::SoQTQuarterAdaptor::INTERLEAVED_COLUMNS  );
         return true;
     }
     else if(strcmp("SetStereoOff",pMsg) == 0 ) {
-        _viewer->setProperty("StereoMode", Quarter::SoQTQuarterAdaptor::MONO );
+        _viewer->setStereoMode(Quarter::SoQTQuarterAdaptor::MONO );
         return true;
    }
     else if(strcmp("Example1",pMsg) == 0 ) {
@@ -724,7 +738,7 @@ bool View3DInventor::onHasMsg(const char* pMsg) const
 #ifdef BUILD_VR
         return true;
 #else
-		return false;
+        return false;
 #endif 
     else if(strcmp("ViewSelection",pMsg) == 0)
         return true;
@@ -931,7 +945,6 @@ void View3DInventor::setCurrentViewMode(ViewMode newmode)
     //
     // It is important to set the focus proxy to get all key events otherwise we would loose
     // control after redirecting the first key event to the GL widget.
-    // We redirect these events in keyPressEvent() and keyReleaseEvent().
     if (oldmode == Child) {
         // To make a global shortcut working from this window we need to add
         // all existing actions from the mainwindow and its sub-widgets 
@@ -980,30 +993,14 @@ void View3DInventor::keyPressEvent (QKeyEvent* e)
         if (e->key() == Qt::Key_Escape) {
             setCurrentViewMode(Child);
         }
-        else {
-            // Note: The key events should be redirected directly to the GL widget and not to the main window
-            // otherwise the first redirected key event always disappears in hyperspace.
-            //
-            // send the event to the GL widget that converts to and handles an SoEvent
-            QWidget* w = _viewer->getGLWidget();
-            QApplication::sendEvent(w,e);
-        }
     }
-    else {
-        QMainWindow::keyPressEvent(e);
-    }
+
+    QMainWindow::keyPressEvent(e);
 }
 
 void View3DInventor::keyReleaseEvent (QKeyEvent* e)
 {
-    ViewMode mode = MDIView::currentViewMode();
-    if (mode != Child) {
-        // send the event to the GL widget that converts to and handles an SoEvent
-        QWidget* w = _viewer->getGLWidget();
-        QApplication::sendEvent(w,e);
-    } else {
-        QMainWindow::keyReleaseEvent(e);
-    }
+    QMainWindow::keyReleaseEvent(e);
 }
 
 void View3DInventor::focusInEvent (QFocusEvent * e)

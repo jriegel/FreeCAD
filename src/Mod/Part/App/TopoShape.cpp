@@ -98,6 +98,8 @@
 # include <IGESControl_Controller.hxx>
 # include <IGESControl_Writer.hxx>
 # include <IGESControl_Reader.hxx>
+# include <IGESData_GlobalSection.hxx>
+# include <IGESData_IGESModel.hxx>
 # include <STEPControl_Writer.hxx>
 # include <STEPControl_Reader.hxx>
 # include <TopTools_MapOfShape.hxx>
@@ -166,6 +168,7 @@
 #include "ProgressIndicator.h"
 #include "modelRefine.h"
 #include "Tools.h"
+#include "encodeFilename.h"
 
 using namespace Part;
 
@@ -453,8 +456,11 @@ void TopoShape::convertTogpTrsf(const Base::Matrix4D& mtrx, gp_Trsf& trsf)
 {
     trsf.SetValues(mtrx[0][0],mtrx[0][1],mtrx[0][2],mtrx[0][3],
                    mtrx[1][0],mtrx[1][1],mtrx[1][2],mtrx[1][3],
-                   mtrx[2][0],mtrx[2][1],mtrx[2][2],mtrx[2][3],
-                   0.00001,0.00001);
+                   mtrx[2][0],mtrx[2][1],mtrx[2][2],mtrx[2][3]
+#if OCC_VERSION_HEX < 0x060800
+                  , 0.00001,0.00001
+#endif
+                ); //precision was removed in OCCT CR0025194
 }
 
 void TopoShape::convertToMatrix(const gp_Trsf& trsf, Base::Matrix4D& mtrx)
@@ -567,8 +573,7 @@ void TopoShape::importIges(const char *FileName)
         IGESControl_Controller::Init();
         Interface_Static::SetIVal("read.surfacecurve.mode",3);
         IGESControl_Reader aReader;
-        QString fn = QString::fromUtf8(FileName);
-        if (aReader.ReadFile((const char*)fn.toLocal8Bit()) != IFSelect_RetDone)
+        if (aReader.ReadFile(encodeFilename(FileName).c_str()) != IFSelect_RetDone)
             throw Base::Exception("Error in reading IGES");
 
         Handle_Message_ProgressIndicator pi = new ProgressIndicator(100);
@@ -593,8 +598,7 @@ void TopoShape::importStep(const char *FileName)
 {
     try {
         STEPControl_Reader aReader;
-        QString fn = QString::fromUtf8(FileName);
-        if (aReader.ReadFile((const char*)fn.toLocal8Bit()) != IFSelect_RetDone)
+        if (aReader.ReadFile(encodeFilename(FileName).c_str()) != IFSelect_RetDone)
             throw Base::Exception("Error in reading STEP");
 
         Handle_Message_ProgressIndicator pi = new ProgressIndicator(100);
@@ -624,8 +628,7 @@ void TopoShape::importBrep(const char *FileName)
         Handle_Message_ProgressIndicator pi = new ProgressIndicator(100);
         pi->NewScope(100, "Reading BREP file...");
         pi->Show();
-        QString fn = QString::fromUtf8(FileName);
-        BRepTools::Read(aShape,(const char*)fn.toLocal8Bit(),aBuilder,pi);
+        BRepTools::Read(aShape,encodeFilename(FileName).c_str(),aBuilder,pi);
         pi->EndScope();
 #else
         BRepTools::Read(aShape,(const Standard_CString)FileName,aBuilder);
@@ -694,10 +697,14 @@ void TopoShape::exportIges(const char *filename) const
         // write iges file
         IGESControl_Controller::Init();
         IGESControl_Writer aWriter;
+        IGESData_GlobalSection header = aWriter.Model()->GlobalSection();
+        header.SetAuthorName(new TCollection_HAsciiString(Interface_Static::CVal("write.iges.header.author")));
+        header.SetCompanyName(new TCollection_HAsciiString(Interface_Static::CVal("write.iges.header.company")));
+      //header.SetSendName(new TCollection_HAsciiString(Interface_Static::CVal("write.iges.header.product")));
+        aWriter.Model()->SetGlobalSection(header);
         aWriter.AddShape(this->_Shape);
         aWriter.ComputeModel();
-        QString fn = QString::fromUtf8(filename);
-        if (aWriter.Write((const char*)fn.toLocal8Bit()) != IFSelect_RetDone)
+        if (aWriter.Write(encodeFilename(filename).c_str()) != IFSelect_RetDone)
             throw Base::Exception("Writing of IGES failed");
     }
     catch (Standard_Failure) {
@@ -721,14 +728,13 @@ void TopoShape::exportStep(const char *filename) const
             throw Base::Exception("Error in transferring STEP");
 
         APIHeaderSection_MakeHeader makeHeader(aWriter.Model());
-        makeHeader.SetName(new TCollection_HAsciiString((const Standard_CString)filename));
+        makeHeader.SetName(new TCollection_HAsciiString((const Standard_CString)(encodeFilename(filename).c_str())));
         makeHeader.SetAuthorValue (1, new TCollection_HAsciiString("FreeCAD"));
         makeHeader.SetOrganizationValue (1, new TCollection_HAsciiString("FreeCAD"));
         makeHeader.SetOriginatingSystem(new TCollection_HAsciiString("FreeCAD"));
         makeHeader.SetDescriptionValue(1, new TCollection_HAsciiString("FreeCAD Model"));
 
-        QString fn = QString::fromUtf8(filename);
-        if (aWriter.Write((const char*)fn.toLocal8Bit()) != IFSelect_RetDone)
+        if (aWriter.Write(encodeFilename(filename).c_str()) != IFSelect_RetDone)
             throw Base::Exception("Writing of STEP failed");
         pi->EndScope();
     }
@@ -740,8 +746,7 @@ void TopoShape::exportStep(const char *filename) const
 
 void TopoShape::exportBrep(const char *filename) const
 {
-    QString fn = QString::fromUtf8(filename);
-    if (!BRepTools::Write(this->_Shape,(const char*)fn.toLocal8Bit()))
+    if (!BRepTools::Write(this->_Shape,encodeFilename(filename).c_str()))
         throw Base::Exception("Writing of BREP failed");
 }
 
@@ -762,8 +767,7 @@ void TopoShape::exportStl(const char *filename, double deflection) const
         writer.RelativeMode() = false;
         writer.SetDeflection(deflection);
     }
-    QString fn = QString::fromUtf8(filename);
-    writer.Write(this->_Shape,(const Standard_CString)fn.toLocal8Bit());
+    writer.Write(this->_Shape,encodeFilename(filename).c_str());
 }
 
 void TopoShape::exportFaceSet(double dev, double ca, std::ostream& str) const
@@ -1610,9 +1614,6 @@ TopoDS_Shape TopoShape::makeHelix(Standard_Real pitch, Standard_Real height,
     gp_Dir2d aDir(2. * M_PI, pitch);
     Standard_Real coneDir = 1.0;
     if (leftHanded) {
-        //aPnt.SetCoord(0.0, height);
-        //aDir.SetCoord(2.0 * PI, -pitch);
-        aPnt.SetCoord(2. * M_PI, 0.0);
         aDir.SetCoord(-2. * M_PI, pitch);
         coneDir = -1.0;
     }
@@ -1681,7 +1682,6 @@ TopoDS_Shape TopoShape::makeLongHelix(Standard_Real pitch, Standard_Real height,
     gp_Dir2d aDir(2. * M_PI, pitch);
     Standard_Real coneDir = 1.0;
     if (leftHanded) {
-        aPnt.SetCoord(2. * M_PI, 0.0);
         aDir.SetCoord(-2. * M_PI, pitch);
         coneDir = -1.0;
     }
@@ -2043,8 +2043,11 @@ void TopoShape::transformShape(const Base::Matrix4D& rclTrf, bool copy)
     gp_Trsf mat;
     mat.SetValues(rclTrf[0][0],rclTrf[0][1],rclTrf[0][2],rclTrf[0][3],
                   rclTrf[1][0],rclTrf[1][1],rclTrf[1][2],rclTrf[1][3],
-                  rclTrf[2][0],rclTrf[2][1],rclTrf[2][2],rclTrf[2][3],
-                  0.00001,0.00001);
+                  rclTrf[2][0],rclTrf[2][1],rclTrf[2][2],rclTrf[2][3]
+#if OCC_VERSION_HEX < 0x060800
+                  , 0.00001,0.00001
+#endif
+                ); //precision was removed in OCCT CR0025194
 
     // location transformation
     BRepBuilderAPI_Transform mkTrf(this->_Shape, mat, copy ? Standard_True : Standard_False);

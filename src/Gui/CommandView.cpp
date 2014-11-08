@@ -1576,7 +1576,7 @@ StdCmdViewCreate::StdCmdViewCreate()
 
 void StdCmdViewCreate::activated(int iMsg)
 {
-    getActiveGuiDocument()->createView("View3DIv");
+    getActiveGuiDocument()->createView(View3DInventor::getClassTypeId());
     getActiveGuiDocument()->getActiveView()->viewAll();
 }
 
@@ -1876,10 +1876,10 @@ StdCmdViewIvStereoRedGreen::StdCmdViewIvStereoRedGreen()
   : Command("Std_ViewIvStereoRedGreen")
 {
   sGroup        = QT_TR_NOOP("Standard-View");
-  sMenuText     = QT_TR_NOOP("Stereo red/green");
-  sToolTipText  = QT_TR_NOOP("Switch stereo viewing to red/green");
+  sMenuText     = QT_TR_NOOP("Stereo red/cyan");
+  sToolTipText  = QT_TR_NOOP("Switch stereo viewing to red/cyan");
   sWhatsThis    = "Std_ViewIvStereo";
-  sStatusTip    = QT_TR_NOOP("Switch stereo viewing to red/green");
+  sStatusTip    = QT_TR_NOOP("Switch stereo viewing to red/cyan");
   sPixmap       = "Std_Tool7";
   eType         = Alter3DView;
 }
@@ -2419,7 +2419,7 @@ CmdViewMeasureClearAll::CmdViewMeasureClearAll()
     sGroup        = QT_TR_NOOP("Measure");
     sMenuText     = QT_TR_NOOP("Clear measurement");
     sToolTipText  = QT_TR_NOOP("Clear measurement");
-    sWhatsThis    = sToolTipText;
+    sWhatsThis    = "View_Measure_Clear_All";
     sStatusTip    = sToolTipText;
     sPixmap       = "Part_Measure_Clear_All";
 }
@@ -2448,7 +2448,7 @@ CmdViewMeasureToggleAll::CmdViewMeasureToggleAll()
   sGroup        = QT_TR_NOOP("Measure");
   sMenuText     = QT_TR_NOOP("Toggle measurement");
   sToolTipText  = QT_TR_NOOP("Toggle measurement");
-  sWhatsThis    = sToolTipText;
+  sWhatsThis    = "View_Measure_Toggle_All";
   sStatusTip    = sToolTipText;
   sPixmap       = "Part_Measure_Toggle_All";
 }

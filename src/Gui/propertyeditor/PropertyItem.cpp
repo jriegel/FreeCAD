@@ -1009,7 +1009,6 @@ void PropertyVectorDistanceItem::setValue(const QVariant& variant)
     QString unit = QString::fromLatin1("('%1 %2'").arg(q.getValue()).arg(q.getUnit().getString());
     q = Base::Quantity(value.y, Base::Unit::Length);
     unit + QString::fromLatin1("'%1 %2'").arg(q.getValue()).arg(q.getUnit().getString());
-    q = Base::Quantity(value.z, Base::Unit::Length);
 
     setPropertyValue(unit);
 }
@@ -2147,7 +2146,7 @@ PropertyLinkItem::PropertyLinkItem()
 QVariant PropertyLinkItem::toString(const QVariant& prop) const
 {
     QStringList list = prop.toStringList();
-    return QVariant(list.last());
+    return QVariant(list[2]);
 }
 
 QVariant PropertyLinkItem::value(const App::Property* prop) const

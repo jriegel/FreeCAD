@@ -55,7 +55,6 @@
 #include "DlgPreferencesImp.h"
 #include "DlgCustomizeImp.h"
 #include "Widgets.h"
-#include "NetworkRetriever.h"
 #include "OnlineDocumentation.h"
 #include "GuiConsole.h"
 #include "WorkbenchManager.h"
@@ -430,7 +429,7 @@ StdCmdOnlineHelp::StdCmdOnlineHelp()
 
 void StdCmdOnlineHelp::activated(int iMsg)
 {
-    Gui::getMainWindow()->showDocumentation();
+    Gui::getMainWindow()->showDocumentation(QString());
 }
 
 //===========================================================================

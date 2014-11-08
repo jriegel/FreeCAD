@@ -131,10 +131,6 @@ using namespace boost::program_options;
 # include <new>
 #endif
 
-#ifdef MemDebugOn
-# define new DEBUG_CLIENTBLOCK
-#endif
-
 
 //using Base::GetConsole;
 using namespace Base;
@@ -292,6 +288,23 @@ Document* Application::newDocument(const char * Name, const char * UserName)
         Name = "Unnamed";
     string name = getUniqueDocumentName(Name);
 
+    std::string userName;
+    if (UserName && UserName[0] != '\0') {
+        userName = UserName;
+    }
+    else {
+        userName = Name;
+        std::vector<std::string> names;
+        names.reserve(DocMap.size());
+        std::map<string,Document*>::const_iterator pos;
+        for (pos = DocMap.begin();pos != DocMap.end();++pos) {
+            names.push_back(pos->second->Label.getValue());
+        }
+
+        if (!names.empty())
+            userName = Base::Tools::getUniqueName(userName, names);
+    }
+
     // create the FreeCAD document
     auto_ptr<Document> newDoc(new Document() );
 
@@ -319,10 +332,7 @@ Document* Application::newDocument(const char * Name, const char * UserName)
     signalNewDocument(*_pActiveDoc);
 
     // set the UserName after notifying all observers
-    if (UserName)
-        _pActiveDoc->Label.setValue(UserName);
-    else
-        _pActiveDoc->Label.setValue(Name);
+    _pActiveDoc->Label.setValue(userName);
 
     return _pActiveDoc;
 }
@@ -489,7 +499,7 @@ void Application::setActiveDocument(const char *Name)
     }
 }
 
-const char* Application::GetHomePath(void) const
+const char* Application::getHomePath(void) const
 {
     return _mConfig["AppHomePath"].c_str();
 }
@@ -1273,10 +1283,12 @@ void Application::processCmdLineFiles(void)
             else {
                 std::vector<std::string> mods = App::GetApplication().getImportModules(Ext.c_str());
                 if (!mods.empty()) {
+                    std::string escapedstr = Base::Tools::escapedUnicodeFromUtf8(File.filePath().c_str());
                     Base::Interpreter().loadModule(mods.front().c_str());
                     Base::Interpreter().runStringArg("import %s",mods.front().c_str());
-                    Base::Interpreter().runStringArg("%s.open(\"%s\")",mods.front().c_str(),File.filePath().c_str());
-                    Base::Console().Log("Command line open: %s.Open(\"%s\")\n",mods.front().c_str(),File.filePath().c_str());
+                    Base::Interpreter().runStringArg("%s.open(u\"%s\")",mods.front().c_str(),
+                            escapedstr.c_str());
+                    Base::Console().Log("Command line open: %s.open(u\"%s\")\n",mods.front().c_str(),escapedstr.c_str());
                 }
                 else {
                     Console().Warning("File format not supported: %s \n", File.filePath().c_str());
@@ -2003,31 +2015,38 @@ std::string Application::FindHomePath(const char* sCall)
     // We have three ways to start this application either use one of the both executables or
     // import the FreeCAD.pyd module from a running Python session. In the latter case the
     // Python interpreter is already initialized.
-    char  szFileName [MAX_PATH] ;
+    wchar_t szFileName [MAX_PATH];
     if (Py_IsInitialized()) {
-        GetModuleFileName(GetModuleHandle(sCall),szFileName, MAX_PATH-1);
+        GetModuleFileNameW(GetModuleHandle(sCall),szFileName, MAX_PATH-1);
     }
     else {
-        GetModuleFileName(0, szFileName, MAX_PATH-1);
+        GetModuleFileNameW(0, szFileName, MAX_PATH-1);
     }
 
-    std::string Call(szFileName), TempHomePath;
-    std::string::size_type pos = Call.find_last_of(PATHSEP);
-    TempHomePath.assign(Call,0,pos);
-    pos = TempHomePath.find_last_of(PATHSEP);
-    TempHomePath.assign(TempHomePath,0,pos+1);
+    std::wstring Call(szFileName), homePath;
+    std::wstring::size_type pos = Call.find_last_of(PATHSEP);
+    homePath.assign(Call,0,pos);
+    pos = homePath.find_last_of(PATHSEP);
+    homePath.assign(homePath,0,pos+1);
 
     // switch to posix style
-    for (std::string::iterator i=TempHomePath.begin();i!=TempHomePath.end();++i) {
-        if (*i == '\\')
-            *i = '/';
+    for (std::wstring::iterator it = homePath.begin(); it != homePath.end(); ++it) {
+        if (*it == '\\')
+            *it = '/';
     }
 
     // fixes #0001638 to avoid to load DLLs from Windows' system directories before FreeCAD's bin folder
-    std::string binPath = TempHomePath;
-    binPath += "bin";
-    SetDllDirectory(binPath.c_str());
-    return TempHomePath;
+    std::wstring binPath = homePath;
+    binPath += L"bin";
+    SetDllDirectoryW(binPath.c_str());
+
+    // http://stackoverflow.com/questions/5625884/conversion-of-stdwstring-to-qstring-throws-linker-error
+#ifdef _MSC_VER
+    QString str = QString::fromUtf16(reinterpret_cast<const ushort *>(homePath.c_str()));
+#else
+    QString str = QString::fromStdWString(homePath);
+#endif
+    return str.toStdString();
 }
 
 #else

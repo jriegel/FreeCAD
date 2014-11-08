@@ -69,27 +69,39 @@ else:
         FreeCAD.Console.PrintWarning("DXF libraries need to be updated. Downloading...\n")
         libsok = False
 if not libsok:
-    files = ['dxfColorMap.py','dxfImportObjects.py','dxfLibrary.py','dxfReader.py']
-    baseurl = 'https://raw.githubusercontent.com/yorikvanhavre/Draft-dxf-importer/'+str(CURRENTDXFLIB)+"/"
-    import ArchCommands
-    from FreeCAD import Base
-    progressbar = Base.ProgressIndicator()
-    progressbar.start("Downloading files...",4)
-    for f in files:
-        progressbar.next()
-        p = None
-        p = ArchCommands.download(baseurl+f,force=True)
-        if not p:
-            FreeCAD.Console.PrintWarning("Download of dxf libraries failed. Please download them manually from\nhttps://github.com/yorikvanhavre/Draft-dxf-importer\nand place them in your macros folder\n")
-            break
-    progressbar.stop() 
-
-    sys.path.append(FreeCAD.ConfigGet("UserAppData"))
-    try:
-        import dxfColorMap, dxfLibrary, dxfReader
-    except ImportError:
+    p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft")
+    dxfAllowDownload = p.GetBool("dxfAllowDownload",False)
+    if dxfAllowDownload:
+        files = ['dxfColorMap.py','dxfImportObjects.py','dxfLibrary.py','dxfReader.py']
+        baseurl = 'https://raw.githubusercontent.com/yorikvanhavre/Draft-dxf-importer/'+str(CURRENTDXFLIB)+"/"
+        import ArchCommands
+        from FreeCAD import Base
+        progressbar = Base.ProgressIndicator()
+        progressbar.start("Downloading files...",4)
+        for f in files:
+            progressbar.next()
+            p = None
+            p = ArchCommands.download(baseurl+f,force=True)
+            if not p:
+                FreeCAD.Console.PrintWarning("Download of dxf libraries failed. Please download them manually from\nhttps://github.com/yorikvanhavre/Draft-dxf-importer\nand place them in your macros folder\n")
+                break
+        progressbar.stop() 
+    
+        sys.path.append(FreeCAD.ConfigGet("UserAppData"))
+        try:
+            import dxfColorMap, dxfLibrary, dxfReader
+        except ImportError:
+            dxfReader = None
+            dxfLibrary = None
+    else:
+        FreeCAD.Console.PrintWarning("The DXF import/export libraries needed by FreeCAD to handle the DXF format\n")
+        FreeCAD.Console.PrintWarning("were not found on this system. Please either enable FreeCAD to download these\n")
+        FreeCAD.Console.PrintWarning("libraries (menu Edit > Preferences > Import-Export > DXF > Enable downloads) or download\n")
+        FreeCAD.Console.PrintWarning("these libraries manually, as explained on\n")
+        FreeCAD.Console.PrintWarning("https://github.com/yorikvanhavre/Draft-dxf-importer\n")
         dxfReader = None
         dxfLibrary = None
+        
 
 if open.__module__ == '__builtin__':
     pythonopen = open # to distinguish python built-in open function from the one declared here
@@ -106,7 +118,7 @@ def decodeName(name):
         try:
             decodedName = (name.decode("latin1"))
         except UnicodeDecodeError:
-                print "dxf: error: couldn't determine character encoding"
+                print("dxf: error: couldn't determine character encoding")
                 decodedName = name
     return decodedName
 
@@ -114,17 +126,17 @@ def deformat(text):
     "removes weird formats in texts and wipes UTF characters"
     # remove ACAD string formatation
     #t = re.sub('{([^!}]([^}]|\n)*)}', '', text)
-    #print "input text: ",text
+    #print("input text: ",text)
     t = text.strip("{}")
     t = re.sub("\\\.*?;","",t)
     # replace UTF codes by utf chars
     sts = re.split("\\\\(U\+....)",t)
     ns = u""
     for ss in sts:
-        #print ss, type(ss)
+        #print(ss, type(ss))
         if ss.startswith("U+"):
             ucode = "0x"+ss[2:]
-            ns += unichr(eval(ucode))
+            ns += unichr(eval(ucode)) #Python3 - unichr doesn't exist anymore
         else:
             try:
                 ns += ss.decode("utf8")
@@ -132,12 +144,12 @@ def deformat(text):
                 try:
                     ns += ss.decode("latin1")
                 except UnicodeError:
-                    print "unable to decode text: ",text
+                    print("unable to decode text: ",text)
     t = ns
     # replace degrees, diameters chars
     t = re.sub('%%d','°',t) 
     t = re.sub('%%c','Ø',t)
-    #print "output text: ",t
+    #print("output text: ",t)
     return t
 
 def locateLayer(wantedLayer,color=None):
@@ -585,7 +597,7 @@ def drawSpline(spline,forceShape=False):
             return ob
         else:
             sp = Part.BSplineCurve()
-            # print knots
+            # print(knots)
             sp.interpolate(verts)
             sh = Part.Wire(sp.toShape())
             if closed:
@@ -602,9 +614,9 @@ def drawBlock(blockref,num=None,createObject=False):
         if blockref.name[0] == '*':
             return None
     if len(blockref.entities.data) == 0:
-        print "skipping empty block ",blockref.name
+        print("skipping empty block ",blockref.name)
         return None
-    #print "creating block ", blockref.name, " containing ", len(blockref.entities.data), " entities"
+    #print("creating block ", blockref.name, " containing ", len(blockref.entities.data), " entities")
     shapes = []
     for line in blockref.entities.get_type('line'):
         s = drawLine(line,forceShape=True)
@@ -622,7 +634,7 @@ def drawBlock(blockref,num=None,createObject=False):
         s = drawCircle(circle,forceShape=True)
         if s: shapes.append(s)
     for insert in blockref.entities.get_type('insert'):
-        #print "insert ",insert," in block ",insert.block[0]
+        #print("insert ",insert," in block ",insert.block[0])
         if dxfStarBlocks or insert.block[0] != '*':
             s = drawInsert(insert)
             if s: shapes.append(s)
@@ -639,7 +651,7 @@ def drawBlock(blockref,num=None,createObject=False):
     for text in blockref.entities.get_type('mtext'):
         if dxfImportTexts:
              if dxfImportLayouts or (not rawValue(text,67)):
-                print "adding block text",text.value, " from ",blockref
+                print("adding block text",text.value, " from ",blockref)
                 addText(text)
     try: shape = Part.makeCompound(shapes)
     except Part.OCCError: warn(blockref)
@@ -659,7 +671,7 @@ def drawInsert(insert,num=None,clone=False):
         for a in attrs:
             addText(a,attrib=True)
     if clone:
-        if blockobjects.has_key(insert.block):
+        if insert.block in blockobjects:
             newob = Draft.clone(blockobjects[insert.block])
             tsf = FreeCAD.Matrix()
             rot = math.radians(insert.rotation)
@@ -674,7 +686,7 @@ def drawInsert(insert,num=None,clone=False):
         else:
             shape = None
     else:
-        if blockshapes.has_key(insert):
+        if insert in blockshapes:
             shape = blockshapes[insert.block].copy()
         else:
             shape = None
@@ -799,7 +811,7 @@ def addText(text,attrib=False):
             yv = ax.cross(xv)
             if text.alignment in [1,2,3]:
                 sup = DraftVecUtils.scaleTo(yv,fsize/TEXTSCALING).negative()
-                print ax,sup
+                #print(ax,sup)
                 pos = pos.add(sup)
             elif text.alignment in [4,5,6]:
                 sup = DraftVecUtils.scaleTo(yv,fsize/(2*TEXTSCALING)).negative()
@@ -1254,8 +1266,8 @@ def processdxf(document,filename,getShapes=False):
     # make blocks, if any
 
     if dxfMakeBlocks:
-        print "creating layerblocks..."
-        for k,l in layerBlocks.iteritems():
+        print("creating layerblocks...")
+        for k,l in layerBlocks.items():
             shape = drawLayerBlock(l)
             if shape:
                 newob = addObject(shape,k)
@@ -1263,24 +1275,25 @@ def processdxf(document,filename,getShapes=False):
     
     # hide block objects, if any
     
-    for k,o in blockobjects.iteritems():
+    for k,o in blockobjects.items():
         if o.ViewObject:
             o.ViewObject.hide()
     del blockobjects
     
     # finishing
 
-    print "done processing"
+    print("done processing")
 
     doc.recompute()
     FreeCAD.Console.PrintMessage("successfully imported "+filename+"\n")
-    if badobjects: print "dxf: ",len(badobjects)," objects were not imported"
+    if badobjects: 
+        print("dxf: ",len(badobjects)," objects were not imported")
     del doc
     del blockshapes
 
 def warn(dxfobject,num=None):
     "outputs a warning if a dxf object couldn't be imported"
-    print "dxf: couldn't import ", dxfobject, " (",num,")"
+    print("dxf: couldn't import ", dxfobject, " (",num,")")
     badobjects.append(dxfobject)
 
 def open(filename):
@@ -1321,7 +1334,7 @@ def projectShape(shape,direction):
     try:
         groups = Drawing.projectEx(shape,direction)
     except OCCError:
-        print "unable to project shape on direction ",direction
+        print("unable to project shape on direction ",direction)
         return shape
     else:
         for g in groups[0:5]:
@@ -1366,15 +1379,15 @@ def getArcData(edge):
         # method 2 - check the midpoint - not reliable either
         #ve3 = DraftGeomUtils.findMidpoint(edge)
         #ang3 = -math.degrees(DraftVecUtils.angle(ve3.sub(ce)))
-        #print "edge ",edge.hashCode()," data ",ang1, " , ",ang2," , ", ang3
+        #print ("edge ",edge.hashCode()," data ",ang1, " , ",ang2," , ", ang3)
         #if (ang3 < ang1) and (ang2 < ang3):
-        #    print "inverting, case1"
+        #    print ("inverting, case1")
         #    ang1, ang2 = ang2, ang1
         #elif (ang3 > ang1) and (ang3 > ang2):
-        #    print "inverting, case2"
+        #    print ("inverting, case2")
         #    ang1, ang2 = ang2, ang1
         #elif (ang3 < ang1) and (ang3 < ang2):
-        #    print "inverting, case3"
+        #    print ("inverting, case3")
         #    ang1, ang2 = ang2, ang1
         return DraftVecUtils.tup(ce), radius, ang1, ang2
 
@@ -1392,7 +1405,7 @@ def getSplineSegs(edge):
             nbsegs = int(math.ceil(edge.Length/seglength))
             step = (edge.LastParameter-edge.FirstParameter)/nbsegs
             for nv in range(1,nbsegs):
-                #print "value at",nv*step,"=",edge.valueAt(nv*step)
+                #print("value at",nv*step,"=",edge.valueAt(nv*step))
                 v = edge.valueAt(edge.FirstParameter+(nv*step))
                 points.append(v)
         points.append(edge.valueAt(edge.LastParameter))
@@ -1409,7 +1422,7 @@ def getWire(wire,nospline=False,lw=True):
             return ((v.x,v.y,v.z),None,[None,None],b)
     edges = DraftGeomUtils.sortEdges(wire.Edges)
     points = []
-    # print "processing wire ",wire.Edges
+    # print("processing wire ",wire.Edges)
     for edge in edges:
         v1 = edge.Vertexes[0].Point
         if DraftGeomUtils.geomType(edge) == "Circle":
@@ -1453,7 +1466,7 @@ def getWire(wire,nospline=False,lw=True):
     if not DraftGeomUtils.isReallyClosed(wire):
         v = edges[-1].Vertexes[-1].Point
         points.append(fmt(v))
-    # print "wire verts: ",points
+    # print("wire verts: ",points)
     return points
 
 def getBlock(sh,obj,lwPoly=False):
@@ -1495,7 +1508,7 @@ def writeShape(sh,ob,dxfobject,nospline=False,lwPoly=False):
         loneedges = []
         for e in sh.Edges:
             if not(e.hashCode() in processededges): loneedges.append(e)
-        # print "lone edges ",loneedges
+        # print("lone edges ",loneedges)
         for edge in loneedges:
             if (DraftGeomUtils.geomType(edge) in ["BSplineCurve","BezierCurve"]): # splines
                 if (len(edge.Vertexes) == 1) and (edge.Curve.isClosed()):
@@ -1544,7 +1557,7 @@ def writeShape(sh,ob,dxfobject,nospline=False,lwPoly=False):
                         ax = edge.Curve.Focus1.sub(edge.Curve.Center)
                         major = DraftVecUtils.tup(DraftVecUtils.scaleTo(ax,edge.Curve.MajorRadius))
                         minor = edge.Curve.MinorRadius/edge.Curve.MajorRadius
-                        # print "exporting ellipse: ",center,norm,start,end,major,minor
+                        # print("exporting ellipse: ",center,norm,start,end,major,minor)
                         dxfobject.append(dxfLibrary.Ellipse(center=center,majorAxis=major,normalAxis=norm,
                                                             minorAxisRatio=minor,startParameter=start,
                                                             endParameter=end,
@@ -1563,14 +1576,14 @@ def writeShape(sh,ob,dxfobject,nospline=False,lwPoly=False):
 def writeMesh(ob,dxfobject):
     "export a shape as a polyface mesh"
     meshdata = ob.Shape.tessellate(0.5)
-    # print meshdata
+    # print(meshdata)
     points = []
     faces = []
     for p in meshdata[0]:
         points.append([p.x,p.y,p.z])
     for f in meshdata[1]:
         faces.append([f[0]+1,f[1]+1,f[2]+1])
-    # print len(points),len(faces)
+    # print(len(points),len(faces))
     dxfobject.append(dxfLibrary.PolyLine([points,faces], [0.0,0.0,0.0],
                                          64, color=getACI(ob),
                                          layer=getGroup(ob)))
@@ -1599,7 +1612,7 @@ def export(objectslist,filename,nospline=False,lwPoly=False):
             # other cases, treat edges
             dxf = dxfLibrary.Drawing()
             for ob in exportList:
-                print "processing ",ob.Name
+                print("processing ",ob.Name)
                 if ob.isDerivedFrom("Part::Feature"):
                     if FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft").GetBool("dxfmesh"):
                         sh = None
@@ -1687,7 +1700,7 @@ def exportPage(page,filename):
                 template = template.replace(editables[i],values[i])
     else:
         # dummy default template
-        print "DXF version of the template not found. Creating a default empty template."
+        print("DXF version of the template not found. Creating a default empty template.")
         template = "999\nFreeCAD DXF exporter v"+FreeCAD.Version()[0]+"."+FreeCAD.Version()[1]+"-"+FreeCAD.Version()[2]+"\n"
         template += "0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n0\nENDSEC\n"
         template += "0\nSECTION\n2\nBLOCKS\n$blocks\n0\nENDSEC\n"
@@ -1765,7 +1778,7 @@ def getViewDXF(view):
         dxfhandle += 1
         
     else:
-        print "Unable to get DXF representation from view: ",view.Label
+        print("Unable to get DXF representation from view: ",view.Label)
     return block,insert
     
 

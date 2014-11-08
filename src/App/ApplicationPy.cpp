@@ -45,7 +45,6 @@
 #include <Base/FileInfo.h>
 #include <Base/UnitsApi.h>
 
-#define new DEBUG_CLIENTBLOCK
 //using Base::GetConsole;
 using namespace Base;
 using namespace App;
@@ -180,12 +179,14 @@ PyObject* Application::sLoadFile(PyObject * /*self*/, PyObject *args,PyObject * 
 
 PyObject* Application::sOpenDocument(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
-    char *pstr;
-    if (!PyArg_ParseTuple(args, "s", &pstr))     // convert args: Python->C
-        return NULL;                             // NULL triggers exception
+    char* Name;
+    if (!PyArg_ParseTuple(args, "et","utf-8",&Name))
+        return NULL;
+    std::string EncodedName = std::string(Name);
+    PyMem_Free(Name);
     try {
         // return new document
-        return (GetApplication().openDocument(pstr)->getPyObject());
+        return (GetApplication().openDocument(EncodedName.c_str())->getPyObject());
     }
     catch (const Base::Exception& e) {
         PyErr_SetString(PyExc_IOError, e.what());
@@ -193,7 +194,7 @@ PyObject* Application::sOpenDocument(PyObject * /*self*/, PyObject *args,PyObjec
     }
     catch (const std::exception& e) {
         // might be subclass from zipios
-        PyErr_Format(PyExc_IOError, "Invalid project file %s: %s\n", pstr, e.what());
+        PyErr_Format(PyExc_IOError, "Invalid project file %s: %s\n", EncodedName.c_str(), e.what());
         return 0L;
     }
 }
@@ -520,7 +521,7 @@ PyObject* Application::sGetResourceDir(PyObject * /*self*/, PyObject *args,PyObj
     if (!PyArg_ParseTuple(args, ""))     // convert args: Python->C
         return NULL;                       // NULL triggers exception
 
-    Py::String datadir(Application::getResourceDir());
+    Py::String datadir(Application::getResourceDir(),"utf-8");
     return Py::new_reference_to(datadir);
 }
 
@@ -529,7 +530,7 @@ PyObject* Application::sGetHomePath(PyObject * /*self*/, PyObject *args,PyObject
     if (!PyArg_ParseTuple(args, ""))     // convert args: Python->C
         return NULL;                       // NULL triggers exception
 
-    Py::String homedir(GetApplication().GetHomePath());
+    Py::String homedir(GetApplication().getHomePath(),"utf-8");
     return Py::new_reference_to(homedir);
 }
 

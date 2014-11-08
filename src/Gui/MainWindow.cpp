@@ -31,6 +31,7 @@
 # include <QMimeData>
 # include <QCloseEvent>
 # include <QContextMenuEvent>
+# include <QDesktopServices>
 # include <QDesktopWidget>
 # include <QDockWidget>
 # include <QFontMetrics>
@@ -548,12 +549,17 @@ void MainWindow::whatsThis()
     QWhatsThis::enterWhatsThisMode();
 }
 
-void MainWindow::showDocumentation(const char* Article)
+void MainWindow::showDocumentation(const QString& help)
 {
-    QString help;
-    if (Article && Article[0] != '\0')
-        help = QString::fromUtf8("%1.html").arg(QLatin1String(Article));
-    d->assistant->showDocumentation(help);
+    QUrl url(help);
+    if (url.scheme().isEmpty()) {
+        QString page;
+        page = QString::fromUtf8("%1.html").arg(help);
+        d->assistant->showDocumentation(page);
+    }
+    else {
+        QDesktopServices::openUrl(url);
+    }
 }
 
 bool MainWindow::event(QEvent *e)
@@ -576,7 +582,7 @@ bool MainWindow::event(QEvent *e)
     }
     else if (e->type() == QEvent::WhatsThisClicked) {
         QWhatsThisClickedEvent* wt = static_cast<QWhatsThisClickedEvent*>(e);
-        showDocumentation((const char*)wt->href().toUtf8());
+        showDocumentation(wt->href());
     }
     else if (e->type() == QEvent::ApplicationWindowIconChange) {
         // if application icon changes apply it to the main window and the "About..." dialog
@@ -946,7 +952,7 @@ void MainWindow::onWindowActivated(QWidget* w)
     if (!w) return;
     MDIView* view = dynamic_cast<MDIView*>(w->widget());
 #else
-     MDIView* view = dynamic_cast<MDIView*>(w);
+    MDIView* view = dynamic_cast<MDIView*>(w);
 #endif
 
     // Even if windowActivated() signal is emitted mdi doesn't need to be a top-level window.
@@ -1618,6 +1624,18 @@ void MainWindow::changeEvent(QEvent *e)
         // reload current workbench to retranslate all actions and window titles
         Workbench* wb = WorkbenchManager::instance()->active();
         if (wb) wb->retranslate();
+    }
+    else if (e->type() == QEvent::ActivationChange) {
+        if (isActiveWindow()) {
+            QMdiSubWindow* mdi = d->mdiArea->currentSubWindow();
+            if (mdi) {
+                MDIView* view =dynamic_cast<MDIView*>(mdi->widget());
+                if (getMainWindow()->activeWindow() != view) {
+                    d->activeView = view;
+                    Application::Instance->viewActivated(view);
+                }
+            }
+        }
     }
     else {
         QMainWindow::changeEvent(e);

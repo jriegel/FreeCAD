@@ -213,8 +213,6 @@ int main( int argc, char ** argv )
     {
         QCoreApplication app(argc, argv);
         QStringList args = app.arguments();
-        args.pop_front(); // remove 1st argument
-        argv_.push_back(argv[0]);
         for (QStringList::iterator it = args.begin(); it != args.end(); ++it) {
             data.push_back(it->toUtf8());
             argv_.push_back(data.back().data());
@@ -310,7 +308,7 @@ int main( int argc, char ** argv )
 
     // Now it's time to read-in the file branding.xml if it exists
     Branding brand;
-    QString path = QString::fromUtf8(App::GetApplication().GetHomePath());
+    QString path = QString::fromUtf8(App::GetApplication().getHomePath());
     QFileInfo fi(path, QString::fromAscii("branding.xml"));
     if (brand.readFile(fi.absoluteFilePath())) {
         Branding::XmlConfig cfg = brand.getUserDefines();

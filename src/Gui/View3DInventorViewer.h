@@ -33,8 +33,9 @@
 #include <Inventor/nodes/SoEventCallback.h>
 #include <Inventor/nodes/SoSwitch.h>
 #include <Inventor/SbRotation.h>
-#include "Gui/Quarter/SoQTQuarterAdaptor.h"
+#include <Gui/Quarter/SoQTQuarterAdaptor.h>
 #include <QCursor>
+#include <QImage>
 
 #include <Gui/Selection.h>
 
@@ -120,8 +121,18 @@ public:
     };
     //@}
 
-    View3DInventorViewer (QWidget *parent);
-    View3DInventorViewer (const QGLFormat& format, QWidget *parent);
+    /** @name Render mode
+      */
+    //@{
+    enum RenderType {
+        Native,
+        Framebuffer,
+        Image
+    };
+    //@}
+
+    View3DInventorViewer (QWidget *parent, const QGLWidget* sharewidget = 0);
+    View3DInventorViewer (const QGLFormat& format, QWidget *parent, const QGLWidget* sharewidget = 0);
     virtual ~View3DInventorViewer();
     
     void init();
@@ -151,8 +162,7 @@ public:
     void setFeedbackSize(const int size);
     int getFeedbackSize(void) const;
 
-    void setRenderFramebuffer(const SbBool enable);
-    SbBool isRenderFramebuffer() const;
+    void setRenderType(const RenderType type);
     void renderToFramebuffer(QGLFramebufferObject*);
 
     virtual void setViewing(SbBool enable);
@@ -293,15 +303,6 @@ public:
     void addDimension3d(SoNode *node);
     void addDimensionDelta(SoNode *node);
     //@}
-    
-    /** @name Anti-Aliasing Control
-     * the anti-aliasing mode is controled by parameters through view3dinventor.
-     * don't call them directly. Instead set the parameter View/AntiAliasing.
-     */
-    //@{
-    void setAntiAliasingMode(AntiAliasing mode);
-    AntiAliasing getAntiAliasingMode() const;
-    //@}
 
     /**
      * Set the camera's orientation. If isAnimationEnabled() returns
@@ -321,8 +322,8 @@ public:
     void viewAll();
     void viewAll(float factor);
 
-	/// Breaks out a VR window for a Rift
-	void viewVR(void);
+    /// Breaks out a VR window for a Rift
+    void viewVR(void);
 
     /**
      * Reposition the current camera so we can see all selected objects 
@@ -354,6 +355,7 @@ public:
 protected:
     void renderScene();
     void renderFramebuffer();
+    void renderGLImage();
     void animatedViewAll(int steps, int ms);
     virtual void actualRedraw(void);
     virtual void setSeekMode(SbBool enable);
@@ -363,8 +365,10 @@ protected:
     void printDimension();
     void selectAll();
 
-    static void clearBuffer(void * userdata, SoAction * action);
-    static void setGLWidget(void * userdata, SoAction * action);
+private:
+    static void setViewportCB(void * userdata, SoAction * action);
+    static void clearBufferCB(void * userdata, SoAction * action);
+    static void setGLWidgetCB(void * userdata, SoAction * action);
     static void handleEventCB(void * userdata, SoEventCallback * n);
     static void interactionStartCB(void * data, Quarter::SoQTQuarterAdaptor * viewer);
     static void interactionFinishCB(void * data, Quarter::SoQTQuarterAdaptor * viewer);
@@ -394,7 +398,10 @@ private:
     SoEventCallback* pEventCallback;
     NavigationStyle* navigation;
     SoFCUnifiedSelection* selectionRoot;
+
+    RenderType renderType;
     QGLFramebufferObject* framebuffer;
+    QImage glImage;
     SoSwitch *dimensionRoot;
 
     // small axis cross in the corner

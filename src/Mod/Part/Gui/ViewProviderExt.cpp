@@ -219,6 +219,7 @@ ViewProviderPartExt::~ViewProviderPartExt()
     coords->unref();
     faceset->unref();
     norm->unref();
+    normb->unref();
     lineset->unref();
     nodeset->unref();
 }
