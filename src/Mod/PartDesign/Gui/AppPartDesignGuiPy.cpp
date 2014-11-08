@@ -116,8 +116,8 @@ struct PyMethodDef PartDesignGui_Import_methods[] = {
     {"setActiveBody"       ,setActiveBody      ,METH_VARARGS,
      "setActiveBody(BodyObject) -- Set the PartBody object in work."},
 
-    {"setActiveBody"       ,getActiveBody      ,METH_NOARGS,
-     "setActiveBody() -- Get the PartBody object in work."},
+    {"getActiveBody"       ,getActiveBody      ,METH_NOARGS,
+     "getActiveBody() -- Get the PartBody object in work."},
 
     {"setUpPart"       ,setUpPart      ,METH_VARARGS,
      "setUpPart(Part) -- Sets a empty part object up for usage in PartDesign."},
