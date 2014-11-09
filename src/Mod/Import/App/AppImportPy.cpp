@@ -66,13 +66,22 @@
 static PyObject * importAssembly(PyObject *self, PyObject *args)
 {
     char* Name;
-    PyObject* TargetObject=0;
-    if (!PyArg_ParseTuple(args, "s|O",&Name,&TargetObject))
+    PyObject* TargetObjectPy=0;
+    if (!PyArg_ParseTuple(args, "et|O!","utf-8",&Name,&(App::DocumentObjectPy::Type),&TargetObjectPy))
         return 0;
+    std::string Utf8Name = std::string(Name);
+    PyMem_Free(Name);
+    std::string name8bit = Part::encodeFilename(Utf8Name);
 
     PY_TRY {
         //Base::Console().Log("Insert in Part with %s",Name);
-        Base::FileInfo file(Name);
+        Base::FileInfo file(name8bit);
+
+        App::DocumentObject* target = nullptr;
+
+        if(TargetObjectPy)
+            target = static_cast<App::DocumentObjectPy*>(TargetObjectPy)->getDocumentObjectPtr();
+       
 
         App::Document *pcDoc = 0;
             
@@ -92,7 +101,7 @@ static PyObject * importAssembly(PyObject *self, PyObject *args)
                 aReader.SetColorMode(true);
                 aReader.SetNameMode(true);
                 aReader.SetLayerMode(true);
-                if (aReader.ReadFile((Standard_CString)Name) != IFSelect_RetDone) {
+                if (aReader.ReadFile((Standard_CString)(name8bit.c_str())) != IFSelect_RetDone) {
                     PyErr_SetString(PyExc_Exception, "cannot read STEP file");
                     return 0;
                 }
@@ -121,7 +130,7 @@ static PyObject * importAssembly(PyObject *self, PyObject *args)
                 aReader.SetColorMode(true);
                 aReader.SetNameMode(true);
                 aReader.SetLayerMode(true);
-                if (aReader.ReadFile((Standard_CString)Name) != IFSelect_RetDone) {
+                if (aReader.ReadFile((Standard_CString)(name8bit.c_str())) != IFSelect_RetDone) {
                     PyErr_SetString(PyExc_Exception, "cannot read IGES file");
                     return 0;
                 }
@@ -147,8 +156,8 @@ static PyObject * importAssembly(PyObject *self, PyObject *args)
             return 0;
         }
 
-        Import::ImportOCAFAssembly ocaf(hDoc, pcDoc, file.fileNamePure());
-        ocaf.loadShapes();
+        Import::ImportOCAFAssembly ocaf(hDoc, pcDoc, file.fileNamePure(),target);
+        ocaf.loadAssembly();
         pcDoc->recompute();
 
     }
