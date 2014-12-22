@@ -90,6 +90,7 @@ void Gui::SoFCDB::init()
     SoFCVectorizeU3DAction          ::initClass();
     SoHighlightElementAction        ::initClass();
     SoSelectionElementAction        ::initClass();
+    SoVRMLAction                    ::initClass();
     SoSkipBoundingGroup             ::initClass();
     SoTextLabel                     ::initClass();
     SoStringLabel                   ::initClass();
@@ -119,6 +120,8 @@ void Gui::SoFCDB::init()
     PropertyPlacementItem           ::init();
     PropertyEnumItem                ::init();
     PropertyStringListItem          ::init();
+    PropertyFloatListItem           ::init();
+    PropertyIntegerListItem         ::init();
     PropertyColorItem               ::init();
     PropertyFileItem                ::init();
     PropertyPathItem                ::init();

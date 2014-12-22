@@ -106,15 +106,20 @@ DlgCustomToolbars::DlgCustomToolbars(DlgCustomToolbars::Type t, QWidget* parent)
     // fills the combo box with all available workbenches
     QStringList workbenches = Application::Instance->workbenches();
     workbenches.sort();
-    index = 0;
-    for (QStringList::Iterator it = workbenches.begin(); it != workbenches.end(); ++it, ++index) {
+    index = 1;
+    workbenchBox->addItem(QApplication::windowIcon(), tr("Global"));
+    workbenchBox->setItemData(0, QVariant(QString::fromAscii("Global")), Qt::UserRole);
+    for (QStringList::Iterator it = workbenches.begin(); it != workbenches.end(); ++it) {
         QPixmap px = Application::Instance->workbenchIcon(*it);
         QString mt = Application::Instance->workbenchMenuText(*it);
-        if ( px.isNull() )
-            workbenchBox->addItem(mt);
-        else
-            workbenchBox->addItem(px, mt);
-        workbenchBox->setItemData(index, QVariant(*it), Qt::UserRole);
+        if (mt != QLatin1String("<none>")) {
+            if (px.isNull())
+                workbenchBox->addItem(mt);
+            else
+                workbenchBox->addItem(px, mt);
+            workbenchBox->setItemData(index, QVariant(*it), Qt::UserRole);
+            index++;
+        }
     }
 
     QStringList labels; 
@@ -219,7 +224,12 @@ void DlgCustomToolbars::importCustomToolbars(const QByteArray& name)
 {
     ParameterGrp::handle hGrp = App::GetApplication().GetUserParameter().GetGroup("BaseApp")->GetGroup("Workbench");
     const char* subgroup = (type == Toolbar ? "Toolbar" : "Toolboxbar");
-    hGrp = hGrp->GetGroup(name.constData())->GetGroup(subgroup);
+    if (!hGrp->HasGroup(name.constData()))
+        return;
+    hGrp = hGrp->GetGroup(name.constData());
+    if (!hGrp->HasGroup(subgroup))
+        return;
+    hGrp = hGrp->GetGroup(subgroup);
 
     std::vector<Base::Reference<ParameterGrp> > hGrps = hGrp->GetGroups();
     CommandManager& rMgr = Application::Instance->commandManager();

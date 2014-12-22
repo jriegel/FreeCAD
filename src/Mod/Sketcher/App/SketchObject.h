@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2008     *
+ *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2008    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -127,6 +127,10 @@ public:
 
     /// trim a curve
     int trim(int geoId, const Base::Vector3d& point);
+    /// Exposes all internal geometry of an object supporting internal geometry
+    int ExposeInternalGeometry(int GeoId);
+    /// Deletes all unused (not further constrained) internal geometry
+    int DeleteUnusedInternalGeometry(int GeoId);
 
     /// retrieves for a Vertex number the corresponding GeoId and PosId
     void getGeoVertexIndex(int VertexId, int &GeoId, PointPos &PosId) const;
@@ -168,7 +172,6 @@ protected:
     /// get called by the container when a property has changed
     virtual void onChanged(const App::Property* /*prop*/);
     virtual void onDocumentRestored();
-    virtual void onFinishDuplicating();
 
 private:
     std::vector<Part::Geometry *> ExternalGeo;

@@ -90,7 +90,8 @@ SET(Document_CPP_SRCS
     Plane.cpp
     Transactions.cpp
     VRMLObject.cpp
-	MaterialObject.cpp
+    MaterialObject.cpp
+    MergeDocuments.cpp
 )
 
 SET(Document_HPP_SRCS
@@ -115,7 +116,8 @@ SET(Document_HPP_SRCS
     Plane.h
     Transactions.h
     VRMLObject.h
-	MaterialObject.h
+    MaterialObject.h
+    MergeDocuments.h
 )
 SET(Document_SRCS
     ${Document_CPP_SRCS}

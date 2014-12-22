@@ -659,6 +659,10 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     Gui::MenuItem* cons = new Gui::MenuItem();
     cons->setCommand("Sketcher constraints");
     SketcherGui::addSketcherWorkbenchConstraints( *cons );
+    
+    Gui::MenuItem* consaccel = new Gui::MenuItem();
+    consaccel->setCommand("Sketcher tools");
+    SketcherGui::addSketcherWorkbenchTools(*consaccel);
 
     Gui::MenuItem* part = new Gui::MenuItem;
     root->insertItem(item, part);
@@ -777,6 +781,10 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
           << "Sketcher_ConstrainRadius"
           << "Sketcher_ConstrainAngle";
 
+    Gui::ToolBarItem* consaccel = new Gui::ToolBarItem(root);
+    consaccel->setCommand("Sketcher tools");
+    SketcherGui::addSketcherWorkbenchTools( *consaccel );
+    
     return root;
 }
 

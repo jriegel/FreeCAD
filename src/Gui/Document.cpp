@@ -94,6 +94,8 @@ struct DocumentP
     Connection connectRestDocument;
     Connection connectStartLoadDocument;
     Connection connectFinishLoadDocument;
+    Connection connectExportObjects;
+    Connection connectImportObjects;
 };
 
 } // namespace Gui
@@ -136,6 +138,11 @@ Document::Document(App::Document* pcDocument,Application * app)
     d->connectFinishLoadDocument = App::GetApplication().signalFinishRestoreDocument.connect
         (boost::bind(&Gui::Document::slotFinishRestoreDocument, this, _1));
 
+    d->connectExportObjects = pcDocument->signalExportViewObjects.connect
+        (boost::bind(&Gui::Document::exportObjects, this, _1, _2));
+    d->connectImportObjects = pcDocument->signalImportViewObjects.connect
+        (boost::bind(&Gui::Document::importObjects, this, _1, _2, _3));
+
     // pointer to the python class
     // NOTE: As this Python object doesn't get returned to the interpreter we
     // mustn't increment it (Werner Jan-12-2006)
@@ -162,6 +169,8 @@ Document::~Document()
     d->connectRestDocument.disconnect();
     d->connectStartLoadDocument.disconnect();
     d->connectFinishLoadDocument.disconnect();
+    d->connectExportObjects.disconnect();
+    d->connectImportObjects.disconnect();
 
     // e.g. if document gets closed from within a Python command
     d->_isClosing = true;
@@ -449,11 +458,17 @@ void Document::slotChangedObject(const App::DocumentObject& Obj, const App::Prop
     if (viewProvider) {
         try {
             viewProvider->update(&Prop);
-        } catch(const Base::MemoryException& e) {
+        }
+        catch(const Base::MemoryException& e) {
             Base::Console().Error("Memory exception in '%s' thrown: %s\n",Obj.getNameInDocument(),e.what());
-        } catch(Base::Exception &e){
+        }
+        catch(Base::Exception& e){
             e.ReportException();
-        } catch (...) {
+        }
+        catch(const std::exception& e){
+            Base::Console().Error("C++ exception in '%s' thrown: %s\n",Obj.getNameInDocument(),e.what());
+        }
+        catch (...) {
             Base::Console().Error("Cannot update representation for '%s'.\n", Obj.getNameInDocument());
         }
 
@@ -586,7 +601,7 @@ bool Document::saveAs(void)
 
         // save as new file name
         Gui::WaitCursor wc;
-        Command::doCommand(Command::Doc,"App.getDocument(\"%s\").saveAs('%s')"
+        Command::doCommand(Command::Doc,"App.getDocument(\"%s\").saveAs(\"%s\")"
                                        , DocName, (const char*)fn.toUtf8());
         setModified(false);
 
@@ -857,7 +872,8 @@ void Document::exportObjects(const std::vector<App::DocumentObject*>& obj, Base:
     writer.Stream() << "</Document>" << std::endl;
 }
 
-void Document::importObjects(const std::vector<App::DocumentObject*>& obj, Base::Reader& reader)
+void Document::importObjects(const std::vector<App::DocumentObject*>& obj, Base::Reader& reader,
+                             const std::map<std::string, std::string>& nameMapping)
 {
     // We must create an XML parser to read from the input stream
     Base::XMLReader xmlReader("GuiDocument.xml", reader);
@@ -878,15 +894,12 @@ void Document::importObjects(const std::vector<App::DocumentObject*>& obj, Base:
             // thus we try to match by type. This should work because the order of
             // objects should not have changed
             xmlReader.readElement("ViewProvider");
-            std::string type = xmlReader.getAttribute("type");
-            ViewProvider* pObj = getViewProvider(*it);
-            while (pObj && type != pObj->getTypeId().getName()) {
-                if (it != obj.end()) {
-                    ++it;
-                    pObj = getViewProvider(*it);
-                }
-            }
-            if (pObj && type == pObj->getTypeId().getName())
+            std::string name = xmlReader.getAttribute("name");
+            std::map<std::string, std::string>::const_iterator jt = nameMapping.find(name);
+            if (jt != nameMapping.end())
+                name = jt->second;
+            Gui::ViewProvider* pObj = this->getViewProviderByName(name.c_str());
+            if (pObj)
                 pObj->Restore(xmlReader);
             xmlReader.readEndElement("ViewProvider");
             if (it == obj.end())
@@ -896,6 +909,10 @@ void Document::importObjects(const std::vector<App::DocumentObject*>& obj, Base:
     }
 
     xmlReader.readEndElement("Document");
+
+    // In the file GuiDocument.xml new data files might be added
+    if (!xmlReader.getFilenames().empty())
+        xmlReader.readFiles(static_cast<zipios::ZipInputStream&>(reader.getStream()));
 }
 
 void Document::addRootObjectsToGroup(const std::vector<App::DocumentObject*>& obj, App::DocumentObjectGroup* grp)
@@ -1070,19 +1087,21 @@ bool Document::canClose ()
     if (!isModified())
         return true;
     bool ok = true;
-    switch(QMessageBox::question(getActiveView(),
-        QObject::tr("Unsaved document"),
-        QObject::tr("The document '%1' has been modified.\n"
-                    "Do you want to save your changes?")
-        .arg(QString::fromUtf8(getDocument()->Label.getValue())),
-        QMessageBox::Yes | QMessageBox::Default,
-        QMessageBox::No,
-        QMessageBox::Cancel | QMessageBox::Escape))
+    QMessageBox box(getActiveView());
+    box.setIcon(QMessageBox::Question);
+    box.setWindowTitle(QObject::tr("Unsaved document"));
+    box.setText(QObject::tr("Do you want to save your changes to document '%1' before closing?")
+                .arg(QString::fromUtf8(getDocument()->Label.getValue())));
+    box.setInformativeText(QObject::tr("If you don't save, your changes will be lost."));
+    box.setStandardButtons(QMessageBox::Discard | QMessageBox::Cancel | QMessageBox::Save);
+    box.setDefaultButton(QMessageBox::Save);
+
+    switch (box.exec())
     {
-    case QMessageBox::Yes:
+    case QMessageBox::Save:
         ok = save();
         break;
-    case QMessageBox::No:
+    case QMessageBox::Discard:
         ok = true;
         break;
     case QMessageBox::Cancel:

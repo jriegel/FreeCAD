@@ -78,12 +78,19 @@ PyObject* SketchObjectPy::addGeometry(PyObject *args)
         if (geo->getTypeId() == Part::GeomTrimmedCurve::getClassTypeId()) {
             Handle_Geom_TrimmedCurve trim = Handle_Geom_TrimmedCurve::DownCast(geo->handle());
             Handle_Geom_Circle circle = Handle_Geom_Circle::DownCast(trim->BasisCurve());
+            Handle_Geom_Ellipse ellipse = Handle_Geom_Ellipse::DownCast(trim->BasisCurve());
             if (!circle.IsNull()) {
                 // create the definition struct for that geom
                 Part::GeomArcOfCircle aoc;
                 aoc.setHandle(trim);
                 ret = this->getSketchObjectPtr()->addGeometry(&aoc);
             }
+            else if (!ellipse.IsNull()) {
+                // create the definition struct for that geom
+                Part::GeomArcOfEllipse aoe;
+                aoe.setHandle(trim);
+                ret = this->getSketchObjectPtr()->addGeometry(&aoe);
+            }             
             else {
                 std::stringstream str;
                 str << "Unsupported geometry type: " << geo->getTypeId().getName();
@@ -93,7 +100,9 @@ PyObject* SketchObjectPy::addGeometry(PyObject *args)
         }
         else if (geo->getTypeId() == Part::GeomPoint::getClassTypeId() ||
                  geo->getTypeId() == Part::GeomCircle::getClassTypeId() ||
+                 geo->getTypeId() == Part::GeomEllipse::getClassTypeId() ||
                  geo->getTypeId() == Part::GeomArcOfCircle::getClassTypeId() ||
+                 geo->getTypeId() == Part::GeomArcOfEllipse::getClassTypeId() ||
                  geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
             ret = this->getSketchObjectPtr()->addGeometry(geo);
         }
@@ -118,12 +127,20 @@ PyObject* SketchObjectPy::addGeometry(PyObject *args)
                 if (geo->getTypeId() == Part::GeomTrimmedCurve::getClassTypeId()) {
                     Handle_Geom_TrimmedCurve trim = Handle_Geom_TrimmedCurve::DownCast(geo->handle());
                     Handle_Geom_Circle circle = Handle_Geom_Circle::DownCast(trim->BasisCurve());
+                    Handle_Geom_Ellipse ellipse = Handle_Geom_Ellipse::DownCast(trim->BasisCurve());
                     if (!circle.IsNull()) {
                         // create the definition struct for that geom
                         boost::shared_ptr<Part::GeomArcOfCircle> aoc(new Part::GeomArcOfCircle());
                         aoc->setHandle(trim);
                         geoList.push_back(aoc.get());
                         tmpList.push_back(aoc);
+                    }
+                    else if (!ellipse.IsNull()) {
+                        // create the definition struct for that geom
+                        boost::shared_ptr<Part::GeomArcOfEllipse> aoe(new Part::GeomArcOfEllipse());
+                        aoe->setHandle(trim);
+                        geoList.push_back(aoe.get());
+                        tmpList.push_back(aoe);
                     }
                     else {
                         std::stringstream str;
@@ -134,7 +151,9 @@ PyObject* SketchObjectPy::addGeometry(PyObject *args)
                 }
                 else if (geo->getTypeId() == Part::GeomPoint::getClassTypeId() ||
                          geo->getTypeId() == Part::GeomCircle::getClassTypeId() ||
+                         geo->getTypeId() == Part::GeomEllipse::getClassTypeId() ||
                          geo->getTypeId() == Part::GeomArcOfCircle::getClassTypeId() ||
+                         geo->getTypeId() == Part::GeomArcOfEllipse::getClassTypeId() ||
                          geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
                     geoList.push_back(geo);
                 }
@@ -581,6 +600,40 @@ PyObject* SketchObjectPy::trim(PyObject *args)
 
     Py_Return;
 
+}
+
+PyObject* SketchObjectPy::ExposeInternalGeometry(PyObject *args)
+{
+    int GeoId;
+
+    if (!PyArg_ParseTuple(args, "i", &GeoId))
+        return 0;
+
+    if (this->getSketchObjectPtr()->ExposeInternalGeometry(GeoId)==-1) {
+        std::stringstream str;
+        str << "Object does not support internal geometry: " << GeoId;
+        PyErr_SetString(PyExc_ValueError, str.str().c_str());
+        return 0;
+    }
+ 
+    Py_Return;
+}
+
+PyObject* SketchObjectPy::DeleteUnusedInternalGeometry(PyObject *args)
+{
+    int GeoId;
+
+    if (!PyArg_ParseTuple(args, "i", &GeoId))
+        return 0;
+
+    if (this->getSketchObjectPtr()->DeleteUnusedInternalGeometry(GeoId)==-1) {
+        std::stringstream str;
+        str << "Object does not support internal geometry: " << GeoId;
+        PyErr_SetString(PyExc_ValueError, str.str().c_str());
+        return 0;
+    }
+    
+    Py_Return;
 }
 
 Py::Int SketchObjectPy::getConstraintCount(void) const

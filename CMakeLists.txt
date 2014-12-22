@@ -10,16 +10,20 @@ set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 
 cmake_minimum_required(VERSION 2.6.0 FATAL_ERROR)
 
+if(COMMAND cmake_policy)
+    cmake_policy(SET CMP0003 NEW)
+    # added in cmake 3.0
+    if(POLICY CMP0050)
+        cmake_policy(SET CMP0050 OLD)
+    endif(POLICY CMP0050)
+endif(COMMAND cmake_policy)
+
 # include local  modules
 include(AddFileDependencies)
 include(cMake/FreeCadMacros.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cMake")
 
-
-if(COMMAND cmake_policy)
-     cmake_policy(SET CMP0003 NEW)
-endif(COMMAND cmake_policy)
 
 #if(CMAKE_CFG_INTDIR STREQUAL .)
     # No Debug/Release output paths
@@ -46,9 +50,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 endif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
-    # Needed for salomesmesh
-    ENABLE_LANGUAGE(Fortran)
-
     include(cMake/ConfigureChecks.cmake)
     configure_file(config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
     add_definitions(-DHAVE_CONFIG_H)
@@ -118,6 +119,7 @@ OPTION(BUILD_GUI "Build FreeCAD Gui. Otherwise you have only the command line an
 OPTION(FREECAD_MAINTAINERS_BUILD "Build FreeCAD for Maintainers, with Docu and 3rd party libs. On Windows the Installer is build." OFF)
 OPTION(FREECAD_USE_EXTERNAL_ZIPIOS "Use system installed zipios++ instead of the bundled." OFF)
 OPTION(FREECAD_USE_EXTERNAL_PIVY "Use system installed python-pivy instead of the bundled." OFF)
+OPTION(FREECAD_USE_EXTERNAL_SMESH "Use system installed smesh instead of the bundled." OFF)
 OPTION(FREECAD_BUILD_DEBIAN "Prepare for a build of a Debian package" OFF)
 
 OPTION(BUILD_CAM "Build the FreeCAD CAM module and the needed libs, be aware, unfinished code!" OFF)
@@ -168,6 +170,8 @@ endif(MSVC)
 if (FREECAD_BUILD_DEBIAN)
     set(FREECAD_USE_EXTERNAL_ZIPIOS ON)
     set(FREECAD_USE_EXTERNAL_PIVY ON)
+    # A Debian package for SMESH doesn't exist
+    #set(FREECAD_USE_EXTERNAL_SMESH ON)
 endif (FREECAD_BUILD_DEBIAN)
 
 # ==============================================================================
@@ -314,6 +318,7 @@ if(FREECAD_LIBPACK_USE)
     find_file(FREECAD_LIBPACK_CHECKFILE9X boost_program_options-vc90-mt-gd-1_54.lib ${FREECAD_LIBPACK_DIR}/lib )
     find_file(FREECAD_LIBPACK_CHECKFILE10X boost_program_options-vc110-mt-1_55.lib ${FREECAD_LIBPACK_DIR}/lib )
     find_file(FREECAD_LIBPACK_CHECKCUSTOM boost_program_options-vc90-mt-gd-1_41.lib ${FREECAD_LIBPACK_DIR}/lib )
+    find_file(FREECAD_LIBPACK_CHECKFILE_CLBUNDLER MANIFEST.db ${FREECAD_LIBPACK_DIR})
 
     # don't show them in the GUI
     set(FREECAD_LIBPACK_CHECKFILE6X "${FREECAD_LIBPACK_CHECKFILE6X}" CACHE INTERNAL "Find libpack")
@@ -322,8 +327,12 @@ if(FREECAD_LIBPACK_USE)
     set(FREECAD_LIBPACK_CHECKFILE9X "${FREECAD_LIBPACK_CHECKFILE9X}" CACHE INTERNAL "Find libpack")
     set(FREECAD_LIBPACK_CHECKFILE10X "${FREECAD_LIBPACK_CHECKFILE10X}" CACHE INTERNAL "Find libpack")
     set(FREECAD_LIBPACK_CHECKCUSTOM "${FREECAD_LIBPACK_CHECKCUSTOM}" CACHE INTERNAL "Find libpack")
+    set(FREECAD_LIBPACK_CHECKFILE_CLBUNDLER "${FREECAD_LIBPACK_CHECKFILE_CLBUNDLER}" CACHE INTERNAL "Find libpack")
 
-    IF(FREECAD_LIBPACK_CHECKFILE6X)
+    IF(FREECAD_LIBPACK_CHECKFILE_CLBUNDLER)
+        set(FREECAD_LIBPACK_VERSION "CLbundler" CACHE STRING "Displays if the libpack has been found" FORCE)
+        include(cMake/UseLibPackCLbundler.cmake)
+    ELSEIF(FREECAD_LIBPACK_CHECKFILE6X)
         set(FREECAD_LIBPACK_VERSION "6.x" CACHE STRING "Displays if the libpack has been found" FORCE)
         include(cMake/UseLibPack6x.cmake)
     ELSEIF(FREECAD_LIBPACK_CHECKFILE7X)
@@ -351,10 +360,10 @@ if(FREECAD_LIBPACK_USE)
     ELSEIF(FREECAD_LIBPACK_CHECKCUSTOM)
         set(FREECAD_LIBPACK_VERSION "Custom" CACHE STRING "Displays if the libpack has been found" FORCE)
         include(cMake/UseLibPackCustom.cmake)
-    ELSE(FREECAD_LIBPACK_CHECKFILE6X)
+    ELSE(FREECAD_LIBPACK_CHECKFILE_CLBUNDLER)
         set(FREECAD_LIBPACK_VERSION "NOTFOUND" CACHE STRING "Displays if the libpack has been found" FORCE)
         message(SEND_ERROR  "Could not find libpack in specified location:" ${FREECAD_LIBPACK_DIR})
-    ENDIF(FREECAD_LIBPACK_CHECKFILE6X)
+    ENDIF(FREECAD_LIBPACK_CHECKFILE_CLBUNDLER)
 
 # -------------------------------- PyCXX --------------------------------
 
@@ -372,7 +381,15 @@ if(FREECAD_LIBPACK_USE)
 
     find_package(PySideTools REQUIRED) # Pyside utilities (pyside-uic & pyside-rcc)
 
-else(FREECAD_LIBPACK_USE)
+# -------------------------------- Salome SMESH --------------------------
+
+    if(NOT FREECAD_USE_EXTERNAL_SMESH)
+        set(SMESH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/3rdParty/salomesmesh/inc)
+    endif()
+
+endif(FREECAD_LIBPACK_USE)
+
+if(NOT FREECAD_LIBPACK_USE OR FREECAD_LIBPACK_CHECKFILE_CLBUNDLER)
 
 # ================================================================================
 # == for other OSes search the packages ==========================================
@@ -423,96 +440,23 @@ else(FREECAD_LIBPACK_USE)
 
 # -------------------------------- OpenCasCade --------------------------------
 
-#first, look for OpenCASCADE Community Edition (OCE)
-#if OCE is installed in a nonstandard location, add -DOCE_DIR=/path/to/dir/containing/OCEConfig.cmake
-# when configuring with cmake, i.e. cmake .. -DOCE_DIR=/usr/share/cmake
-    if(NOT DEFINED OCE_DIR)
-        if(UNIX)
-            set(OCE_DIR "/usr/local/share/cmake/")
-        elseif(WIN32)
-            set(OCE_DIR "c:/OCE-0.4.0/share/cmake")
-        endif()
-    endif()
-    find_package (OCE QUIET)
-    if(${OCE_FOUND})
-        message("-- OpenCASCADE Community Edition has been found.")
-        add_definitions (-DHAVE_CONFIG_H)
-        #lib list copied from FreeCAD's FindOpenCasCade.cmake
-        set(OCC_LIBRARIES
-            TKFillet
-            TKMesh
-            TKernel
-            TKG2d
-            TKG3d
-            TKMath
-            TKIGES
-            TKSTL
-            TKShHealing
-            TKXSBase
-            TKBool
-            TKBO
-            TKBRep
-            TKTopAlgo
-            TKGeomAlgo
-            TKGeomBase
-            TKOffset
-            TKPrim
-            TKSTEP
-            TKSTEPBase
-            TKSTEPAttr
-            TKHLR
-            TKFeat
-        )
-        #lib list copied from FreeCAD's FindOpenCasCade.cmake
-        set(OCC_OCAF_LIBRARIES
-            TKCAF
-            TKXCAF
-            TKLCAF
-            TKXDESTEP
-            TKXDEIGES
-            TKMeshVS
-        )
-        CHECK_MINIMUM_OCC_VERSION_HEX(0x060703)
-        if (NOT OCC_MIN_VERSION)
-            set(OCC_OCAF_LIBRARIES
-                ${OCC_OCAF_LIBRARIES}
-                TKAdvTools
-            )
-        endif()
-        set(OCC_INCLUDE_DIR ${OCE_INCLUDE_DIRS})
-        set(OCC_FOUND ${OCE_FOUND})
-    else() #look for OpenCASCADE
-        find_package(OpenCasCade)
-        if(NOT OCC_FOUND)
-            message("Neither OpenCASCADE Community Edition nor OpenCasCade were found: will not build CAD modules!")
-        else()
-            message("-- OpenCASCADE include directory: ${OCC_INCLUDE_PATH}")
-            message("-- OpenCASCADE shared libraries directory: ${OCC_LIB_PATH}")
-        endif()
-    endif()
+    find_package(OpenCasCade)
 
 # -------------------------------- Salome SMESH --------------------------
 
     # Salome SMESH sources are under src/3rdParty now
     IF(OCC_FOUND)
-    set(SMESH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/3rdParty/salomesmesh/inc)
-    set(SMESH_LIBRARIES
-        StdMeshers
-        #MEFISTO2
-        SMESH
-        DriverUNV
-        SMESHDS
-        DriverSTL
-        DriverDAT
-        Driver
-        SMDS
-    )
+    if(NOT FREECAD_USE_EXTERNAL_SMESH)
+        set(SMESH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/3rdParty/salomesmesh/inc)
+    else()
+        find_package(SMESH)
+        if(NOT SMESH_FOUND)
+            message(ERROR "SMESH was not found.")
+        endif()
+        include_directories(${SMESH_INCLUDE_DIR})
+    endif()
     set(SMESH_FOUND TRUE)
     ENDIF(OCC_FOUND)
-    #find_package(SMESH)
-    #IF(NOT SMESH_FOUND)
-    #    MESSAGE("Salome SMESH was not found!")
-    #ENDIF(NOT SMESH_FOUND)
 
 # -------------------------------- Netgen --------------------------------
 
@@ -582,7 +526,11 @@ else(FREECAD_LIBPACK_USE)
         foreach(it ${moc_files})
             get_filename_component(it ${it} ABSOLUTE)
             QT4_MAKE_OUTPUT_FILE(${it} moc_ cpp outfile)
-            QT4_CREATE_MOC_COMMAND(${it} ${outfile} "${moc_flags}" "${moc_options}" "${moc_target}")
+            ADD_CUSTOM_COMMAND(OUTPUT ${outfile}
+                COMMAND ${QT_MOC_EXECUTABLE}
+                ARGS ${moc_options} ${it} -o ${outfile}
+                MAIN_DEPENDENCY ${it}
+            )
             set(${outfiles} ${${outfiles}} ${outfile})
             add_file_dependencies(${it} ${outfile})
         endforeach(it)
@@ -637,7 +585,7 @@ else(FREECAD_LIBPACK_USE)
 
         find_package(Matplotlib)
         IF(MATPLOTLIB_FOUND)
-            message("-- matplotlib-${MATPLOTLIB_VERSION} has been found.")
+            message(STATUS "-- matplotlib-${MATPLOTLIB_VERSION} has been found.")
         ELSE(MATPLOTLIB_FOUND)
             message("-- matplotlib not found, Plot module won't be available!")
         ENDIF(MATPLOTLIB_FOUND)
@@ -648,7 +596,7 @@ else(FREECAD_LIBPACK_USE)
     endif(BUILD_GUI)
 
 
-endif(FREECAD_LIBPACK_USE)
+endif(NOT FREECAD_LIBPACK_USE OR FREECAD_LIBPACK_CHECKFILE_CLBUNDLER)
 
 if(BUILD_VR)
     find_package(Rift)
@@ -685,7 +633,7 @@ ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 8)
 IF(MSVC)
 	# set default compiler settings
 	SET (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHa")
-	SET (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFC_DEBUG")
+	SET (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFC_DEBUG /Zm128")
 	# set default libs
 	SET (CMAKE_C_STANDARD_LIBRARIES "kernel32.lib user32.lib gdi32.lib winspool.lib SHFolder.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib winmm.lib comsupp.lib Ws2_32.lib dbghelp.lib ")
 	set (CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES}")

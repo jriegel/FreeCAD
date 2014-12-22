@@ -26,8 +26,10 @@
 #ifndef __InventorAll__
 # include "InventorAll.h"
 # include <sstream>
+# include <QColor>
 # include <QImage>
 # include <QGLFramebufferObject>
+# include <QGLPixelBuffer>
 # include <Inventor/SbViewVolume.h>
 # include <Inventor/nodes/SoCamera.h>
 #endif
@@ -655,29 +657,22 @@ Py::Object View3DInventorPy::isAnimationEnabled(const Py::Tuple& args)
     return Py::Boolean(ok ? true : false);
 }
 
-void View3DInventorPy::createImageFromFramebuffer(int backgroundType, int width, int height, QImage& img)
+void View3DInventorPy::createImageFromFramebuffer(int width, int height, const QColor& bgcolor, QImage& img)
 {
+#if QT_VERSION >= 0x040600
+    QGLFramebufferObjectFormat format;
+    format.setSamples(8);
+    format.setAttachment(QGLFramebufferObject::Depth);
+    QGLFramebufferObject fbo(width, height, format);
+#else
     QGLFramebufferObject fbo(width, height, QGLFramebufferObject::Depth);
+#endif
     const QColor col = _view->getViewer()->backgroundColor();
     bool on = _view->getViewer()->hasGradientBackground();
 
-    switch(backgroundType){
-        case 0: // Current
-            break;
-        case 1: // Black
-            _view->getViewer()->setBackgroundColor(QColor(0,0,0));
-            _view->getViewer()->setGradientBackground(false);
-            break;
-        case 2: // White
-            _view->getViewer()->setBackgroundColor(QColor(255,255,255));
-            _view->getViewer()->setGradientBackground(false);
-            break;
-        case 3: // Transparent
-            _view->getViewer()->setBackgroundColor(QColor(255,255,255));
-            _view->getViewer()->setGradientBackground(false);
-            break;
-        default:
-            break;
+    if (bgcolor.isValid()) {
+        _view->getViewer()->setBackgroundColor(bgcolor);
+        _view->getViewer()->setGradientBackground(false);
     }
 
     _view->getViewer()->renderToFramebuffer(&fbo);
@@ -688,46 +683,31 @@ void View3DInventorPy::createImageFromFramebuffer(int backgroundType, int width,
 
 Py::Object View3DInventorPy::saveImage(const Py::Tuple& args)
 {
-    char *cFileName,*cImageType="Current",*cComment="$MIBA";
-    int w=-1,h=-1,t;
+    char *cFileName,*cColor="Current",*cComment="$MIBA";
+    int w=-1,h=-1;
 
-    if (!PyArg_ParseTuple(args.ptr(), "s|iiss",&cFileName,&w,&h,&cImageType,&cComment))
+    if (!PyArg_ParseTuple(args.ptr(), "s|iiss",&cFileName,&w,&h,&cColor,&cComment))
         throw Py::Exception();
 
-#ifdef __GNUC__
-    if (strcasecmp(cImageType,"Current")==0)
-        t=0;
-    else if(strcasecmp(cImageType,"Black")==0)
-        t=1;
-    else if(strcasecmp(cImageType,"White")==0)
-        t=2;
-    else if(strcasecmp(cImageType,"Transparent")==0)
-        t=3;
-    else 
-        throw Py::Exception("Parameter 4 have to be (Current|Black|White|Transparent)");
-#else
-    if (_stricmp(cImageType,"Current")==0)
-        t=0;
-    else if(_stricmp(cImageType,"Black")==0)
-        t=1;
-    else if(_stricmp(cImageType,"White")==0)
-        t=2;
-    else if(_stricmp(cImageType,"Transparent")==0)
-        t=3;
-    else 
-        throw Py::Exception("Parameter 4 have to be (Current|Black|White|Transparent)");
-#endif
+    QColor bg;
+    QString colname = QString::fromLatin1(cColor);
+    if (colname.compare(QLatin1String("Current"), Qt::CaseInsensitive) == 0)
+        bg = QColor(); // assign an invalid color here
+    else
+        bg.setNamedColor(colname);
+
     QImage img;
+    bool pbuffer = QGLPixelBuffer::hasOpenGLPbuffers();
     if (App::GetApplication().GetParameterGroupByPath
-        ("User parameter:BaseApp/Preferences/Document")->GetBool("DisablePBuffers",false)) {
-        createImageFromFramebuffer(t, w, h, img);
+        ("User parameter:BaseApp/Preferences/Document")->GetBool("DisablePBuffers",!pbuffer)) {
+        createImageFromFramebuffer(w, h, bg, img);
     }
     else {
         try {
-            _view->getViewer()->savePicture(w, h, t, img);
+            _view->getViewer()->savePicture(w, h, bg, img);
         }
         catch (const Base::Exception&) {
-            createImageFromFramebuffer(t, w, h, img);
+            createImageFromFramebuffer(w, h, bg, img);
         }
     }
 
@@ -741,9 +721,10 @@ Py::Object View3DInventorPy::saveImage(const Py::Tuple& args)
 Py::Object View3DInventorPy::saveVectorGraphic(const Py::Tuple& args)
 {
     char* filename;
-    int ps=4, t=2;
+    int ps=4;
+    char* name="white";
 
-    if (!PyArg_ParseTuple(args.ptr(), "s|ii",&filename,&ps,&t))
+    if (!PyArg_ParseTuple(args.ptr(), "s|is",&filename,&ps,&name))
         throw Py::Exception();
 
     std::auto_ptr<SoVectorizeAction> vo;
@@ -769,7 +750,14 @@ Py::Object View3DInventorPy::saveVectorGraphic(const Py::Tuple& args)
         throw Py::Exception(a_out.str());
     }
 
-    _view->getViewer()->saveGraphic(ps,t,vo.get());
+    QColor bg;
+    QString colname = QString::fromLatin1(name);
+    if (colname.compare(QLatin1String("Current"), Qt::CaseInsensitive) == 0)
+        bg = _view->getViewer()->backgroundColor();
+    else
+        bg.setNamedColor(colname);
+
+    _view->getViewer()->saveGraphic(ps,bg,vo.get());
     out->closeFile();
     return Py::None();
 }

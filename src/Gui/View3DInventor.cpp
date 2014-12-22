@@ -35,6 +35,7 @@
 # include <QFileDialog>
 # include <QGLFormat>
 # include <QGLWidget>
+# include <QGLPixelBuffer>
 # include <QPainter>
 # include <QPrinter>
 # include <QPrintDialog>
@@ -518,7 +519,8 @@ void View3DInventor::print(QPrinter* printer)
         ps = SoVectorizeAction::A4;
         break;
     }
-    _viewer->saveGraphic(ps,View3DInventorViewer::White,&action);
+    QColor c = Qt::white;
+    _viewer->saveGraphic(ps,c,&action);
     out->closeFile();
     QSvgRenderer svg;
     if (svg.load(QString::fromUtf8(tmp.c_str()))) {
@@ -531,13 +533,14 @@ void View3DInventor::print(QPrinter* printer)
     QPainter p(printer);
     QRect rect = printer->pageRect();
 
+    bool pbuffer = QGLPixelBuffer::hasOpenGLPbuffers();
     if (App::GetApplication().GetParameterGroupByPath
-        ("User parameter:BaseApp/Preferences/Document")->GetBool("DisablePBuffers",false)) {
+        ("User parameter:BaseApp/Preferences/Document")->GetBool("DisablePBuffers",!pbuffer)) {
         previewFromFramebuffer(rect, img);
     }
     else {
         try {
-            _viewer->savePicture(rect.width(), rect.height(), View3DInventorViewer::White, img);
+            _viewer->savePicture(rect.width(), rect.height(), QColor(Qt::white), img);
         }
         catch (...) {
             previewFromFramebuffer(rect, img);

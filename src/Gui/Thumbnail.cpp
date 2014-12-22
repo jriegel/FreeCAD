@@ -30,6 +30,7 @@
 # include <QDateTime>
 # include <QImage>
 # include <QGLFramebufferObject>
+# include <QGLPixelBuffer>
 #endif
 
 #include "Thumbnail.h"
@@ -86,13 +87,14 @@ void Thumbnail::SaveDocFile (Base::Writer &writer) const
     if (!this->viewer)
         return;
     QImage img;
+    bool pbuffer = QGLPixelBuffer::hasOpenGLPbuffers();
     if (App::GetApplication().GetParameterGroupByPath
-        ("User parameter:BaseApp/Preferences/Document")->GetBool("DisablePBuffers",false)) {
+        ("User parameter:BaseApp/Preferences/Document")->GetBool("DisablePBuffers",!pbuffer)) {
         this->createThumbnailFromFramebuffer(img);
     }
     else {
         try {
-            this->viewer->savePicture(this->size, this->size, View3DInventorViewer::Current, img);
+            this->viewer->savePicture(this->size, this->size, QColor(), img);
         }
         catch (...) {
             this->createThumbnailFromFramebuffer(img);

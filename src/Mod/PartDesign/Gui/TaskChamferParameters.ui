@@ -35,6 +35,7 @@
         <bool>true</bool>
        </property>
       </widget>
+      <widget class="Gui::QuantitySpinBox" name="chamferDistance"/>
      </item>
     </layout>
    </item>
@@ -55,9 +56,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>Gui::InputField</class>
-   <extends>QLineEdit</extends>
-   <header>Gui/InputField.h</header>
+   <class>Gui::QuantitySpinBox</class>
+   <extends>QWidget</extends>
+   <header>Gui/QuantitySpinBox.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
