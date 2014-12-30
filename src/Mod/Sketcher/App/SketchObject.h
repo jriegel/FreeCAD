@@ -162,6 +162,14 @@ public:
     virtual int getAxisCount(void) const;
     /// retrieves an axis iterating through the construction lines of the sketch (indices start at 0)
     virtual Base::Axis getAxis(int axId) const;
+    /// verify and accept the assigned geometry
+    virtual void acceptGeometry();
+    /// Check if constraint has invalid indexes
+    bool evaluateConstraint(const Constraint *constraint) const;
+    /// Check for constraints with invalid indexes
+    bool evaluateConstraints() const;
+    /// Remove constraints with invalid indexes
+    void validateConstraints();
 
     /// Flag to allow external geometry from other bodies than the one this sketch belongs to
     bool allowOtherBody;

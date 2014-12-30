@@ -885,7 +885,9 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                 case STATUS_SKETCH_DragPoint:
                 case STATUS_SKETCH_DragCurve:
                 case STATUS_SKETCH_DragConstraint:
-                break;
+                case STATUS_SKETCH_StartRubberBand:
+                case STATUS_SKETCH_UseRubberBand:
+                    break;
             }
         }
     }
@@ -946,6 +948,8 @@ bool ViewProviderSketch::mouseMove(const SbVec2s &cursorPos, Gui::View3DInventor
             (cursorPos - prvCursorPos).getValue(dx, dy);
             if(std::abs(dx) < dragIgnoredDistance && std::abs(dy) < dragIgnoredDistance)
                 return false;
+        default:
+            break;
     }
 
     // Calculate 3d point to the mouse position
@@ -971,9 +975,7 @@ bool ViewProviderSketch::mouseMove(const SbVec2s &cursorPos, Gui::View3DInventor
         Mode != STATUS_SKETCH_UseRubberBand) {
 
         SoPickedPoint *pp = this->getPointOnRay(cursorPos, viewer);
-
         preselectChanged = detectPreselection(pp, viewer, cursorPos);
-
         delete pp;
     }
 
@@ -1291,11 +1293,13 @@ Base::Vector3d ViewProviderSketch::seekConstraintPosition(const Base::Vector3d &
             // checking if a constraint is the same as the one selected
             if (tailFather1 == constraint || tailFather2 == constraint)
                 isConstraintAtPosition = false;
-        } else
+        }
+        else {
             isConstraintAtPosition = false;
+        }
 
         multiplier *= -1; // search in both sides
-        if  (multiplier >= 0)
+        if (multiplier >= 0)
             multiplier++; // Increment the multiplier
     }
     if (multiplier == 10)
@@ -1338,43 +1342,43 @@ void ViewProviderSketch::onSelectionChanged(const Gui::SelectionChanges& msg)
             // is it this object??
             if (strcmp(msg.pDocName,getSketchObject()->getDocument()->getName())==0
                 && strcmp(msg.pObjectName,getSketchObject()->getNameInDocument())== 0) {
-                    if (msg.pSubName) {
-                        std::string shapetype(msg.pSubName);
-                        if (shapetype.size() > 4 && shapetype.substr(0,4) == "Edge") {
-                            int GeoId = std::atoi(&shapetype[4]) - 1;
-                            edit->SelCurvSet.insert(GeoId);
-                            this->updateColor();
-                        }
-                        else if (shapetype.size() > 12 && shapetype.substr(0,12) == "ExternalEdge") {
-                            int GeoId = std::atoi(&shapetype[12]) - 1;
-                            GeoId = -GeoId - 3;
-                            edit->SelCurvSet.insert(GeoId);
-                            this->updateColor();
-                        }
-                        else if (shapetype.size() > 6 && shapetype.substr(0,6) == "Vertex") {
-                            int VtId = std::atoi(&shapetype[6]) - 1;
-                            addSelectPoint(VtId);
-                            this->updateColor();
-                        }
-                        else if (shapetype == "RootPoint") {
-                            addSelectPoint(-1);
-                            this->updateColor();
-                        }
-                        else if (shapetype == "H_Axis") {
-                            edit->SelCurvSet.insert(-1);
-                            this->updateColor();
-                        }
-                        else if (shapetype == "V_Axis") {
-                            edit->SelCurvSet.insert(-2);
-                            this->updateColor();
-                        }
-                        else if (shapetype.size() > 10 && shapetype.substr(0,10) == "Constraint") {
-                            int ConstrId = std::atoi(&shapetype[10]) - 1;
-                            edit->SelConstraintSet.insert(ConstrId);
-                            this->drawConstraintIcons();
-                            this->updateColor();
-                        }
+                if (msg.pSubName) {
+                    std::string shapetype(msg.pSubName);
+                    if (shapetype.size() > 4 && shapetype.substr(0,4) == "Edge") {
+                        int GeoId = std::atoi(&shapetype[4]) - 1;
+                        edit->SelCurvSet.insert(GeoId);
+                        this->updateColor();
                     }
+                    else if (shapetype.size() > 12 && shapetype.substr(0,12) == "ExternalEdge") {
+                        int GeoId = std::atoi(&shapetype[12]) - 1;
+                        GeoId = -GeoId - 3;
+                        edit->SelCurvSet.insert(GeoId);
+                        this->updateColor();
+                    }
+                    else if (shapetype.size() > 6 && shapetype.substr(0,6) == "Vertex") {
+                        int VtId = std::atoi(&shapetype[6]) - 1;
+                        addSelectPoint(VtId);
+                        this->updateColor();
+                    }
+                    else if (shapetype == "RootPoint") {
+                        addSelectPoint(-1);
+                        this->updateColor();
+                    }
+                    else if (shapetype == "H_Axis") {
+                        edit->SelCurvSet.insert(-1);
+                        this->updateColor();
+                    }
+                    else if (shapetype == "V_Axis") {
+                        edit->SelCurvSet.insert(-2);
+                        this->updateColor();
+                    }
+                    else if (shapetype.size() > 10 && shapetype.substr(0,10) == "Constraint") {
+                        int ConstrId = std::atoi(&shapetype[10]) - 1;
+                        edit->SelConstraintSet.insert(ConstrId);
+                        this->drawConstraintIcons();
+                        this->updateColor();
+                    }
+                }
             }
         }
         else if (msg.Type == Gui::SelectionChanges::RmvSelection) {
@@ -1440,45 +1444,44 @@ void ViewProviderSketch::onSelectionChanged(const Gui::SelectionChanges& msg)
             //}
         }
         else if (msg.Type == Gui::SelectionChanges::SetPreselect) {
-	    if (strcmp(msg.pDocName,getSketchObject()->getDocument()->getName())==0
+            if (strcmp(msg.pDocName,getSketchObject()->getDocument()->getName())==0
                && strcmp(msg.pObjectName,getSketchObject()->getNameInDocument())== 0) {
-                    if (msg.pSubName) {
-                        std::string shapetype(msg.pSubName);
-                        if (shapetype.size() > 4 && shapetype.substr(0,4) == "Edge") {
-			      int GeoId = std::atoi(&shapetype[4]) - 1;
-			      resetPreselectPoint();
-			      edit->PreselectCurve = GeoId;
-			      edit->PreselectCross = -1;
-			      edit->PreselectConstraintSet.clear();
-			      if (edit->sketchHandler)
-				  edit->sketchHandler->applyCursor();
-			      this->updateColor();
-			      
-                        }
-                        else if (shapetype.size() > 6 && shapetype.substr(0,6) == "Vertex"){
-			      int PtIndex = std::atoi(&shapetype[6]) - 1;
-			      setPreselectPoint(PtIndex);
-			      edit->PreselectCurve = -1;
-			      edit->PreselectCross = -1;
-			      edit->PreselectConstraintSet.clear();
-			      if (edit->sketchHandler)
-				  edit->sketchHandler->applyCursor();
-			      this->updateColor();
-			}
-		    }
-	    }
-	}
-	else if (msg.Type == Gui::SelectionChanges::RmvPreselect) {
-	    resetPreselectPoint();
-	    edit->PreselectCurve = -1;
-	    edit->PreselectCross = -1;
-	    edit->PreselectConstraintSet.clear();
-	    if (edit->sketchHandler)
-		edit->sketchHandler->applyCursor();
-	    this->updateColor();
+                if (msg.pSubName) {
+                    std::string shapetype(msg.pSubName);
+                    if (shapetype.size() > 4 && shapetype.substr(0,4) == "Edge") {
+                        int GeoId = std::atoi(&shapetype[4]) - 1;
+                        resetPreselectPoint();
+                        edit->PreselectCurve = GeoId;
+                        edit->PreselectCross = -1;
+                        edit->PreselectConstraintSet.clear();
 
-	}
+                        if (edit->sketchHandler)
+                            edit->sketchHandler->applyCursor();
+                        this->updateColor();
+                    }
+                    else if (shapetype.size() > 6 && shapetype.substr(0,6) == "Vertex") {
+                        int PtIndex = std::atoi(&shapetype[6]) - 1;
+                        setPreselectPoint(PtIndex);
+                        edit->PreselectCurve = -1;
+                        edit->PreselectCross = -1;
+                        edit->PreselectConstraintSet.clear();
 
+                        if (edit->sketchHandler)
+                            edit->sketchHandler->applyCursor();
+                        this->updateColor();
+                    }
+                }
+            }
+        }
+        else if (msg.Type == Gui::SelectionChanges::RmvPreselect) {
+            resetPreselectPoint();
+            edit->PreselectCurve = -1;
+            edit->PreselectCross = -1;
+            edit->PreselectConstraintSet.clear();
+            if (edit->sketchHandler)
+                edit->sketchHandler->applyCursor();
+            this->updateColor();
+        }
     }
 }
 
@@ -1579,8 +1582,8 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point,
                 const SoDetail *curve_detail = Point->getDetail(edit->CurveSet);
                 if (curve_detail && curve_detail->getTypeId() == SoLineDetail::getClassTypeId()) {
                     // get the index
-                    int CurvIndex = static_cast<const SoLineDetail *>(curve_detail)->getLineIndex();
-                    GeoIndex = edit->CurvIdToGeoId[CurvIndex];
+                    int curveIndex = static_cast<const SoLineDetail *>(curve_detail)->getLineIndex();
+                    GeoIndex = edit->CurvIdToGeoId[curveIndex];
                 }
             // checking for a hit in the cross
             } else if (tail == edit->RootCrossSet) {
@@ -3704,6 +3707,7 @@ Restart:
                 break;
             case Coincident: // nothing to do for coincident
             case None:
+            case InternalAlignment:
                 break;
         }
     }
@@ -3964,6 +3968,13 @@ bool ViewProviderSketch::setEdit(int ModNum)
             Gui::Control().reject();
         else
             return false;
+    }
+
+    Sketcher::SketchObject* sketch = getSketchObject();
+    if (!sketch->evaluateConstraints()) {
+        QMessageBox::critical(Gui::getMainWindow(), tr("Invalid sketch"),
+            tr("The sketch is invalid and cannot be edited.\nUse the sketch validation tool."));
+        return false;
     }
 
     // clear the selection (convenience)
@@ -4346,6 +4357,27 @@ void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int Mo
     Base::Rotation tmp(plm.getRotation());
 
     SbRotation rot((float)tmp[0],(float)tmp[1],(float)tmp[2],(float)tmp[3]);
+
+    // Will the sketch be visible from the new position (#0000957)?
+    //
+    SoCamera* camera = viewer->getSoRenderManager()->getCamera();
+    SbVec3f curdir; // current view direction
+    camera->orientation.getValue().multVec(SbVec3f(0, 0, -1), curdir);
+    SbVec3f focal = camera->position.getValue() +
+                    camera->focalDistance.getValue() * curdir;
+
+    SbVec3f newdir; // future view direction
+    rot.multVec(SbVec3f(0, 0, -1), newdir);
+    SbVec3f newpos = focal - camera->focalDistance.getValue() * newdir;
+
+    SbVec3f plnpos = Base::convertTo<SbVec3f>(plm.getPosition());
+    double dist = (plnpos - newpos).dot(newdir);
+    if (dist < 0) {
+        float focalLength = camera->focalDistance.getValue() - dist + 5;
+        camera->position = focal - focalLength * curdir;
+        camera->focalDistance.setValue(focalLength);
+    }
+
     viewer->setCameraOrientation(rot);
 
     viewer->setEditing(TRUE);
@@ -4494,14 +4526,6 @@ int ViewProviderSketch::getPreselectCross(void) const
     return -1;
 }
 
-/*This never gets used?
-  int ViewProviderSketch::getPreselectConstraint(void) const
-{
-    if (edit)
-        return edit->PreselectConstraint;
-    return -1;
-}*/
-
 Sketcher::SketchObject *ViewProviderSketch::getSketchObject(void) const
 {
     return dynamic_cast<Sketcher::SketchObject *>(pcObject);
@@ -4510,10 +4534,7 @@ Sketcher::SketchObject *ViewProviderSketch::getSketchObject(void) const
 bool ViewProviderSketch::onDelete(const std::vector<std::string> &subList)
 {
     if (edit) {
-        std::vector<Gui::SelectionObject> selection = Gui::Selection().getSelectionEx();
-        if (selection.empty())
-            return false;
-        const std::vector<std::string> &SubNames = selection[0].getSubNames();
+        std::vector<std::string> SubNames = subList;
 
         Gui::Selection().clearSelection();
         resetPreselectPoint();
