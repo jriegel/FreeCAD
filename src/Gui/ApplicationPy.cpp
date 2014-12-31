@@ -128,10 +128,13 @@ PyMethodDef Application::Methods[] = {
    "Open a macro, Inventor or VRML file"},
   {"export",                  (PyCFunction) Application::sExport,           1,
    "save scene to Inventor or VRML file"},
-  {"activeDocument",          (PyCFunction) Application::sActiveDocument,   1,
+   { "activeDocument", (PyCFunction)Application::sActiveDocument, 1,
    "activeDocument() -> object or None\n\n"
-   "Return the active document or None if no one exists"},
-  {"getDocument",             (PyCFunction) Application::sGetDocument,      1,
+   "Return the active document or None if no one exists" },
+   { "activeView", (PyCFunction)Application::sActiveView, 1,
+   "activeView() -> object or None\n\n"
+   "Return the active view of the active document or None if no one exists" },
+   { "getDocument", (PyCFunction)Application::sGetDocument, 1,
    "getDocument(string) -> object\n\n"
    "Get a document by its name"},
   {"doCommand",               (PyCFunction) Application::sDoCommand,        1,
@@ -150,17 +153,34 @@ PyMethodDef Application::Methods[] = {
   {NULL, NULL}		/* Sentinel */
 };
 
-PyObject* Gui::Application::sActiveDocument(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
+PyObject* Gui::Application::sActiveDocument(PyObject * /*self*/, PyObject *args, PyObject * /*kwd*/)
 {
-    if (!PyArg_ParseTuple(args, ""))     // convert args: Python->C 
-        return NULL;                       // NULL triggers exception 
+	if (!PyArg_ParseTuple(args, ""))     // convert args: Python->C 
+		return NULL;                       // NULL triggers exception 
 
-    Document *pcDoc = Instance->activeDocument();
-    if (pcDoc) {
-        return pcDoc->getPyObject();
-    } else {
-        Py_Return;
-    }
+	Document *pcDoc = Instance->activeDocument();
+	if (pcDoc) {
+		return pcDoc->getPyObject();
+	}
+	else {
+		Py_Return;
+	}
+}
+
+PyObject* Gui::Application::sActiveView(PyObject * /*self*/, PyObject *args, PyObject * /*kwd*/)
+{
+	if (!PyArg_ParseTuple(args, ""))     // convert args: Python->C 
+		return NULL;                       // NULL triggers exception 
+
+	Document *pcDoc = Instance->activeDocument();
+	if (pcDoc) {
+		Gui::MDIView *pcView = pcDoc->getActiveView();
+		if (pcView)
+			// already incremented in getPyObject().
+			return pcView->getPyObject();
+	}
+
+    Py_Return;
 }
 
 PyObject* Application::sGetDocument(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)

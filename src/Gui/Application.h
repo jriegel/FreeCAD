@@ -231,6 +231,7 @@ public:
     PYFUNCDEF_S(sExport);
 
     PYFUNCDEF_S(sActiveDocument);
+	PYFUNCDEF_S(sActiveView);
     PYFUNCDEF_S(sGetDocument);
 
     PYFUNCDEF_S(sDoCommand);
