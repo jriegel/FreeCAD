@@ -76,7 +76,7 @@ TaskPadParameters::TaskPadParameters(ViewProviderPad *PadView,bool newObj, QWidg
             this, SLOT(onOffsetChanged(double)));
     connect(ui->changeMode, SIGNAL(currentIndexChanged(int)),
             this, SLOT(onModeChanged(int)));
-    connect(ui->buttonFace, SIGNAL(pressed()),
+    connect(ui->buttonFace, SIGNAL(clicked()),
             this, SLOT(onButtonFace()));
     connect(ui->lineFaceName, SIGNAL(textEdited(QString)),
             this, SLOT(onFaceName(QString)));
@@ -248,7 +248,7 @@ void TaskPadParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
 
     else if (msg.Type == Gui::SelectionChanges::ClrSelection) {
         ui->lineFaceName->blockSignals(true);
-        ui->lineFaceName->setText(tr("No face selected"));
+        ui->lineFaceName->setText(tr(""));
         ui->lineFaceName->setProperty("FaceName", QByteArray());
         ui->lineFaceName->blockSignals(false);
     }
@@ -392,6 +392,9 @@ void TaskPadParameters::changeEvent(QEvent *e)
         if (upToFace.indexOf("Face") == 0) {
             faceId = upToFace.remove(0,4).toInt(&ok);
         }
+#if QT_VERSION >= 0x040700
+        ui->lineFaceName->setPlaceholderText(tr("No face selected"));
+#endif
         ui->lineFaceName->setText(ok ?
                                   parts[0] + QString::fromAscii(":") + tr("Face") + QString::number(faceId) :
                                   tr("No face selected"));

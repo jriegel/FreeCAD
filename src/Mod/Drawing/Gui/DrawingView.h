@@ -26,6 +26,7 @@
 
 #include <Gui/MDIView.h>
 #include <QGraphicsView>
+#include <QPrinter>
 
 QT_BEGIN_NAMESPACE
 class QSlider;
@@ -101,6 +102,8 @@ public:
 protected:
     void contextMenuEvent(QContextMenuEvent *event);
     void closeEvent(QCloseEvent*);
+    void findPrinterSettings(const QString&);
+    QPrinter::PageSize getPageSize(int w, int h) const;
 
 private:
     QAction *m_nativeAction;
@@ -114,6 +117,8 @@ private:
     std::string m_objectName;
 
     QString m_currentPath;
+    QPrinter::Orientation m_orientation;
+    QPrinter::PageSize m_pageSize;
 };
 
 } // namespace DrawingViewGui

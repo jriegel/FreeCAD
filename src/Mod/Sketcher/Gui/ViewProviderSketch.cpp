@@ -697,12 +697,18 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                         getSketchObject()->getGeoVertexIndex(edit->DragPoint, GeoId, PosId);
                         if (GeoId != Sketcher::Constraint::GeoUndef && PosId != Sketcher::none) {
                             Gui::Command::openCommand("Drag Point");
-                            Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.movePoint(%i,%i,App.Vector(%f,%f,0),%i)"
-                                                   ,getObject()->getNameInDocument()
-                                                   ,GeoId, PosId, x-xInit, y-yInit, relative ? 1 : 0
-                                                   );
-                            Gui::Command::commitCommand();
-                            Gui::Command::updateActive();
+                            try {
+                                Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.movePoint(%i,%i,App.Vector(%f,%f,0),%i)"
+                                                       ,getObject()->getNameInDocument()
+                                                       ,GeoId, PosId, x-xInit, y-yInit, relative ? 1 : 0
+                                                       );
+                                Gui::Command::commitCommand();
+                                Gui::Command::updateActive();
+                            }
+                            catch (const Base::Exception& e) {
+                                Gui::Command::abortCommand();
+                                Base::Console().Error("Drag point: %s\n", e.what());
+                            }
                         }
                         setPreselectPoint(edit->DragPoint);
                         edit->DragPoint = -1;
@@ -720,12 +726,18 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                             geo->getTypeId() == Part::GeomEllipse::getClassTypeId()||
                             geo->getTypeId() == Part::GeomArcOfEllipse::getClassTypeId()) { 
                             Gui::Command::openCommand("Drag Curve");
-                            Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.movePoint(%i,%i,App.Vector(%f,%f,0),%i)"
-                                                   ,getObject()->getNameInDocument()
-                                                   ,edit->DragCurve, Sketcher::none, x-xInit, y-yInit, relative ? 1 : 0
-                                                   );
-                            Gui::Command::commitCommand();
-                            Gui::Command::updateActive();
+                            try {
+                                Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.movePoint(%i,%i,App.Vector(%f,%f,0),%i)"
+                                                       ,getObject()->getNameInDocument()
+                                                       ,edit->DragCurve, Sketcher::none, x-xInit, y-yInit, relative ? 1 : 0
+                                                       );
+                                Gui::Command::commitCommand();
+                                Gui::Command::updateActive();
+                            }
+                            catch (const Base::Exception& e) {
+                                Gui::Command::abortCommand();
+                                Base::Console().Error("Drag curve: %s\n", e.what());
+                            }
                         }
                         edit->PreselectCurve = edit->DragCurve;
                         edit->DragCurve = -1;
@@ -1253,12 +1265,19 @@ void ViewProviderSketch::moveConstraint(int constNum, const Base::Vector2D &toPo
                 dir2.RotateZ(-M_PI/2);
             }
 
-        } else if (Constr->First != Constraint::GeoUndef) { // line angle
+        } else if (Constr->First != Constraint::GeoUndef) { // line/arc angle
             const Part::Geometry *geo = GeoById(geomlist, Constr->First);
-            if (geo->getTypeId() != Part::GeomLineSegment::getClassTypeId())
+            if (geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
+                const Part::GeomLineSegment *lineSeg = dynamic_cast<const Part::GeomLineSegment *>(geo);
+                p0 = (lineSeg->getEndPoint()+lineSeg->getStartPoint())/2;
+            }
+            else if (geo->getTypeId() == Part::GeomArcOfCircle::getClassTypeId()) {
+                const Part::GeomArcOfCircle *arc = dynamic_cast<const Part::GeomArcOfCircle *>(geo);
+                p0 = arc->getCenter();
+            }
+            else {
                 return;
-            const Part::GeomLineSegment *lineSeg = dynamic_cast<const Part::GeomLineSegment *>(geo);
-            p0 = (lineSeg->getEndPoint()+lineSeg->getStartPoint())/2;
+            }
         } else
             return;
 
@@ -3709,16 +3728,26 @@ Restart:
 
                     } else if (Constr->First != Constraint::GeoUndef) {
                         const Part::Geometry *geo = GeoById(*geomlist, Constr->First);
-                        if (geo->getTypeId() != Part::GeomLineSegment::getClassTypeId())
+                        if (geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
+                            const Part::GeomLineSegment *lineSeg = dynamic_cast<const Part::GeomLineSegment *>(geo);
+                            p0 = Base::convertTo<SbVec3f>((lineSeg->getEndPoint()+lineSeg->getStartPoint())/2);
+
+                            Base::Vector3d dir = lineSeg->getEndPoint()-lineSeg->getStartPoint();
+                            startangle = 0.;
+                            range = atan2(dir.y,dir.x);
+                            endangle = startangle + range;
+                        }
+                        else if (geo->getTypeId() == Part::GeomArcOfCircle::getClassTypeId()) {
+                            const Part::GeomArcOfCircle *arc = dynamic_cast<const Part::GeomArcOfCircle *>(geo);
+                            p0 = Base::convertTo<SbVec3f>(arc->getCenter());
+
+                            Base::Vector3d dir = arc->getEndPoint()-arc->getStartPoint();
+                            arc->getRange(startangle, endangle);
+                            range = endangle - startangle;
+                        }
+                        else {
                             break;
-                        const Part::GeomLineSegment *lineSeg = dynamic_cast<const Part::GeomLineSegment *>(geo);
-
-                        p0 = Base::convertTo<SbVec3f>((lineSeg->getEndPoint()+lineSeg->getStartPoint())/2);
-
-                        Base::Vector3d dir = lineSeg->getEndPoint()-lineSeg->getStartPoint();
-                        startangle = 0.;
-                        range = atan2(dir.y,dir.x);
-                        endangle = startangle + range;
+                        }
                     } else
                         break;
 
