@@ -230,6 +230,21 @@ def getcolor(color):
         #for k,v in svgcolors.iteritems():
         #    if (k.lower() == color.lower()): pass
 
+def transformCopyShape(shape,m):
+    """apply transformation matrix m on given shape
+since OCCT 6.8.0 transformShape can be used to apply certian non-orthogonal
+transformations on shapes. This way a conversion to BSplines in
+transformGeometry can be avoided."""
+    if abs(m.A11**2+m.A12**2 -m.A21**2-m.A22**2) < 1e-8 and \
+            abs(m.A11*m.A21+m.A12*m.A22) < 1e-8: #no shear
+        try:
+            newshape=shape.copy()
+            newshape.transformShape(m)
+            return newshape
+        except Part.OCCError: # older versions of OCCT will refuse to work on
+            pass              # non-orthogonal matrices
+    return shape.transformGeometry(m)
+
 def getsize(length,mode='discard',base=1):
         """parses length values containing number and unit
         with mode 'discard': extracts a number from the given string (removes unit suffixes)
@@ -989,10 +1004,12 @@ class svgHandler(xml.sax.ContentHandler):
                 if isinstance(sh,Part.Shape):
                         if self.transform:
                                 FreeCAD.Console.PrintMessage("applying object transform: %s\n" % self.transform)
-                                sh = sh.transformGeometry(self.transform)
+                                sh = transformCopyShape(sh,self.transform)
+                                #sh = sh.transformGeometry(self.transform)
                         for transform in self.grouptransform[::-1]:
                                 FreeCAD.Console.PrintMessage("applying group transform: %s\n" % transform)
-                                sh = sh.transformGeometry(transform)
+                                sh = transformCopyShape(sh,transform)
+                                #sh = sh.transformGeometry(transform)
                         return sh
                 elif Draft.getType(sh) == "Dimension":
                         pts = []
@@ -1125,17 +1142,22 @@ def export(exportList,filename):
             svg_export_style = 0
 
         # finding sheet size
-        minx = 10000
-        miny = 10000
-        maxx = 0
-        maxy = 0
+        bb = None
         for ob in exportList:
                 if ob.isDerivedFrom("Part::Feature"):
-                        for v in ob.Shape.Vertexes:
-                                if v.Point.x < minx: minx = v.Point.x
-                                if v.Point.x > maxx: maxx = v.Point.x
-                                if v.Point.y < miny: miny = v.Point.y
-                                if v.Point.y > maxy: maxy = v.Point.y
+                    if bb:
+                        bb.add(ob.Shape.BoundBox)
+                    else:
+                        bb = ob.Shape.BoundBox
+        if bb:
+            minx = bb.XMin
+            maxx = bb.XMax
+            miny = bb.YMin
+            maxy = bb.YMax
+        else:
+            FreeCAD.Console.PrintError("The export list contains no shape\n")
+            return
+            
         if svg_export_style == 0:
             # translated-style exports get a bit of a margin
             margin = (maxx-minx)*.01

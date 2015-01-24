@@ -1716,12 +1716,13 @@ def getSVG(obj,scale=1,linewidth=0.35,fontsize=12,fillstyle="shape color",direct
 
     def getLineStyle():
         "returns a linestyle"
+        p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft")
         if linestyle == "Dashed":
-            return "0.09,0.05"
+            return p.GetString("svgDashedLine","0.09,0.05")
         elif linestyle == "Dashdot":
-            return "0.09,0.05,0.02,0.05"
+            return p.GetString("svgDashdotLine","0.09,0.05,0.02,0.05")
         elif linestyle == "Dotted":
-            return "0.02,0.02"
+            return p.GetString("svgDottedLine","0.02,0.02")
         return "none"
 
     def getProj(vec):
@@ -2812,12 +2813,18 @@ def upgrade(objects,delete=False,force=None):
                 result = draftify(objects[0])
                 if result: msg(translate("draft", "Found 1 non-parametric objects: draftifying it\n"))
                 
-        # we have only one object that contains one edge: turn to Draft line
-        elif (not faces) and (len(objects) == 1) and (len(objects[0].Shape.Edges) == 1):
-            e = objects[0].Shape.Edges[0]
-            if isinstance(e.Curve,Part.Line):
-                result = turnToLine(objects[0])
-                if result: msg(translate("draft", "Found 1 linear object: converting to line\n"))
+        # we have only one object that contains one edge
+        elif (not faces) and (len(objects) == 1) and (len(edges) == 1):
+            # we have a closed sketch: Extract a face
+            if objects[0].isDerivedFrom("Sketcher::SketchObject") and (len(edges[0].Vertexes) == 1):
+                result = makeSketchFace(objects[0])
+                if result: msg(translate("draft", "Found 1 closed sketch object: creating a face from it\n"))
+            else:
+                # turn to Draft line
+                e = objects[0].Shape.Edges[0]
+                if isinstance(e.Curve,Part.Line):
+                    result = turnToLine(objects[0])
+                    if result: msg(translate("draft", "Found 1 linear object: converting to line\n"))
                 
         # we have only closed wires, no faces
         elif wires and (not faces) and (not openwires):
@@ -3292,7 +3299,7 @@ class _ViewProviderDimension(_ViewProviderDraft):
         obj.addProperty("App::PropertyString","FontName","Draft","Font name")
         obj.addProperty("App::PropertyFloat","LineWidth","Draft","Line width")
         obj.addProperty("App::PropertyColor","LineColor","Draft","Line color")
-        obj.addProperty("App::PropertyLength","ExtLines","Draft","Length of the extension lines")
+        obj.addProperty("App::PropertyDistance","ExtLines","Draft","Length of the extension lines")
         obj.addProperty("App::PropertyBool","FlipArrows","Draft","Rotate the dimension arrows 180 degrees")
         obj.addProperty("App::PropertyBool","ShowUnit","Draft","Show the unit suffix")        
         obj.addProperty("App::PropertyVector","TextPosition","Draft","The position of the text. Leave (0,0,0) for automatic position")
@@ -3406,8 +3413,13 @@ class _ViewProviderDimension(_ViewProviderDraft):
                     if hasattr(obj.ViewObject,"ExtLines"):
                         dmax = obj.ViewObject.ExtLines.Value
                         if dmax and (proj.Length > dmax):
-                            self.p1 = self.p2.add(DraftVecUtils.scaleTo(proj,dmax))
-                            self.p4 = self.p3.add(DraftVecUtils.scaleTo(proj,dmax))
+                            if (dmax > 0):
+                                self.p1 = self.p2.add(DraftVecUtils.scaleTo(proj,dmax))
+                                self.p4 = self.p3.add(DraftVecUtils.scaleTo(proj,dmax))
+                            else:
+                                rest = proj.Length + dmax
+                                self.p1 = self.p2.add(DraftVecUtils.scaleTo(proj,rest))
+                                self.p4 = self.p3.add(DraftVecUtils.scaleTo(proj,rest))
                 else:
                     self.p2 = self.p1
                     self.p3 = self.p4
@@ -4074,6 +4086,7 @@ class _Wire(_DraftObject):
         obj.addProperty("App::PropertyLink","Tool","Draft","The tool object is the wire is formed from 2 objects")
         obj.addProperty("App::PropertyVector","Start","Draft","The start point of this line")
         obj.addProperty("App::PropertyVector","End","Draft","The end point of this line")
+        obj.addProperty("App::PropertyLength","Length","Draft","The length of this line")
         obj.addProperty("App::PropertyLength","FilletRadius","Draft","Radius to use to fillet the corners")
         obj.addProperty("App::PropertyLength","ChamferSize","Draft","Size of the chamfer to give to the corners")
         obj.addProperty("App::PropertyBool","MakeFace","Draft","Create a face if this object is closed")
@@ -4148,6 +4161,8 @@ class _Wire(_DraftObject):
                             shape = w
             if shape:
                 obj.Shape = shape
+                if hasattr(obj,"Length"):
+                    obj.Length = shape.Length
         obj.Placement = plm
         self.onChanged(obj,"Placement")
         
@@ -4168,6 +4183,14 @@ class _Wire(_DraftObject):
                 if pts[-1] != realfpend:
                     pts[-1] = realfpend
                     obj.Points = pts
+        elif prop == "Length":
+            if obj.Shape:
+                if obj.Length.Value != obj.Shape.Length:
+                    if len(obj.Points) == 2:
+                        v = obj.Points[-1].sub(obj.Points[0])
+                        v = DraftVecUtils.scaleTo(v,obj.Length.Value)
+                        obj.Points = [obj.Points[0],obj.Points[0].add(v)]
+
         elif prop == "Placement":
             pl = FreeCAD.Placement(obj.Placement)
             if len(obj.Points) >= 2:
@@ -4180,6 +4203,7 @@ class _Wire(_DraftObject):
             if len(obj.Points) > 2:
                 obj.setEditorMode('Start',2)
                 obj.setEditorMode('End',2)
+                obj.setEditorMode('Length',2)
                         
 
 class _ViewProviderWire(_ViewProviderDraft):

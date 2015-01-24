@@ -281,8 +281,11 @@ def getGroupColor(dxfobj,index=False):
                     else:
                         if (l.color == 7) and dxfBrightBackground: 
                             return [0.0,0.0,0.0]
-                        else: 
-                            return dxfColorMap.color_map[l.color]
+                        else:
+                            if isinstance(l.color,int): 
+                                if l.color > 0:
+                                    return dxfColorMap.color_map[l.color]
+    return [0.0,0.0,0.0]
 
 def getColor():
     if gui and draftui:
@@ -563,7 +566,29 @@ def drawSolid(solid):
             warn(solid)
     return None
 
-def drawSpline(spline,forceShape=False):
+def drawSplineIterpolation(verts,closed=False,forceShape=False,\
+        alwaysDiscretize=False):
+    if (dxfCreateDraft or dxfCreateSketch) and (not forceShape):
+        if dxfDiscretizeCurves or alwaysDiscretize:
+            ob = Draft.makeWire(verts)
+        else:
+            ob = Draft.makeBSpline(verts)
+        ob.Closed = closed
+        return ob
+    else:
+        if dxfDiscretizeCurves or alwaysDiscretize:
+            sh = Part.makePolygon(verts+[verts[0]])
+        else:
+            sp = Part.BSplineCurve()
+            # print(knots)
+            sp.interpolate(verts)
+            sh = Part.Wire(sp.toShape())
+        if closed and dxfFillMode:
+            return Part.Face(sh)
+        else:
+            return sh
+
+def drawSplineOld(spline,forceShape=False):
     "returns a Part Shape from a dxf spline"
     flag = rawValue(spline,70)
     if flag == 1:
@@ -588,29 +613,126 @@ def drawSpline(spline,forceShape=False):
         elif dline[0] == 40:
             knots.append(dline[1])
     try:
-        if (dxfCreateDraft or dxfCreateSketch) and (not forceShape):
-            if dxfDiscretizeCurves:
-                ob = Draft.makeWire(verts)
-            else:
-                ob = Draft.makeBSpline(verts)
-            ob.Closed = closed
-            return ob
-        else:
-            if dxfDiscretizeCurves:
-                sh = Part.makePolygon(verts+[verts[0]])
-            else:
-                sp = Part.BSplineCurve()
-                # print(knots)
-                sp.interpolate(verts)
-                sh = Part.Wire(sp.toShape())
-            if closed and dxfFillMode:
-                return Part.Face(sh)
-            else:
-                return sh                          
+        return drawSplineIterpolation(verts,closed,forceShape)
     except Part.OCCError:
         warn(spline)
     return None
-    
+
+def drawSpline(spline,forceShape=False):
+    """returns a Part Shape from a dxf spline
+as there is currently no Draft premitive to handle splines the result is a
+non-parametric curve"""
+    flags = rawValue(spline,70)
+    closed   = (flags &  1) != 0
+    periodic = (flags &  2) != 0 and False # workaround
+    rational = (flags &  4) != 0
+    planar   = (flags &  8) != 0
+    linear   = (flags & 16) != 0
+    degree     = rawValue(spline,71)
+    nbknots    = rawValue(spline,72) or 0
+    nbcontrolp = rawValue(spline,73) or 0
+    nbfitp     = rawValue(spline,74) or 0
+    knots = []
+    weights = []
+    controlpoints = []
+    fitpoints = []
+    # parse the knots and points
+    dataremain = spline.data[:]
+    while len(dataremain) >0:
+        groupnumber = dataremain[0][0]
+        if groupnumber == 40: #knot
+            knots.append(dataremain[0][1])
+            dataremain = dataremain[1:]
+        elif groupnumber == 41: #weight
+            weights.append(dataremain[0][1])
+            dataremain = dataremain[1:]
+        elif groupnumber in (10,11): # control or fit point
+            x = dataremain[0][1]
+            if dataremain[1][0] in (20,21):
+                y=dataremain[1][1]
+                if dataremain[2][0] in (30,31):
+                    z=dataremain[2][1]
+                    dataremain = dataremain[3:]
+                else:
+                    z=0.0
+                    dataremain = dataremain[2:]
+            else:
+                y=0.0
+                dataremain = dataremain[1:]
+            vec = FreeCAD.Vector(x,y,z)
+            if groupnumber == 10:
+                controlpoints.append(vec)
+            elif groupnumber == 11:
+                fitpoints.append(vec)
+        else:
+            dataremain = dataremain[1:]
+            #print groupnumber #debug
+
+    if nbknots != len(knots):
+        raise ValueError('Wrong number of knots')
+    if nbcontrolp != len(controlpoints):
+        raise ValueError('Wrong number of control points')
+    if nbfitp != len(fitpoints):
+        raise ValueError('Wrong number of fit points')
+    if rational == all((w == 1.0 or w is None) for w in weights):
+        raise ValueError('inconsistant rational flag')
+    if len(weights) == 0:
+        weights = None
+    elif len(weights) != len(controlpoints):
+        raise ValueError('Wrong number of weights')
+
+    # build knotvector and multvector
+    # this means to remove duplicate knots
+    multvector=[]
+    knotvector=[]
+    mult=0
+    previousknot=None
+    for knotvalue in knots:
+        if knotvalue == previousknot:
+            mult += 1
+        else:
+            if mult > 0:
+                multvector.append(mult)
+            mult = 1
+            previousknot = knotvalue
+            knotvector.append(knotvalue)
+    multvector.append(mult)
+    # check if the multiplicities are valid
+    innermults = multvector[:] if periodic else multvector[1:-1]
+    if any(m>degree for m in innermults): #invalid
+        if all(m == degree+1 for m in multvector):
+            if not forceShape and weights is None:
+                points=controlpoints[:]
+                del points[degree+1::degree+1]
+                return Draft.makeBezCurve(points,Degree=degree)
+            else:
+                poles=controlpoints[:]
+                edges=[]
+                while len(poles) >= degree+1:
+                    #bezier segments
+                    bzseg=Part.BezierCurve()
+                    bzseg.increase(degree)
+                    bzseg.setPoles(poles[0:degree+1])
+                    poles=poles[degree+1:]
+                    if weights is not None:
+                        bzseg.setWeights(weights[0:degree+1])
+                        weights=weights[degree+1:]
+                    edges.append(bzseg.toShape())
+                return Part.Wire(edges)
+        else:
+            warn('polygon fallback on %s' %spline)
+            return drawSplineIterpolation(controlpoints,closed=closed,\
+                forceShape=forceShape,alwaysDiscretize=True)
+    try:
+        bspline=Part.BSplineCurve()
+        bspline.buildFromPolesMultsKnots(poles=controlpoints,mults=multvector,\
+                knots=knotvector,degree=degree,periodic=periodic,\
+                weights=weights)
+        return bspline.toShape()
+    except Part.OCCError:
+        warn(spline)
+    return None
+
 def drawBlock(blockref,num=None,createObject=False):
     "returns a shape from a dxf block reference"
     if not dxfStarBlocks:
@@ -966,6 +1088,18 @@ def processdxf(document,filename,getShapes=False):
         edges = []
         for s in shapes:
             edges.extend(s.Edges)
+        if len(edges) > (100):
+            FreeCAD.Console.PrintMessage(str(len(edges))+" edges to join\n")
+            from PySide import QtGui
+            d = QtGui.QMessageBox()
+            d.setText("Warning: High number of entities to join (>100)")
+            d.setInformativeText("This might take a long time or even freeze your computer. Are you sure? You can also disable the \"join geometry\" setting in DXF import preferences")
+            d.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel)
+            d.setDefaultButton(QtGui.QMessageBox.Cancel)
+            res = d.exec_()
+            if res == QtGui.QMessageBox.Cancel:
+                FreeCAD.Console.PrintMessage("Aborted\n")
+                return
         shapes = DraftGeomUtils.findWires(edges)
         for s in shapes:
             newob = addObject(s)
@@ -1301,6 +1435,7 @@ def warn(dxfobject,num=None):
 
 def open(filename):
     "called when freecad opens a file."
+    readPreferences()
     if dxfReader:
         docname = os.path.splitext(os.path.basename(filename))[0]
         doc = FreeCAD.newDocument(docname)
@@ -1310,6 +1445,7 @@ def open(filename):
 
 def insert(filename,docname):
     "called when freecad imports a file"
+    readPreferences()
     if dxfReader:
         groupname = os.path.splitext(os.path.basename(filename))[0]
         try:
@@ -1353,13 +1489,35 @@ def getArcData(edge):
         # closed circle
         return DraftVecUtils.tup(ce), radius, 0, 0
     else:
-        if round(edge.Curve.Axis.dot(FreeCAD.Vector(0,0,1))) == 1:
-            ang1,ang2=edge.ParameterRange
+        # new method: recalculate ourselves - cannot trust edge.Curve.Axis or XAxis
+        p1 = edge.Vertexes[0].Point
+        p2 = edge.Vertexes[-1].Point
+        v1 = p1.sub(ce)
+        v2 = p2.sub(ce)
+        #print v1.cross(v2)
+        #print edge.Curve.Axis
+        #print p1
+        #print p2
+        # we can use Z check since arcs getting here will ALWAYS be in XY plane
+        # Z can be 0 if the arc is 180 deg
+        if (v1.cross(v2).z >= 0) or (edge.Curve.Axis.z > 0):
+            #clockwise
+            ang1 = -DraftVecUtils.angle(v1)
+            ang2 = -DraftVecUtils.angle(v2)
         else:
-            ang2,ang1=edge.ParameterRange
-        if edge.Curve.XAxis != FreeCAD.Vector(1,0,0):
-            ang1 -= DraftVecUtils.angle(edge.Curve.XAxis)
-            ang2 -= DraftVecUtils.angle(edge.Curve.XAxis)
+            #counterclockwise
+            ang2 = -DraftVecUtils.angle(v1)
+            ang1 = -DraftVecUtils.angle(v2)
+        
+        # obsolete method - fails a lot
+        #if round(edge.Curve.Axis.dot(FreeCAD.Vector(0,0,1))) == 1:
+        #    ang1,ang2=edge.ParameterRange
+        #else:
+        #    ang2,ang1=edge.ParameterRange
+        #if edge.Curve.XAxis != FreeCAD.Vector(1,0,0):
+        #    ang1 -= DraftVecUtils.angle(edge.Curve.XAxis)
+        #    ang2 -= DraftVecUtils.angle(edge.Curve.XAxis)
+        
         return DraftVecUtils.tup(ce), radius, math.degrees(ang1),\
                 math.degrees(ang2)
 
@@ -1541,7 +1699,7 @@ def writeMesh(ob,dxfobject):
                                 
 def export(objectslist,filename,nospline=False,lwPoly=False):
     "called when freecad exports a file. If nospline=True, bsplines are exported as straight segs lwPoly=True for OpenSCAD DXF"
-    
+    readPreferences()
     if dxfLibrary:
         global exportList
         exportList = objectslist
@@ -1563,7 +1721,7 @@ def export(objectslist,filename,nospline=False,lwPoly=False):
             # other cases, treat edges
             dxf = dxfLibrary.Drawing()
             for ob in exportList:
-                print("processing ",ob.Name)
+                print("processing "+str(ob.Name))
                 if ob.isDerivedFrom("Part::Feature"):
                     if FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft").GetBool("dxfmesh"):
                         sh = None
@@ -1741,24 +1899,29 @@ def exportPageLegacy(page,filename):
     export(tempobj,filename,nospline=True,lwPoly=False)
     FreeCAD.closeDocument(tempdoc.Name)
 
-
-# reading parameters
-p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft")
-dxfCreatePart = p.GetBool("dxfCreatePart",True)
-dxfCreateDraft = p.GetBool("dxfCreateDraft",False)
-dxfCreateSketch = p.GetBool("dxfCreateSketch",False)
-dxfDiscretizeCurves = p.GetBool("DiscretizeEllipses",True)
-dxfStarBlocks = p.GetBool("dxfstarblocks",False)
-dxfMakeBlocks = p.GetBool("groupLayers",False)
-dxfJoin = p.GetBool("joingeometry",False)
-dxfRenderPolylineWidth = p.GetBool("renderPolylineWidth",False)
-dxfImportTexts = p.GetBool("dxftext",False)
-dxfImportLayouts = p.GetBool("dxflayouts",False)
-dxfImportPoints = p.GetBool("dxfImportPoints",False)
-dxfImportHatches = p.GetBool("importDxfHatches",False)
-dxfUseStandardSize = p.GetBool("dxfStdSize",False)
-dxfGetColors = p.GetBool("dxfGetOriginalColors",False)
-dxfUseDraftVisGroups = p.GetBool("dxfUseDraftVisGroups",False)
-dxfFillMode = p.GetBool("fillmode",True)
-dxfBrightBackground = isBrightBackground()
-dxfDefaultColor = getColor()
+def readPreferences():
+    # reading parameters
+    p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft")
+    global dxfCreatePart, dxfCreateDraft, dxfCreateSketch, dxfDiscretizeCurves, dxfStarBlocks
+    global dxfMakeBlocks, dxfJoin, dxfRenderPolylineWidth, dxfImportTexts, dxfImportLayouts
+    global dxfImportPoints, dxfImportHatches, dxfUseStandardSize, dxfGetColors, dxfUseDraftVisGroups
+    global dxfFillMode, dxfBrightBackground, dxfDefaultColor
+    dxfCreatePart = p.GetBool("dxfCreatePart",True)
+    dxfCreateDraft = p.GetBool("dxfCreateDraft",False)
+    dxfCreateSketch = p.GetBool("dxfCreateSketch",False)
+    dxfDiscretizeCurves = p.GetBool("DiscretizeEllipses",True)
+    dxfStarBlocks = p.GetBool("dxfstarblocks",False)
+    dxfMakeBlocks = p.GetBool("groupLayers",False)
+    dxfJoin = p.GetBool("joingeometry",False)
+    dxfRenderPolylineWidth = p.GetBool("renderPolylineWidth",False)
+    dxfImportTexts = p.GetBool("dxftext",False)
+    dxfImportLayouts = p.GetBool("dxflayouts",False)
+    dxfImportPoints = p.GetBool("dxfImportPoints",False)
+    dxfImportHatches = p.GetBool("importDxfHatches",False)
+    dxfUseStandardSize = p.GetBool("dxfStdSize",False)
+    dxfGetColors = p.GetBool("dxfGetOriginalColors",False)
+    dxfUseDraftVisGroups = p.GetBool("dxfUseDraftVisGroups",False)
+    dxfFillMode = p.GetBool("fillmode",True)
+    dxfBrightBackground = isBrightBackground()
+    dxfDefaultColor = getColor()
+    
