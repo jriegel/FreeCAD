@@ -455,6 +455,21 @@ PyObject*  TopoShapePy::importBrepFromString(PyObject *args)
     Py_Return;
 }
 
+PyObject*  TopoShapePy::__getstate__(PyObject *args) {
+    return exportBrepToString(args);
+}
+
+
+PyObject*  TopoShapePy::__setstate__(PyObject *args) {
+    if (! getTopoShapePtr()) {
+        PyErr_SetString(Base::BaseExceptionFreeCADError,"no c++ object");
+        return 0;
+    }
+    else {
+        return importBrepFromString(args);
+    }
+}
+
 PyObject*  TopoShapePy::exportStl(PyObject *args)
 {
     double deflection = 0;
@@ -618,6 +633,39 @@ PyObject*  TopoShapePy::fuse(PyObject *args)
         // Let's call algorithm computing a fuse operation:
         TopoDS_Shape fusShape = this->getTopoShapePtr()->fuse(shape);
         return new TopoShapePy(new TopoShape(fusShape));
+    }
+    catch (Standard_Failure) {
+        Handle_Standard_Failure e = Standard_Failure::Caught();
+        PyErr_SetString(PartExceptionOCCError, e->GetMessageString());
+        return NULL;
+    }
+    catch (const std::exception& e) {
+        PyErr_SetString(PartExceptionOCCError, e.what());
+        return NULL;
+    }
+}
+
+PyObject*  TopoShapePy::multiFuse(PyObject *args)
+{
+    double tolerance = 0.0;
+    PyObject *pcObj;
+    if (!PyArg_ParseTuple(args, "O|d", &pcObj, &tolerance))
+        return NULL;
+    std::vector<TopoDS_Shape> shapeVec;
+    Py::Sequence shapeSeq(pcObj);
+    for (Py::Sequence::iterator it = shapeSeq.begin(); it != shapeSeq.end(); ++it) {
+        PyObject* item = (*it).ptr();
+        if (PyObject_TypeCheck(item, &(Part::TopoShapePy::Type))) {
+            shapeVec.push_back(static_cast<Part::TopoShapePy*>(item)->getTopoShapePtr()->_Shape);
+        }
+        else {
+            PyErr_SetString(PyExc_TypeError, "non-shape object in sequence");
+            return 0;
+       }
+    }
+    try {
+        TopoDS_Shape multiFusedShape = this->getTopoShapePtr()->multiFuse(shapeVec,tolerance);
+        return new TopoShapePy(new TopoShape(multiFusedShape));
     }
     catch (Standard_Failure) {
         Handle_Standard_Failure e = Standard_Failure::Caught();

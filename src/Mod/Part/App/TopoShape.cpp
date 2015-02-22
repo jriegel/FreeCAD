@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2002     *
+ *   Copyright (c) JÃ¼rgen Riegel          (juergen.riegel@web.de) 2002     *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -764,10 +764,14 @@ void TopoShape::dump(std::ostream& out) const
 void TopoShape::exportStl(const char *filename, double deflection) const
 {
     StlAPI_Writer writer;
+#if OCC_VERSION_HEX < 0x060801
     if (deflection > 0) {
         writer.RelativeMode() = false;
         writer.SetDeflection(deflection);
     }
+#else
+    BRepMesh_IncrementalMesh aMesh(this->_Shape, deflection);
+#endif
     writer.Write(this->_Shape,encodeFilename(filename).c_str());
 }
 
@@ -1325,6 +1329,51 @@ TopoDS_Shape TopoShape::fuse(TopoDS_Shape shape) const
         Standard_Failure::Raise("Tool shape is null");
     BRepAlgoAPI_Fuse mkFuse(this->_Shape, shape);
     return mkFuse.Shape();
+}
+
+TopoDS_Shape TopoShape::multiFuse(const std::vector<TopoDS_Shape>& shapes, Standard_Real tolerance) const
+{
+    if (this->_Shape.IsNull())
+        Standard_Failure::Raise("Base shape is null");
+#if OCC_VERSION_HEX <= 0x060800
+    if (tolerance > 0.0)
+        Standard_Failure::Raise("Fuzzy Booleans are not supported in this version of OCCT");
+    TopoDS_Shape resShape = this->_Shape;
+    if (resShape.IsNull())
+        throw Base::Exception("Object shape is null");
+    for (std::vector<TopoDS_Shape>::const_iterator it = shapes.begin(); it != shapes.end(); ++it) {
+        if (it->IsNull())
+            throw Base::Exception("Input shape is null");
+        // Let's call algorithm computing a fuse operation:
+        BRepAlgoAPI_Fuse mkFuse(resShape, *it);
+        // Let's check if the fusion has been successful
+        if (!mkFuse.IsDone())
+            throw Base::Exception("Fusion failed");
+        resShape = mkFuse.Shape();
+    }
+#else
+    BRepAlgoAPI_Fuse mkFuse;
+    TopTools_ListOfShape shapeArguments,shapeTools;
+    shapeArguments.Append(this->_Shape);
+    for (std::vector<TopoDS_Shape>::const_iterator it = shapes.begin(); it != shapes.end(); ++it) {
+        if (it->IsNull())
+            throw Base::Exception("Tool shape is null");
+        if (tolerance > 0.0)
+            // workaround for http://dev.opencascade.org/index.php?q=node/1056#comment-520
+            shapeTools.Append(BRepBuilderAPI_Copy(*it).Shape());
+        else
+            shapeTools.Append(*it);
+    }
+    mkFuse.SetArguments(shapeArguments);
+    mkFuse.SetTools(shapeTools);
+    if (tolerance > 0.0)
+        mkFuse.SetFuzzyValue(tolerance);
+    mkFuse.Build();
+    if (!mkFuse.IsDone())
+        throw Base::Exception("MultiFusion failed");
+    TopoDS_Shape resShape = mkFuse.Shape();
+#endif
+    return resShape;
 }
 
 TopoDS_Shape TopoShape::oldFuse(TopoDS_Shape shape) const
@@ -2295,11 +2344,16 @@ void TopoShape::getFaces(std::vector<Base::Vector3d> &aPoints,
     Standard_Real x3, y3, z3;
 
     Handle_StlMesh_Mesh aMesh = new StlMesh_Mesh();
+#if OCC_VERSION_HEX >= 0x060801
+    BRepMesh_IncrementalMesh bMesh(this->_Shape, accuracy);
+    StlTransfer::RetrieveMesh(this->_Shape,aMesh);
+#else
     StlTransfer::BuildIncrementalMesh(this->_Shape, accuracy,
 #if OCC_VERSION_HEX >= 0x060503
         Standard_True,
 #endif
         aMesh);
+#endif
     StlMesh_MeshExplorer xp(aMesh);
     for (Standard_Integer nbd=1;nbd<=aMesh->NbDomains();nbd++) {
         for (xp.InitTriangle (nbd); xp.MoreTriangle (); xp.NextTriangle ()) {
