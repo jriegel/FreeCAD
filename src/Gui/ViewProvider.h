@@ -108,7 +108,7 @@ public:
     { return std::vector<App::DocumentObject*>(); }
 
     /** @name Selection handling
-      * This group of methodes do the selection handling.
+      * This group of methods do the selection handling.
       * Here you can define how the selection for your ViewProfider
       * works. 
      */
@@ -134,7 +134,7 @@ public:
     /** @name Methods used by the Tree
       * If you want to take control over the 
       * appearance of your object in the tree you
-      * can reimplemnt this methods.
+      * can reimplementing this methods.
      */
     //@{
     /// deliver the icon shown in the tree view
@@ -150,7 +150,14 @@ public:
     { return std::vector<App::DocumentObject*>(); }
     /** Check whether children can be removed from the view provider by drag and drop */
     virtual bool canDragObjects() const
-    { return false; }
+    {
+      return false;
+    }
+    /** Tell the tree view if this object should apear there */
+    virtual bool showInTree() const
+    {
+      return true;
+    }
     /** Remove a child from the view provider by drag and drop */
     virtual void dragObject(App::DocumentObject*)
     { }
@@ -173,7 +180,7 @@ public:
     //@}
 
     /** update the content of the ViewProvider
-     * this method have to implement the recalcualtion
+     * this method have to implement the recalculation
      * of the ViewProvider. There are different reasons to 
      * update. E.g. only the view attribute has changed, or
      * the data has manipulated.
