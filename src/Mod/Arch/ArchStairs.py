@@ -125,12 +125,17 @@ class _Stairs(ArchComponent.Component):
         obj.setEditorMode("RiserHeight",1)
         obj.setEditorMode("BlondelRatio",1)
         self.Type = "Stairs"
+        self.Role = ["Stair","Stair Flight"]
+        self.Role = "Stair"
 
 
     def execute(self,obj):
 
         "constructs the shape of the stairs"
-
+        
+        if self.clone(obj):
+            return
+        
         import Part
         self.steps = []
         self.pseudosteps = []

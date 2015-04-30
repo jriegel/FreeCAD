@@ -40,6 +40,7 @@ if FreeCAD.GuiUp:
 else:
     def translate(ctxt,txt):
         return txt
+        
 
 def addToComponent(compobject,addobject,mod=None):
     '''addToComponent(compobject,addobject,mod): adds addobject
@@ -132,8 +133,8 @@ class SelectionTaskPanel:
             FreeCADGui.Selection.removeObserver(FreeCAD.ArchObserver)
             del FreeCAD.ArchObserver
         return True
-
-            
+        
+                    
 class ComponentTaskPanel:
     '''The default TaskPanel for all Arch components'''
     def __init__(self):
@@ -289,12 +290,13 @@ class Component:
     "The default Arch Component object"
     def __init__(self,obj):
         obj.addProperty("App::PropertyLink","Base","Arch",translate("Arch","The base object this component is built upon"))
+        obj.addProperty("App::PropertyLink","CloneOf","Arch",translate("Arch","The object this component is cloning"))
         obj.addProperty("App::PropertyLinkList","Additions","Arch",translate("Arch","Other shapes that are appended to this object"))
         obj.addProperty("App::PropertyLinkList","Subtractions","Arch",translate("Arch","Other shapes that are subtracted from this object"))
         obj.addProperty("App::PropertyString","Description","Arch",translate("Arch","An optional description for this component"))
         obj.addProperty("App::PropertyString","Tag","Arch",translate("Arch","An optional tag for this component"))
         obj.addProperty("App::PropertyMap","IfcAttributes","Arch",translate("Arch","Custom IFC properties and attributes"))
-        obj.addProperty("App::PropertyMap","Material","Arch",translate("Arch","A material for this object"))
+        obj.addProperty("App::PropertyLink","BaseMaterial","Material",translate("Arch","A material for this object"))
         obj.addProperty("App::PropertyEnumeration","Role","Arch",translate("Arch","The role of this object"))
         obj.addProperty("App::PropertyBool","MoveWithHost","Arch",translate("Arch","Specifies if this object must move together when its host is moved"))
         obj.Proxy = self
@@ -304,7 +306,8 @@ class Component:
         obj.Role = Roles
 
     def execute(self,obj):
-        return
+        if obj.Base:
+            obj.Shape = obj.Base.Shape
 
     def __getstate__(self):
         return self.Type
@@ -315,6 +318,20 @@ class Component:
             
     def onChanged(self,obj,prop):
         pass
+        
+    def clone(self,obj):
+        "if this object is a clone, sets the shape. Returns True if this is the case"
+        if hasattr(obj,"CloneOf"):
+            if obj.CloneOf:
+                if Draft.getType(obj.CloneOf) == Draft.getType(obj):
+                    pl = obj.Placement
+                    obj.Shape = obj.CloneOf.Shape.copy()
+                    obj.Placement = pl
+                    if hasattr(obj,"BaseMaterial"):
+                        if hasattr(obj.CloneOf,"BaseMaterial"):
+                            obj.BaseMaterial = obj.CloneOf.BaseMaterial
+                    return True
+        return False
         
     def getSiblings(self,obj):
         "returns a list of objects with the same type and same base as this object"
@@ -362,7 +379,13 @@ class Component:
         wires = []
         n,l,w,h = self.getDefaultValues(obj)
         if obj.Base:
-            if obj.Base.isDerivedFrom("Part::Feature"):
+            if obj.Base.isDerivedFrom("Part::Extrusion"):
+                if obj.Base.Base:
+                    base = obj.Base.Base.Shape.copy()
+                    if noplacement:
+                        base.Placement = FreeCAD.Placement()
+                    return [base]
+            elif obj.Base.isDerivedFrom("Part::Feature"):
                 if obj.Base.Shape:
                     base = obj.Base.Shape.copy()
                     if noplacement:
@@ -453,6 +476,9 @@ class Component:
     def getExtrusionVector(self,obj,noplacement=False):
         "Returns an extrusion vector of this component, if applicable"
         n,l,w,h = self.getDefaultValues(obj)
+        if obj.Base:
+            if obj.Base.isDerivedFrom("Part::Extrusion"):
+                return obj.Base.Dir
         if Draft.getType(obj) == "Structure":
             if l > h:
                 v = n.multiply(l)
@@ -641,7 +667,18 @@ class ViewProviderComponent:
         self.Object = vobj.Object
         
     def updateData(self,obj,prop):
+        if prop == "BaseMaterial":
+            if obj.BaseMaterial:
+                if 'Color' in obj.BaseMaterial.Material:
+                    if "(" in obj.BaseMaterial.Material['Color']:
+                        c = tuple([float(f) for f in obj.BaseMaterial.Material['Color'].strip("()").split(",")])
+                        if obj.ViewObject:
+                            obj.ViewObject.ShapeColor = c
         return
+        
+    def getIcon(self):
+        import Arch_rc
+        return ":/icons/Arch_Component.svg"
 
     def onChanged(self,vobj,prop):
         if prop == "Visibility":

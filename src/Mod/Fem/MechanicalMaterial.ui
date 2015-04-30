@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QComboBox" name="comboBox_MaterialsInDir">
+    <widget class="QComboBox" name="cb_materials">
      <item>
       <property name="text">
        <string>choose...</string>
@@ -44,7 +44,7 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="Gui::InputField" name="spinBox_young_modulus">
+      <widget class="Gui::InputField" name="input_fd_young_modulus">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -61,13 +61,13 @@
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
        <property name="unit" stdset="0">
-        <string>Pa</string>
+        <string notr="true">Pa</string>
        </property>
        <property name="decimals" stdset="0">
         <number>3</number>
        </property>
        <property name="maximum" stdset="0">
-        <double>2000.000000000000000</double>
+        <double>2000000000.000000000</double>
        </property>
        <property name="singleStep" stdset="0">
         <double>2.000000000000000</double>
@@ -116,6 +116,16 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="l_mat_description">
+     <property name="text">
+      <string>Material Description</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

@@ -205,7 +205,7 @@ bool Document::setEdit(Gui::ViewProvider* p, int ModNum)
         return false;
 
     View3DInventor *activeView = dynamic_cast<View3DInventor *>(getActiveView());
-    // if the currently active view is not te 3d view search for it and activate it
+    // if the currently active view is not the 3d view search for it and activate it
     if (!activeView) {
         activeView = dynamic_cast<View3DInventor *>(getViewOfViewProvider(p));
         if (activeView)
@@ -1160,6 +1160,26 @@ bool Document::sendMsgToViews(const char* pMsg)
 
     for (it = d->passiveViews.begin();it != d->passiveViews.end();++it) {
         if ((*it)->onMsg(pMsg,pReturnIgnore)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Document::sendMsgToFirstView(const Base::Type& typeId, const char* pMsg, const char** ppReturn)
+{
+    // first try the active view
+    Gui::MDIView* view = getActiveView();
+    if (view && view->isDerivedFrom(typeId)) {
+        if (view->onMsg(pMsg, ppReturn))
+            return true;
+    }
+
+    // now try the other views
+    std::list<Gui::MDIView*> views = getMDIViewsOfType(typeId);
+    for (std::list<Gui::MDIView*>::iterator it = views.begin(); it != views.end(); ++it) {
+        if ((*it != view) && (*it)->onMsg(pMsg, ppReturn)) {
             return true;
         }
     }
