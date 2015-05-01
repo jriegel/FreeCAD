@@ -172,12 +172,16 @@ public:
     /** Remove a child from the view provider by drag and drop */
     virtual void dragObject(App::DocumentObject*)
     { }
-    /** Check whether objects can be added to the view provider by drag and drop */
-    virtual bool canDropObjects() const
-    { return false; }
     /** Check whether the object can be dropped to the view provider by drag and drop */
     virtual bool canDropObject(App::DocumentObject*) const
-    { return true; }
+    {
+        return false;
+    }
+    /** Check whether the object can be dropped to the view provider by drag and drop */
+    virtual bool canDropObjects() const
+    {
+        return false;
+    }
     /** Add an object to the view provider by drag and drop */
     virtual void dropObject(App::DocumentObject*)
     { }

@@ -390,9 +390,6 @@ QMimeData * TreeWidget::mimeData (const QList<QTreeWidgetItem *> items) const
                 if (!vp->canDragObjects()) {
                     return 0;
                 }
-                else if (!vp->canDragObject(obj)) {
-                    return 0;
-                }
             }
         }
     }
