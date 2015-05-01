@@ -144,7 +144,7 @@ CoinRiftWidget::CoinRiftWidget() : QGLWidget()
     const int backBufferMultisample = 0; // TODO This is a guess?
     ovrGLConfig cfg;
     cfg.OGL.Header.API = ovrRenderAPI_OpenGL;
-    cfg.OGL.Header.RTSize = hmd->Resolution;
+    cfg.OGL.Header.BackBufferSize = hmd->Resolution;
     cfg.OGL.Header.Multisample = backBufferMultisample;
     cfg.OGL.Window = reinterpret_cast<HWND>(winId());
     makeCurrent();
@@ -155,10 +155,11 @@ CoinRiftWidget::CoinRiftWidget() : QGLWidget()
     qDebug() << "DC:" << cfg.OGL.DC;
 
     int DistortionCaps = 0;
-    DistortionCaps |= ovrDistortionCap_Chromatic;
+//    DistortionCaps |= ovrDistortionCap_Chromatic;
 // DistortionCaps |= ovrDistortionCap_TimeWarp; // Produces black screen...
     DistortionCaps |= ovrDistortionCap_Vignette;
     DistortionCaps |= ovrDistortionCap_HqDistortion;
+    DistortionCaps |= ovrDistortionCap_Overdrive;
 
     bool VSyncEnabled(false); // TODO This is a guess.
     if (!ovrHmd_ConfigureRendering( hmd, 
@@ -283,7 +284,7 @@ void CoinRiftWidget::initializeGL()
         glBindTexture(GL_TEXTURE_2D, texData->TexId);
         Q_ASSERT(!glGetError());
         // Allocate storage for the texture.
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, eyeTexture[eye].Header.TextureSize.w, eyeTexture[eye].Header.TextureSize.h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, eyeTexture[eye].Header.TextureSize.w, eyeTexture[eye].Header.TextureSize.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -322,14 +323,18 @@ void CoinRiftWidget::paintGL()
 
     makeCurrent();
 
-    ovrPosef eyePose[2];
-
-    glEnable(GL_TEXTURE_2D);
+     glEnable(GL_TEXTURE_2D);
 
     ovrFrameTiming hmdFrameTiming = ovrHmd_BeginFrame(hmd, 0);
+
+    //Get eye poses, feeding in correct IPD offset
+    ovrVector3f ViewOffset[2] = { eyeRenderDesc[0].HmdToEyeViewOffset, eyeRenderDesc[1].HmdToEyeViewOffset };
+    ovrPosef eyePose[2];
+    ovrHmd_GetEyePoses(hmd, 0, ViewOffset, eyePose, NULL);
+
     for (int eyeIndex = 0; eyeIndex < ovrEye_Count; eyeIndex++) {
         ovrEyeType eye = hmd->EyeRenderOrder[eyeIndex];
-        eyePose[eye] = ovrHmd_GetEyePose(hmd, eye);
+        
 
 
         SbRotation    riftOrientation(  eyePose[eye].Orientation.x,
@@ -345,9 +350,9 @@ void CoinRiftWidget::paintGL()
 
 
         //SbVec3f originalPosition(camera[eye]->position.getValue());
-        SbVec3f viewAdjust(eyeRenderDesc[eye].ViewAdjust.x,
-                                                              eyeRenderDesc[eye].ViewAdjust.y,
-                                                              eyeRenderDesc[eye].ViewAdjust.z);
+        SbVec3f viewAdjust( ViewOffset[eye].x,
+                            ViewOffset[eye].y,
+                            ViewOffset[eye].z);
 
         riftOrientation.multVec(viewAdjust,viewAdjust);
 

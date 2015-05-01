@@ -61,12 +61,12 @@
 #include <Inventor/nodes/SoFrustumCamera.h>
 #include <Inventor/nodes/SoDirectionalLight.h>
 
-#include <OVR.h>
-#include <OVR_Kernel.h>
+#include <OVR_CAPI_GL.h>
+//#include <OVR_Kernel.h>
 #include <OVR_Version.h>
 //#include <OVR_CAPI_GL.h>
-#include <../Src/OVR_CAPI_GL.h>
-#include <../Src/CAPI/GL/CAPI_GL_Util.h> // For framebuffer functions.
+//#include <../Src/OVR_CAPI_GL.h>
+//#include <../Src/CAPI/GL/CAPI_GL_Util.h> // For framebuffer functions.
 
 
 
