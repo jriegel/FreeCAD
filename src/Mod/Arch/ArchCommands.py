@@ -192,6 +192,29 @@ def removeComponents(objectsList,host=None):
                    if o in a:
                        a.remove(o)
                        h.Objects = a
+                       
+def makeComponent(baseobj=None,name="Component",delete=False):
+    '''makeComponent([baseobj]): creates an undefined, non-parametric Arch
+    component from the given base object'''
+    obj = FreeCAD.ActiveDocument.addObject("Part::FeaturePython",name)
+    obj.Label = translate("Arch",name)
+    ArchComponent.Component(obj)
+    if FreeCAD.GuiUp:
+        ArchComponent.ViewProviderComponent(obj.ViewObject)
+    if baseobj:
+        import Part
+        if baseobj.isDerivedFrom("Part::Feature"):
+            obj.Shape = baseobj.Shape
+            obj.Placement = baseobj.Placement
+            if delete:
+                FreeCAD.ActiveDocument.removeObject(baseobj.Name)
+            else:
+                obj.Base = baseobj
+                if FreeCAD.GuiUp:
+                    baseobj.ViewObject.hide()
+        elif isinstance(baseobj,Part.Shape):
+            obj.Shape = baseobj
+    return obj
 
 def fixWindow(obj):
     '''fixWindow(object): Fixes non-DAG problems in windows
@@ -404,7 +427,12 @@ def getShapeFromMesh(mesh,fast=True,tolerance=0.001,flat=False,cut=True):
             pts = []
             for pp in p:
                 pts.append(FreeCAD.Vector(pp[0],pp[1],pp[2]))
-            faces.append(Part.Face(Part.makePolygon(pts)))
+            try:
+                f = Part.Face(Part.makePolygon(pts))
+            except:
+                pass
+            else:
+                faces.append(f)
         shell = Part.makeShell(faces)
         solid = Part.Solid(shell)
         solid = solid.removeSplitter()
@@ -489,6 +517,14 @@ def meshToShape(obj,mark=True,fast=True,tol=0.001,flat=False,cut=True):
                     newobj.ViewObject.ShapeColor = (1.0,0.0,0.0,1.0)
             return newobj
     return None
+
+def removeCurves(shape,tolerance=5):
+    '''removeCurves(shape,tolerance=5): replaces curved faces in a shape
+    with faceted segments'''
+    import Mesh
+    t = shape.cleaned().tessellate(tolerance)
+    m = Mesh.Mesh(t)
+    return getShapeFromMesh(m)
 
 def removeShape(objs,mark=True):
     '''removeShape(objs,mark=True): takes an arch object (wall or structure) built on a cubic shape, and removes
@@ -865,7 +901,45 @@ def rebuildArchShape(objects=None):
             print "Failed"
     FreeCAD.ActiveDocument.recompute()
 
+
+def getExtrusionData(shape):
+    """getExtrusionData(shape): returns a base face and an extrusion vector
+    if this shape can be described as a perpendicular extrusion, or None if not."""
+    if shape.isNull():
+        return None
+    if not shape.Solids:
+        return None
+    if len(shape.Faces) < 5:
+        return None
+    # build faces list with normals
+    faces = []
+    for f in shape.Faces:
+        faces.append([f,f.normalAt(0,0)])
+    # find opposite normals pairs
+    pairs = []
+    for i1, f1 in enumerate(faces):
+        for i2, f2 in enumerate(faces):
+            if f1[0].hashCode() != f2[0].hashCode():
+                if round(f1[1].getAngle(f2[1]),8) == 3.14159265:
+                    pairs.append([i1,i2])
+    if not pairs:
+        return None
+    for p in pairs:
+        hc = [faces[p[0]][0].hashCode(),faces[p[1]][0].hashCode()]
+        ok = True
+        # check if other normals are all at 90 degrees
+        for f in faces:
+            if f[0].hashCode() not in hc:
+                if round(f[1].getAngle(faces[p[0]][1]),8) != 1.57079633:
+                    ok = False
+        if ok:
+            return [faces[p[0]][0],faces[p[1]][0].CenterOfMass.sub(faces[p[0]][0].CenterOfMass)]
+    return None
+
+
 # command definitions ###############################################
+
+
 class _CommandAdd:
     "the Arch Add command definition"
     def GetResources(self):
@@ -1021,6 +1095,7 @@ class _CommandSelectNonSolidMeshes:
             for o in sel:
                 FreeCADGui.Selection.addSelection(o)
 
+
 class _CommandRemoveShape:
     "the Arch RemoveShape command definition"
     def GetResources(self):
@@ -1034,6 +1109,7 @@ class _CommandRemoveShape:
     def Activated(self):
         sel = FreeCADGui.Selection.getSelection()
         removeShape(sel)
+
 
 class _CommandCloseHoles:
     "the Arch CloseHoles command definition"
@@ -1050,6 +1126,7 @@ class _CommandCloseHoles:
             s = closeHole(o.Shape)
             if s:
                 o.Shape = s
+
 
 class _CommandCheck:
     "the Arch Check command definition"
@@ -1116,6 +1193,29 @@ class _ToggleIfcBrepFlag:
             toggleIfcBrepFlag(o)
 
 
+class _CommandComponent:
+    "the Arch Component command definition"
+    def GetResources(self):
+        return {'Pixmap'  : 'Arch_Component',
+                'MenuText': QtCore.QT_TRANSLATE_NOOP("Arch_Component","Component"),
+                'Accel': "C, M",
+                'ToolTip': QtCore.QT_TRANSLATE_NOOP("Arch_Component","Creates an undefined architectural component")}
+
+    def IsActive(self):
+        return not FreeCAD.ActiveDocument is None
+
+    def Activated(self):
+        sel = FreeCADGui.Selection.getSelection()
+        if sel:
+            FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Component"))
+            FreeCADGui.addModule("Arch")
+            FreeCADGui.Control.closeDialog()
+            for o in sel:
+                FreeCADGui.doCommand("Arch.makeComponent(FreeCAD.ActiveDocument."+o.Name+")")
+            FreeCAD.ActiveDocument.commitTransaction()
+            FreeCAD.ActiveDocument.recompute()
+
+
 if FreeCAD.GuiUp:
     FreeCADGui.addCommand('Arch_Add',_CommandAdd())
     FreeCADGui.addCommand('Arch_Remove',_CommandRemove())
@@ -1128,3 +1228,4 @@ if FreeCAD.GuiUp:
     FreeCADGui.addCommand('Arch_IfcExplorer',_CommandIfcExplorer())
     FreeCADGui.addCommand('Arch_Survey',_CommandSurvey())
     FreeCADGui.addCommand('Arch_ToggleIfcBrepFlag',_ToggleIfcBrepFlag())
+    FreeCADGui.addCommand('Arch_Component',_CommandComponent())

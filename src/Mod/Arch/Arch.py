@@ -48,3 +48,5 @@ from ArchPanel import *
 from ArchEquipment import *
 from ArchCutPlane import *
 from ArchServer import *
+from ArchMaterial import *
+from ArchSchedule import *

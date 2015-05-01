@@ -28,6 +28,7 @@
 # include <memory>
 # include <strstream>
 # include <Bnd_Box.hxx>
+# include <BRep_Tool.hxx>
 # include <BRepBndLib.hxx>
 # include <BRepExtrema_DistShapeShape.hxx>
 # include <TopoDS_Vertex.hxx>
@@ -391,7 +392,7 @@ void FemMesh::compute()
     myGen->Compute(*myMesh, myMesh->GetShapeToMesh());
 }
 
-std::set<long> FemMesh::getSurfaceNodes(long ElemId,short FaceId, float Angle) const
+std::set<long> FemMesh::getSurfaceNodes(long ElemId, short FaceId, float Angle) const
 {
     std::set<long> result;
     //const SMESHDS_Mesh* data = myMesh->GetMeshDS();
@@ -403,29 +404,28 @@ std::set<long> FemMesh::getSurfaceNodes(long ElemId,short FaceId, float Angle) c
     return result;
 }
 
-std::set<long> FemMesh::getSurfaceNodes(const TopoDS_Face &face)const
+std::set<long> FemMesh::getNodesByFace(const TopoDS_Face &face) const
 {
-
     std::set<long> result;
 
     Bnd_Box box;
     BRepBndLib::Add(face, box);
     // limit where the mesh node belongs to the face:
-    double limit = box.SquareExtent()/10000.0;
+    double limit = BRep_Tool::Tolerance(face);
     box.Enlarge(limit);
 
-    // get the actuall transform of the FemMesh
+    // get the current transform of the FemMesh
     const Base::Matrix4D Mtrx(getTransform());
 
     SMDS_NodeIteratorPtr aNodeIter = myMesh->GetMeshDS()->nodesIterator();
     while (aNodeIter->more()) {
         const SMDS_MeshNode* aNode = aNodeIter->next();
         Base::Vector3d vec(aNode->X(),aNode->Y(),aNode->Z());
-        // Apply the matrix to hold the BoundBox in absolute space. 
+        // Apply the matrix to hold the BoundBox in absolute space.
         vec = Mtrx * vec;
 
-        if(!box.IsOut(gp_Pnt(vec.x,vec.y,vec.z))){
-            // create a Vertex
+        if (!box.IsOut(gp_Pnt(vec.x,vec.y,vec.z))) {
+            // create a vertex
             BRepBuilderAPI_MakeVertex aBuilder(gp_Pnt(vec.x,vec.y,vec.z));
             TopoDS_Shape s = aBuilder.Vertex();
             // measure distance
@@ -433,17 +433,78 @@ std::set<long> FemMesh::getSurfaceNodes(const TopoDS_Face &face)const
             measure.Perform();
             if (!measure.IsDone() || measure.NbSolution() < 1)
                 continue;
-            
-            if(measure.Value() < limit)         
-                result.insert(aNode->GetID());
 
+            if (measure.Value() < limit)
+                result.insert(aNode->GetID());
         }
     }
 
     return result;
 }
 
+std::set<long> FemMesh::getNodesByEdge(const TopoDS_Edge &edge) const
+{
+    std::set<long> result;
 
+    Bnd_Box box;
+    BRepBndLib::Add(edge, box);
+    // limit where the mesh node belongs to the edge:
+    double limit = BRep_Tool::Tolerance(edge);
+    box.Enlarge(limit);
+
+    // get the current transform of the FemMesh
+    const Base::Matrix4D Mtrx(getTransform());
+
+    SMDS_NodeIteratorPtr aNodeIter = myMesh->GetMeshDS()->nodesIterator();
+    while (aNodeIter->more()) {
+        const SMDS_MeshNode* aNode = aNodeIter->next();
+        Base::Vector3d vec(aNode->X(),aNode->Y(),aNode->Z());
+        // Apply the matrix to hold the BoundBox in absolute space.
+        vec = Mtrx * vec;
+
+        if (!box.IsOut(gp_Pnt(vec.x,vec.y,vec.z))) {
+            // create a vertex
+            BRepBuilderAPI_MakeVertex aBuilder(gp_Pnt(vec.x,vec.y,vec.z));
+            TopoDS_Shape s = aBuilder.Vertex();
+            // measure distance
+            BRepExtrema_DistShapeShape measure(edge,s);
+            measure.Perform();
+            if (!measure.IsDone() || measure.NbSolution() < 1)
+                continue;
+
+            if (measure.Value() < limit)
+                result.insert(aNode->GetID());
+        }
+    }
+
+    return result;
+}
+
+std::set<long> FemMesh::getNodesByVertex(const TopoDS_Vertex &vertex) const
+{
+    std::set<long> result;
+
+    double limit = BRep_Tool::Tolerance(vertex);
+    limit *= limit; // use square to improve speed
+    gp_Pnt pnt = BRep_Tool::Pnt(vertex);
+    Base::Vector3d node(pnt.X(), pnt.Y(), pnt.Z());
+
+    // get the current transform of the FemMesh
+    const Base::Matrix4D Mtrx(getTransform());
+
+    SMDS_NodeIteratorPtr aNodeIter = myMesh->GetMeshDS()->nodesIterator();
+    while (aNodeIter->more()) {
+        const SMDS_MeshNode* aNode = aNodeIter->next();
+        Base::Vector3d vec(aNode->X(),aNode->Y(),aNode->Z());
+        vec = Mtrx * vec;
+
+        if (Base::DistanceP2(node, vec) <= limit) {
+            result.insert(aNode->GetID());
+        }
+    }
+
+    return result;
+}
 
 void FemMesh::readNastran(const std::string &Filename)
 {
@@ -662,28 +723,27 @@ void FemMesh::writeABAQUS(const std::string &Filename) const
     if (elemOrderMap.empty()) {
         // dimension 1
         //
-        // FIXME: get the right order
         std::vector<int> b31 = boost::assign::list_of(0)(1);
         std::vector<int> b32 = boost::assign::list_of(0)(1)(2);
-#if 0
+
         elemOrderMap.insert(std::make_pair("B31", b31));
         edgeTypeMap.insert(std::make_pair(elemOrderMap["B31"].size(), "B31"));
         elemOrderMap.insert(std::make_pair("B32", b32));
         edgeTypeMap.insert(std::make_pair(elemOrderMap["B32"].size(), "B32"));
-#endif
 
         // dimension 2
         //
+        std::vector<int> s3 = boost::assign::list_of(0)(1)(2);
+        std::vector<int> s6 = boost::assign::list_of(0)(1)(2)(3)(4)(5);
         // FIXME: get the right order
-        std::vector<int> s3;
-        std::vector<int> s6;
         std::vector<int> s4r;
         std::vector<int> s8r;
-#if 0
+
         elemOrderMap.insert(std::make_pair("S3", s3));
         faceTypeMap.insert(std::make_pair(elemOrderMap["S3"].size(), "S3"));
         elemOrderMap.insert(std::make_pair("S6", s6));
         faceTypeMap.insert(std::make_pair(elemOrderMap["S6"].size(), "S6"));
+#if 0
         elemOrderMap.insert(std::make_pair("S4R", s4r));
         faceTypeMap.insert(std::make_pair(elemOrderMap["S4R"].size(), "S4R"));
         elemOrderMap.insert(std::make_pair("S8R", s8r));
@@ -768,10 +828,15 @@ void FemMesh::writeABAQUS(const std::string &Filename) const
             anABAQUS_Output << std::endl;
         }
     }
-    elementsMap.clear();
+
+    if (!elementsMap.empty()) {
+        anABAQUS_Output.close();
+        return; // done
+    }
 
     // add faces
     //
+    elementsMap.clear();
     SMDS_FaceIteratorPtr aFaceIter = myMesh->GetMeshDS()->facesIterator();
     while (aFaceIter->more()) {
         const SMDS_MeshFace* aFace = aFaceIter->next();
@@ -798,10 +863,15 @@ void FemMesh::writeABAQUS(const std::string &Filename) const
             anABAQUS_Output << std::endl;
         }
     }
-    elementsMap.clear();
+
+    if (!elementsMap.empty()) {
+        anABAQUS_Output.close();
+        return; // done
+    }
 
     // add edges
     //
+    elementsMap.clear();
     SMDS_EdgeIteratorPtr aEdgeIter = myMesh->GetMeshDS()->edgesIterator();
     while (aEdgeIter->more()) {
         const SMDS_MeshEdge* aEdge = aEdgeIter->next();

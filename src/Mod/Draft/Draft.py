@@ -247,6 +247,9 @@ def isClone(obj,objtype,recursive=False):
                 return True
             elif recursive and (getType(obj.Objects[0]) == "Clone"):
                 return isClone(obj.Objects[0],objtype,recursive)
+    elif hasattr(obj,"CloneOf"):
+        if obj.CloneOf:
+            return True
     return False
     
 def getGroupNames():
@@ -2430,6 +2433,14 @@ def clone(obj,delta=None):
     if (len(obj) == 1) and obj[0].isDerivedFrom("Part::Part2DObject"):
         cl = FreeCAD.ActiveDocument.addObject("Part::Part2DObjectPython","Clone2D")
         cl.Label = "Clone of " + obj[0].Label + " (2D)"
+    elif (len(obj) == 1) and hasattr(obj[0],"CloneOf"):
+        # arch objects can be clones
+        import Arch
+        cl = getattr(Arch,"make"+obj[0].Proxy.Type)()
+        base = getCloneBase(obj[0])
+        cl.Label = "Clone of " + base.Label
+        cl.CloneOf = base
+        return cl
     else:
         cl = FreeCAD.ActiveDocument.addObject("Part::FeaturePython","Clone")
         cl.Label = "Clone of " + obj[0].Label
@@ -2441,6 +2452,16 @@ def clone(obj,delta=None):
         cl.Placement.move(delta)
     formatObject(cl,obj[0])
     return cl
+    
+def getCloneBase(obj):
+    '''getCloneBase(obj): returns the object cloned by this object, if
+    any, or this object if it is no clone'''
+    if hasattr(obj,"CloneOf"):
+        if obj.CloneOf:
+            return getCloneBase(obj.CloneOf)
+    if getType(obj) == "Clone":
+        return obj.Objects[0]
+    return obj
 
 def heal(objlist=None,delete=True,reparent=True):
     '''heal([objlist],[delete],[reparent]) - recreates Draft objects that are damaged,
@@ -4216,7 +4237,8 @@ class _Wire(_DraftObject):
             if len(obj.Points) > 2:
                 obj.setEditorMode('Start',2)
                 obj.setEditorMode('End',2)
-                obj.setEditorMode('Length',2)
+                if hasattr(obj,"Length"):
+                    obj.setEditorMode('Length',2)
                         
 
 class _ViewProviderWire(_ViewProviderDraft):
@@ -4764,11 +4786,8 @@ class _Array(_DraftObject):
                         nshape = shape.copy()
                         nshape.translate(currentzvector)
                         base.append(nshape)
-        if fuse:
-            fshape = base.pop()
-            for s in base:
-                fshape = fshape.fuse(s)
-            return fshape.removeSplitter()
+        if fuse and len(base) > 1:
+            return base[0].multiFuse(base[1:]).removeSplitter()
         else:
             return Part.makeCompound(base)
 
@@ -4790,11 +4809,8 @@ class _Array(_DraftObject):
                 if not DraftVecUtils.isNull(axisvector):
                     nshape.translate(FreeCAD.Vector(axisvector).multiply(i+1))
             base.append(nshape)
-        if fuse:
-            fshape = base.pop()
-            for s in base:
-                fshape = fshape.fuse(s)
-            return fshape.removeSplitter()
+        if fuse and len(base) > 1:
+            return base[0].multiFuse(base[1:]).removeSplitter()
         else:
             return Part.makeCompound(base)
 
@@ -4856,7 +4872,7 @@ class _PathArray(_DraftObject):
             length = offset
         return(edge.getParameterByLength(length))
         
-    def orientShape(self,shape,edge,offset,RefPt,xlate,align):
+    def orientShape(self,shape,edge,offset,RefPt,xlate,align,normal=None):
         '''Orient shape to tangent at parm offset along edge.'''
         # http://en.wikipedia.org/wiki/Euler_angles
         import Part
@@ -4878,8 +4894,11 @@ class _PathArray(_DraftObject):
         t = edge.tangentAt(self.getParameterFromV0(edge,offset))
         t.normalize()
         try:
-            n = edge.normalAt(self.getParameterFromV0(edge,offset))
-            n.normalize()
+            if normal:
+                n = normal
+            else:
+                n = edge.normalAt(self.getParameterFromV0(edge,offset))
+                n.normalize()
             b = (t.cross(n)) 
             b.normalize()
         except FreeCAD.Base.FreeCADError:                                                      # no normal defined here
@@ -4917,7 +4936,8 @@ class _PathArray(_DraftObject):
         import Part
         import DraftGeomUtils
         closedpath = DraftGeomUtils.isReallyClosed(pathwire)
-        path = DraftGeomUtils.sortEdges(pathwire.Edges) 
+        normal = DraftGeomUtils.getNormal(pathwire)
+        path = DraftGeomUtils.sortEdges(pathwire.Edges)
         ends = []
         cdist = 0
         for e in path:                                                 # find cumulative edge end distance
@@ -4925,11 +4945,11 @@ class _PathArray(_DraftObject):
             ends.append(cdist)
         base = []
         pt = path[0].Vertexes[0].Point                                 # place the start shape
-        ns = self.orientShape(shape,path[0],0,pt,xlate,align)
+        ns = self.orientShape(shape,path[0],0,pt,xlate,align,normal)
         base.append(ns)
         if not(closedpath):                                            # closed path doesn't need shape on last vertex
             pt = path[-1].Vertexes[-1].Point                           # place the end shape
-            ns = self.orientShape(shape,path[-1],path[-1].Length,pt,xlate,align)
+            ns = self.orientShape(shape,path[-1],path[-1].Length,pt,xlate,align,normal)
             base.append(ns)
         if count < 3:
             return(Part.makeCompound(base))                            
@@ -4953,7 +4973,7 @@ class _PathArray(_DraftObject):
             remains = ends[iend] - travel
             offset = path[iend].Length - remains           
             pt = path[iend].valueAt(self.getParameterFromV0(path[iend],offset))
-            ns = self.orientShape(shape,path[iend],offset,pt,xlate,align)
+            ns = self.orientShape(shape,path[iend],offset,pt,xlate,align,normal)
             base.append(ns)
             travel += step
         return(Part.makeCompound(base))      

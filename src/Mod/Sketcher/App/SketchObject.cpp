@@ -266,8 +266,9 @@ int SketchObject::movePoint(int GeoId, PointPos PosId, const Base::Vector3d& toP
 
 Base::Vector3d SketchObject::getPoint(int GeoId, PointPos PosId) const
 {
-    assert(GeoId == H_Axis || GeoId == V_Axis ||
-           (GeoId <= getHighestCurveIndex() && GeoId >= -getExternalGeometryCount()) );
+    if(!(GeoId == H_Axis || GeoId == V_Axis
+         || (GeoId <= getHighestCurveIndex() && GeoId >= -getExternalGeometryCount()) ))
+        throw Base::Exception("SketchObject::getPoint. Invalid GeoId was supplied.");
     const Part::Geometry *geo = getGeometry(GeoId);
     if (geo->getTypeId() == Part::GeomPoint::getClassTypeId()) {
         const Part::GeomPoint *p = dynamic_cast<const Part::GeomPoint*>(geo);
@@ -1807,7 +1808,7 @@ int SketchObject::delExternal(int ExtGeoId)
 
 int SketchObject::delConstraintsToExternal()
 {
-    const std::vector< Constraint * > &constraints = Constraints.getValues();
+    const std::vector< Constraint * > &constraints = Constraints.getValuesForce();
     std::vector< Constraint * > newConstraints(0);
     int GeoId = -3, NullId = -2000;
     for (std::vector<Constraint *>::const_iterator it = constraints.begin();
@@ -2413,7 +2414,7 @@ bool SketchObject::evaluateConstraints() const
     int extGeoCount = getExternalGeometryCount();
 
     std::vector<Part::Geometry *> geometry = getCompleteGeometry();
-    const std::vector<Sketcher::Constraint *>& constraints = Constraints.getValues();
+    const std::vector<Sketcher::Constraint *>& constraints = Constraints.getValuesForce();
     if (static_cast<int>(geometry.size()) != extGeoCount + intGeoCount)
         return false;
     if (geometry.size() < 2)
@@ -2423,6 +2424,10 @@ bool SketchObject::evaluateConstraints() const
     for (it = constraints.begin(); it != constraints.end(); ++it) {
         if (!evaluateConstraint(*it))
             return false;
+    }
+
+    if(constraints.size()>0){
+        if (!Constraints.scanGeometry(geometry)) return false;
     }
 
     return true;
@@ -2782,7 +2787,7 @@ int SketchObject::port_reversedExternalArcs(bool justAnalyze)
 bool SketchObject::AutoLockTangencyAndPerpty(Constraint *cstr, bool bForce, bool bLock)
 {
     try{
-        assert ( cstr->Type == Tangent  ||  cstr->Type == Perpendicular);
+        //assert ( cstr->Type == Tangent  ||  cstr->Type == Perpendicular);
         if(cstr->Value != 0.0 && ! bForce) /*tangency type already set. If not bForce - don't touch.*/
             return true;
         if(!bLock){
@@ -2827,7 +2832,6 @@ bool SketchObject::AutoLockTangencyAndPerpty(Constraint *cstr, bool bForce, bool
         }
     } catch (Base::Exception& e){
         //failure to determine tangency type is not a big deal, so a warning.
-        assert(0);//but it shouldn't happen (failure to determine tangency type)!
         Base::Console().Warning("Error in AutoLockTangency. %s \n", e.what());
         return false;
     }

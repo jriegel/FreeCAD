@@ -30,7 +30,9 @@
 #include <Base/Console.h>
 #include <Base/Interpreter.h>
 #include <Gui/Application.h>
+#include <Gui/WidgetFactory.h>
 #include <Gui/Language/Translator.h>
+#include "DlgSettingsFemImp.h"
 #include "ViewProviderFemMesh.h"
 #include "ViewProviderFemMeshShape.h"
 #include "ViewProviderFemMeshShapeNetgen.h"
@@ -101,8 +103,8 @@ void FemGuiExport initFemGui()
     Base::Interpreter().loadModule("MechanicalAnalysis");
     Base::Interpreter().loadModule("MechanicalMaterial");
 
-    Base::Interpreter().loadModule("FemLib");
-
+    // register preferences pages
+    new Gui::PrefPageProducer<FemGui::DlgSettingsFemImp> ("FEM");
 
      // add resources and reloads the translators
     loadFemResource();

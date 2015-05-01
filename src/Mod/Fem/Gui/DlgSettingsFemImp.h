@@ -1,5 +1,7 @@
-/***************************************************************************
- *   Copyright (c) 2012 Werner Mayer <wmayer[at]users.sourceforge.net>     *
+ /**************************************************************************
+ *   Copyright (c) 2015 FreeCAD Developers                                 *
+ *   Author: Przemo Firszt <przemo@firszt.eu>                              *
+ *   Based on src/Mod/Raytracing/Gui/DlgSettingsRayImp.h                   *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -21,55 +23,28 @@
  ***************************************************************************/
 
 
-#ifndef FEMGUI_HYPOTHESIS_H
-#define FEMGUI_HYPOTHESIS_H
+#ifndef FEMGUI_DLGSETTINGSFEMIMP_H
+#define FEMGUI_DLGSETTINGSFEMIMP_H
 
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/TaskView/TaskDialog.h>
+#include "ui_DlgSettingsFem.h"
+#include <Gui/PropertyPage.h>
 
 namespace FemGui {
 
-class Ui_HypothesisWidget;
-class HypothesisWidget : public QWidget
+class DlgSettingsFemImp : public Gui::Dialog::PreferencePage, public Ui_DlgSettingsFemImp
 {
     Q_OBJECT
 
 public:
-    HypothesisWidget(QWidget* parent = 0);
-    ~HypothesisWidget();
-    bool accept();
-    bool reject();
+    DlgSettingsFemImp( QWidget* parent = 0 );
+    ~DlgSettingsFemImp();
 
-private:
+protected:
+    void saveSettings();
+    void loadSettings();
     void changeEvent(QEvent *e);
-
-private:
-    Ui_HypothesisWidget* ui;
 };
 
-class TaskHypothesis : public Gui::TaskView::TaskDialog
-{
-    Q_OBJECT
+} // namespace FemGui
 
-public:
-    TaskHypothesis();
-    ~TaskHypothesis();
-
-public:
-    void open();
-    bool accept();
-    bool reject();
-
-    QDialogButtonBox::StandardButtons getStandardButtons() const
-    { return QDialogButtonBox::Ok | QDialogButtonBox::Cancel; }
-    bool needsFullSpace() const
-    { return true; }
-
-private:
-    HypothesisWidget* widget;
-    Gui::TaskView::TaskBox* taskbox;
-};
-
-} //namespace FemGui
-
-#endif // FEMGUI_HYPOTHESIS_H
+#endif // FEMGUI_DLGSETTINGSFEMIMP_H

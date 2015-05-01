@@ -242,6 +242,7 @@ SET(Part_SRCS
     ${Python_SRCS}
     AppPart.cpp
     AppPartPy.cpp
+    BSplineCurveBiArcs.cpp
     CrossSection.cpp
     CrossSection.h
     Geometry.cpp
@@ -260,6 +261,7 @@ SET(Part_SRCS
     edgecluster.h
     modelRefine.cpp
     modelRefine.h
+    Tools.cpp
     Tools.h
     encodeFilename.h
     OCCError.h

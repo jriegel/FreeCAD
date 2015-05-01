@@ -57,7 +57,7 @@ FeaturePage::FeaturePage(void) : numChildren(0)
     static const char *group = "Drawing view";
 
     ADD_PROPERTY_TYPE(PageResult ,(0),group,App::Prop_Output,"Resulting SVG document of that page");
-    ADD_PROPERTY_TYPE(Template   ,(""),group,App::Prop_None  ,"Template for the page");
+    ADD_PROPERTY_TYPE(Template   ,(""),group,App::Prop_Transient  ,"Template for the page");
     ADD_PROPERTY_TYPE(EditableTexts,(""),group,App::Prop_None,"Substitution values for the editable strings in the template");
 }
 
@@ -102,6 +102,17 @@ void FeaturePage::onChanged(const App::Property* prop)
     }
 
     App::DocumentObjectGroup::onChanged(prop);
+}
+
+void FeaturePage::onDocumentRestored()
+{
+    Base::FileInfo fi(PageResult.getValue());
+    std::string path = App::Application::getResourceDir() + "Mod/Drawing/Templates/" + fi.fileName();
+    // try to find the template in user dir/Templates first
+    Base::FileInfo tempfi(App::Application::getUserAppDataDir() + "Templates/" + fi.fileName());
+    if (tempfi.exists())
+        path = tempfi.filePath();
+    Template.setValue(path);
 }
 
 App::DocumentObjectExecReturn *FeaturePage::execute(void)

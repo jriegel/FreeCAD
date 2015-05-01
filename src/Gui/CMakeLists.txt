@@ -6,7 +6,11 @@ endif(WIN32)
 
 if (FREECAD_USE_3DCONNEXION)
     add_definitions(-D_USE_3DCONNEXION_SDK)
-endif(FREECAD_USE_3DCONNEXION)
+    if(APPLE)
+        set(3DCONNEXION_LINKFLAGS "-F/Library/Frameworks -weak_framework 3DconnexionClient")
+        set(3DCONNEXION_INCLUDE_DIR ${3DCONNEXIONCLIENT_FRAMEWORK}/Headers )
+    endif(APPLE)
+ endif(FREECAD_USE_3DCONNEXION)
 
 if (BUILD_VR)
     add_definitions(-DBUILD_VR )
@@ -28,6 +32,7 @@ include_directories(
     ${XERCESC_INCLUDE_DIR}
     ${QT_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIR}
+    ${3DCONNEXION_INCLUDE_DIR}
 )
 
 if(MSVC)
@@ -49,6 +54,7 @@ else(MSVC)
         ${QT_LIBRARIES}
         ${Boost_LIBRARIES}
         ${OPENGL_gl_LIBRARY}
+        ${3DCONNEXION_LINKFLAGS}
     )
 endif(MSVC)
 
@@ -121,7 +127,7 @@ SET(FreeCADGui_XML_SRCS
 SOURCE_GROUP("XML" FILES ${FreeCADApp_XML_SRCS})
 
 # The 3D Connexion SDK files
-if(FREECAD_USE_3DCONNEXION)
+if(FREECAD_USE_3DCONNEXION AND MSVC)
 SET(FreeCADGui_SDK_SRCS
     3Dconnexion/I3dMouseParams.h
     3Dconnexion/MouseParameters.cpp
@@ -129,10 +135,18 @@ SET(FreeCADGui_SDK_SRCS
     3Dconnexion/GuiApplicationNativeEventAwareWin32.cpp
 )
 SOURCE_GROUP("3D connexion SDK" FILES ${FreeCADGui_SDK_SRCS})
-endif(FREECAD_USE_3DCONNEXION)
+endif(FREECAD_USE_3DCONNEXION AND MSVC)
+
+if(FREECAD_USE_3DCONNEXION AND APPLE)
+SET(FreeCADGui_SDK_SRCS
+    3Dconnexion/GuiApplicationNativeEventAwareMac.cpp
+)
+SOURCE_GROUP("3D connexion SDK" FILES ${FreeCADGui_SDK_SRCS})
+endif(FREECAD_USE_3DCONNEXION AND APPLE)
 
 set(Gui_MOC_HDRS
     Action.h
+    ActionFunction.h
     Assistant.h
     CallTips.h
     CombiView.h
@@ -298,6 +312,7 @@ SOURCE_GROUP("Uic" FILES ${Gui_UIC_HDRS})
 # The command sources
 SET(Command_CPP_SRCS
     Action.cpp
+    ActionFunction.cpp
     Command.cpp
     CommandDoc.cpp
     CommandFeat.cpp
@@ -310,6 +325,7 @@ SET(Command_CPP_SRCS
 SET(Command_SRCS
     ${Command_CPP_SRCS}
     Action.h
+    ActionFunction.h
     Command.h
 )
 SOURCE_GROUP("Command" FILES ${Command_SRCS})
@@ -659,13 +675,14 @@ SET(View3D_CPP_SRCS
     CADNavigationStyle.cpp
     BlenderNavigationStyle.cpp
     TouchpadNavigationStyle.cpp
+    GestureNavigationStyle.cpp
     SplitView3DInventor.cpp
     View.cpp
     View3DInventor.cpp
     View3DInventorExamples.cpp
     View3DInventorViewer.cpp
     View3DInventorRiftViewer.cpp
-	CoinRiftWidget.cpp
+    CoinRiftWidget.cpp
     View3DPy.cpp
     View3DViewerPy.cpp
 )
@@ -775,6 +792,7 @@ SET(Inventor_CPP_SRCS
     SoNavigationDragger.cpp
     SoAxisCrossKit.cpp
     SoTextLabel.cpp
+    SoTouchEvents.cpp
 )
 SET(Inventor_SRCS
     ${Inventor_CPP_SRCS}
@@ -796,6 +814,7 @@ SET(Inventor_SRCS
     SoNavigationDragger.h
     SoAxisCrossKit.h
     SoTextLabel.h
+    SoTouchEvents.h
 )
 SOURCE_GROUP("View3D\\Inventor" FILES ${Inventor_SRCS})
 
@@ -905,6 +924,7 @@ SET(FreeCADGui_CPP_SRCS
     Utilities.cpp
     WaitCursor.cpp
     ManualAlignment.cpp
+    WinNativeGestureRecognizers.cpp
 )
 SET(FreeCADGui_SRCS 
     Application.h
@@ -926,6 +946,7 @@ SET(FreeCADGui_SRCS
     Utilities.h
     WaitCursor.h
     ManualAlignment.h
+    WinNativeGestureRecognizers.h
 )
 
 SET(FreeCADGui_SRCS
