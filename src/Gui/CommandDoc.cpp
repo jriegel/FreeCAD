@@ -1087,6 +1087,7 @@ void StdCmdDelete::activated(int iMsg)
                 }
             }
         }
+        doCommand(Doc,"App.getDocument(\"%s\").recompute()", (*it)->getName());
     }
 }
 
