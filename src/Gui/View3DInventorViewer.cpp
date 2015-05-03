@@ -629,7 +629,7 @@ void View3DInventorViewer::removeViewProvider(ViewProvider* pcProvider)
 
     SoSeparator* root = pcProvider->getRoot();
 
-    if (root) {
+    if (root && (pcViewProviderRoot->findChild(root) != -1)) {
         pcViewProviderRoot->removeChild(root);
         _ViewProviderMap.erase(root);
     }
