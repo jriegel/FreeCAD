@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2014     *
+ *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de)          *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -21,36 +21,33 @@
  ***************************************************************************/
 
 
-#ifndef APP_Path_H
-#define APP_Path_H
+#include "PreCompiled.h"
 
-#include <Base/Persistence.h>
+#ifndef _PreComp_
+#endif
+
+#include <Base/Writer.h>
+
+#include "Document.h"
+#include "DocumentGraph.h"
+
+#include "PropertyLinks.h"
+
+using namespace App;
 
 
+//===========================================================================
+// DocumentGraph
+//===========================================================================
 
-namespace App
+DocumentGraph::DocumentGraph(void)
+
 {
+    
+}
 
-
-/** Transport a path through a document to a certain object.
- */
-class AppExport Path 
+DocumentGraph::~DocumentGraph(void)
 {
-protected:
-	std::vector<Base::Persistence *> _PathVector;
+   
+}
 
-public:
-    /// Constructor
-    Path(void);
-	Path(const std::vector<Base::Persistence *> & PathVector);
-
-    virtual ~Path();
-
-	const std::vector<Base::Persistence *> & getVector(void)const{return _PathVector;}
-
-};
-
-} //namespace App
-
-
-#endif // APP_Path_H

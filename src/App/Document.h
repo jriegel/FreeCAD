@@ -47,6 +47,7 @@ namespace Base {
 namespace App
 {
     class DocumentObject;
+    class DocumentGraph;
     class DocumentObjectExecReturn;
     class Document;
     class DocumentPy; // the python document class
@@ -203,6 +204,8 @@ public:
     /// get the number of objects in the document
     int countObjects(void) const;
     //@}
+
+    const DocumentGraph &getGraph() const;
 
     /** @name methods for modification and state handling
      */

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2014     *
+ *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de)          *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -21,36 +21,57 @@
  ***************************************************************************/
 
 
-#ifndef APP_Path_H
-#define APP_Path_H
+#ifndef APP_DocumentGraph_H
+#define APP_DocumentGraph_H
 
-#include <Base/Persistence.h>
+#include <boost/graph/topological_sort.hpp>
+#include <boost/graph/depth_first_search.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
+#include <boost/graph/visitors.hpp>
+#include <boost/graph/graphviz.hpp>
+#include <boost/bind.hpp>
+#include <boost/regex.hpp>
+#include <boost/unordered_set.hpp>
 
+using namespace boost;
+
+// typedef boost::property<boost::vertex_root_t, DocumentObject* > VertexProperty;
+typedef boost::adjacency_list <
+    boost::vecS,           // class OutEdgeListS  : a Sequence or an AssociativeContainer
+    boost::vecS,           // class VertexListS   : a Sequence or a RandomAccessContainer
+    boost::directedS,      // class DirectedS     : This is a directed graph
+    boost::no_property,    // class VertexProperty:
+    boost::no_property,    // class EdgeProperty:
+    boost::no_property,    // class GraphProperty:
+    boost::listS           // class EdgeListS:
+> DependencyList;
+typedef boost::graph_traits<DependencyList> Traits;
+typedef Traits::vertex_descriptor Vertex;
+typedef Traits::edge_descriptor Edge;
 
 
 namespace App
 {
 
-
-/** Transport a path through a document to a certain object.
+/** Graph book keeping class for the document
  */
-class AppExport Path 
+class AppExport DocumentGraph
 {
-protected:
-	std::vector<Base::Persistence *> _PathVector;
+    // adjancy list of the objects in the document
+    std::map<DocumentObject*, Vertex> VertexObjectList;
+    DependencyList DepList;
 
 public:
+
+ 
     /// Constructor
-    Path(void);
-	Path(const std::vector<Base::Persistence *> & PathVector);
+    DocumentGraph(void);
+    virtual ~DocumentGraph();
 
-    virtual ~Path();
-
-	const std::vector<Base::Persistence *> & getVector(void)const{return _PathVector;}
 
 };
 
 } //namespace App
 
 
-#endif // APP_Path_H
+#endif // APP_DocumentGraph_H
