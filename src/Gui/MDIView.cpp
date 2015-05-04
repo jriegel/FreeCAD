@@ -52,8 +52,12 @@ MDIView::MDIView(Gui::Document* pcDocument,QWidget* parent, Qt::WFlags wflags)
 {
     setAttribute(Qt::WA_DeleteOnClose);
     
-    connectDelObject = pcDocument->signalDeletedObject.connect
-      (boost::bind(&ActiveObjectList::objectDeleted, &ActiveObjects, _1));
+    if (pcDocument)
+    {
+      connectDelObject = pcDocument->signalDeletedObject.connect
+        (boost::bind(&ActiveObjectList::objectDeleted, &ActiveObjects, _1));
+      assert(connectDelObject.connected());
+    }
 }
 
 MDIView::~MDIView()
