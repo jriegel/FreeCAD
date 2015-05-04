@@ -351,10 +351,12 @@ SoFCUnifiedSelection::handleEvent(SoHandleEventAction * action)
             SoFullPath *pPath = (pp != NULL) ? (SoFullPath *) pp->getPath() : NULL;
             ViewProvider *vp = 0;
             ViewProviderDocumentObject* vpd = 0;
+            std::vector<ViewProvider*> vpList;
             if (this->pcDocument && pPath && pPath->containsPath(action->getCurPath()))
-                vp = this->pcDocument->getViewProviderByPathFromTail(pPath);
-            if (vp && vp->isDerivedFrom(ViewProviderDocumentObject::getClassTypeId()))
-                vpd = static_cast<ViewProviderDocumentObject*>(vp);
+                vpList = this->pcDocument->getPathFromTail(pPath);
+                
+            if (vpList.size() > 0 && vpList[0]->isDerivedFrom(ViewProviderDocumentObject::getClassTypeId()))
+                vpd = static_cast<ViewProviderDocumentObject*>(vpList[0]);
 
             //SbBool old_state = highlighted;
             highlighted = FALSE;
@@ -434,10 +436,13 @@ SoFCUnifiedSelection::handleEvent(SoHandleEventAction * action)
             SoFullPath *pPath = (pp != NULL) ? (SoFullPath *) pp->getPath() : NULL;
             ViewProvider *vp = 0;
             ViewProviderDocumentObject* vpd = 0;
+            std::vector<ViewProvider*> vpList;
             if (this->pcDocument && pPath && pPath->containsPath(action->getCurPath()))
-                vp = this->pcDocument->getViewProviderByPathFromTail(pPath);
-            if (vp && vp->isDerivedFrom(ViewProviderDocumentObject::getClassTypeId()))
-                vpd = static_cast<ViewProviderDocumentObject*>(vp);
+                vpList = this->pcDocument->getPathFromTail(pPath);
+
+            if (vpList.size() > 0 && vpList[0]->isDerivedFrom(ViewProviderDocumentObject::getClassTypeId()))
+                vpd = static_cast<ViewProviderDocumentObject*>(vpList[0]);
+
             if (vpd && vpd->useNewSelectionModel() && vpd->isSelectable()) {
                 SoSelectionElementAction::Type type = SoSelectionElementAction::None;
                 std::string documentName = vpd->getObject()->getDocument()->getName();

@@ -50,6 +50,7 @@
 #include <Gui/Control.h>
 #include <Gui/Application.h>
 #include <Gui/Command.h>
+#include <Gui/SoObjectSeparator.h>
 #include <Mod/Part/App/TopoShape.h>
 #include <Mod/PartDesign/App/FeatureAdditive.h>
 #include <Mod/PartDesign/App/FeatureSubtractive.h>

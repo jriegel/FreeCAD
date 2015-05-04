@@ -49,6 +49,7 @@
 #include <Gui/Application.h>
 #include <Gui/Control.h>
 #include <Gui/Document.h>
+#include <Gui/SoObjectSeparator.h>
 #include "ViewProviderMirror.h"
 #include "DlgFilletEdges.h"
 #include "TaskOffset.h"

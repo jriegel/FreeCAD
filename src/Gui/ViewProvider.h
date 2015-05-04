@@ -67,6 +67,7 @@ namespace Gui {
 class View3DInventorViewer;
 class ViewProviderPy;
 class ObjectItem;
+class SoObjectSeparator;
 
 
 
@@ -89,7 +90,7 @@ public:
     virtual ~ViewProvider();
 
     // returns the root node of the Provider (3D)
-    virtual SoSeparator* getRoot(void){return pcRoot;}
+    virtual SoSeparator* getRoot(void);
     // returns the root for the Annotations. 
     SoSeparator* getAnnotation(void);
     // returns the root node of the Provider (3D)
@@ -335,7 +336,7 @@ protected:
 
 protected:
     /// The root Separator of the ViewProvider
-    SoSeparator *pcRoot;
+    SoObjectSeparator *pcRoot;
     /// this is transformation for the provider
     SoTransform *pcTransform;
     const char* sPixmap;

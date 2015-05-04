@@ -72,6 +72,7 @@
 #include <Gui/SoFCSelection.h>
 #include <Gui/SoFCSelectionAction.h>
 #include <Gui/SoFCDB.h>
+#include <Gui/SoObjectSeparator.h>
 #include <Gui/MainWindow.h>
 #include <Gui/Selection.h>
 #include <Gui/Utilities.h>
@@ -98,6 +99,7 @@
 #include "ViewProvider.h"
 #include "SoFCIndexedFaceSet.h"
 #include "SoFCMeshObject.h"
+
 
 
 using namespace MeshGui;

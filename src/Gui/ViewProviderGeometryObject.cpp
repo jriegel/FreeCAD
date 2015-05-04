@@ -48,6 +48,7 @@
 #include "View3DInventorViewer.h"
 #include "SoFCSelection.h"
 #include "SoFCBoundingBox.h"
+#include "SoObjectSeparator.h"
 #include "Application.h"
 #include "Document.h"
 #include "Window.h"
@@ -215,7 +216,7 @@ bool ViewProviderGeometryObject::setEdit(int ModNum)
     sa.setInterest(SoSearchAction::FIRST);
     sa.setSearchingAll(FALSE);
     sa.setNode(this->pcTransform);
-    sa.apply(pcRoot);
+    sa.apply(getRoot());
     SoPath * path = sa.getPath();
     if (path) {
         SoCenterballManip * manip = new SoCenterballManip;
@@ -281,7 +282,7 @@ void ViewProviderGeometryObject::unsetEdit(int ModNum)
     SoSearchAction sa;
     sa.setType(SoCenterballManip::getClassTypeId());
     sa.setInterest(SoSearchAction::FIRST);
-    sa.apply(pcRoot);
+    sa.apply(getRoot());
     SoPath * path = sa.getPath();
 
     // No transform manipulator found.

@@ -46,6 +46,7 @@
 
 
 #include <App/PropertyStandard.h>
+#include <Gui/SoObjectSeparator.h>
 #include <Mod/Part/App/PartFeature.h>
 #include "SoFCShapeObject.h"
 #include "ViewProviderSpline.h"

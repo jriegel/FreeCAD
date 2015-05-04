@@ -48,6 +48,7 @@
 #include "View3DInventor.h"
 #include "View3DInventorViewer.h"
 #include "SoFCDB.h"
+#include "SoObjectSeparator.h"
 
 using namespace std;
 using namespace Gui;
@@ -68,7 +69,7 @@ ViewProvider::ViewProvider()
     , viewOverrideMode(-1)
     , _updateData(true)
 {
-    pcRoot = new SoSeparator();
+    pcRoot = new SoObjectSeparator(this);
     pcRoot->ref();
     pcModeSwitch = new SoSwitch();
     pcModeSwitch->ref();
@@ -92,6 +93,11 @@ ViewProvider::~ViewProvider()
     pcModeSwitch->unref();
     if (pcAnnotation)
         pcAnnotation->unref();
+}
+
+SoSeparator* ViewProvider::getRoot(void)
+{ 
+    return static_cast<SoSeparator*>(pcRoot); 
 }
 
 bool ViewProvider::startEditing(int ModNum)

@@ -39,6 +39,7 @@
 #include <Base/ViewProj.h>
 #include <App/Application.h>
 #include <Gui/SoFCBoundingBox.h>
+#include <Gui/SoObjectSeparator.h>
 
 #include "ViewProvider2DObject.h"
 #include <Mod/Part/App/PartFeature.h>

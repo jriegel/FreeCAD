@@ -108,6 +108,7 @@
 
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/Selection.h>
+#include <Gui/SoObjectSeparator.h>
 #include <Gui/View3DInventorViewer.h>
 #include <Gui/Utilities.h>
 #include <Gui/Control.h>

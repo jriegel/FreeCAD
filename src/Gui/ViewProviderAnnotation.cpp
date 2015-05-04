@@ -407,7 +407,7 @@ bool ViewProviderAnnotationLabel::setEdit(int ModNum)
     sa.setInterest(SoSearchAction::FIRST);
     sa.setSearchingAll(FALSE);
     sa.setNode(this->pTextTranslation);
-    sa.apply(pcRoot);
+    sa.apply(getRoot());
     SoPath * path = sa.getPath();
     if (path) {
         TranslateManip * manip = new TranslateManip;
@@ -426,7 +426,7 @@ void ViewProviderAnnotationLabel::unsetEdit(int ModNum)
     SoSearchAction sa;
     sa.setType(TranslateManip::getClassTypeId());
     sa.setInterest(SoSearchAction::FIRST);
-    sa.apply(pcRoot);
+    sa.apply(getRoot());
     SoPath * path = sa.getPath();
 
     // No transform manipulator found.

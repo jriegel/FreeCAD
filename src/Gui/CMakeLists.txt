@@ -782,6 +782,7 @@ SET(Inventor_CPP_SRCS
     SoFCColorGradient.cpp
     SoFCColorLegend.cpp
     SoFCDB.cpp
+	SoObjectSeparator.cpp
     SoFCInteractiveElement.cpp
     SoFCOffscreenRenderer.cpp
     SoFCSelection.cpp
@@ -804,6 +805,7 @@ SET(Inventor_SRCS
     SoFCColorGradient.h
     SoFCColorLegend.h
     SoFCDB.h
+	SoObjectSeparator.h
     SoFCInteractiveElement.h
     SoFCOffscreenRenderer.h
     SoFCSelection.h

@@ -54,6 +54,7 @@
 #include <Gui/Document.h>
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
+#include <Gui/SoObjectSeparator.h>
 #include <Base/Sequencer.h>
 #include <Base/UnitsApi.h>
 

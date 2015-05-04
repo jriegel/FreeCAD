@@ -92,6 +92,7 @@
 #include <Gui/DlgEditFileIncludeProptertyExternal.h>
 #include <Gui/SoFCBoundingBox.h>
 #include <Gui/SoFCUnifiedSelection.h>
+#include <Gui/SoObjectSeparator.h>
 
 #include <Mod/Part/App/Geometry.h>
 #include <Mod/Sketcher/App/SketchObject.h>

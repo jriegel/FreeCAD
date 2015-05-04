@@ -33,6 +33,7 @@
 #include "SoFCSelection.h"
 #include "SoFCBackgroundGradient.h"
 #include "SoFCBoundingBox.h"
+#include "SoObjectSeparator.h"
 #include "SoFCSelection.h"
 #include "SoFCUnifiedSelection.h"
 #include "SoFCSelectionAction.h"
@@ -73,6 +74,7 @@ void Gui::SoFCDB::init()
     SoFCColorGradient               ::initClass();
     SoFCBackgroundGradient          ::initClass();
     SoFCBoundingBox                 ::initClass();
+    SoObjectSeparator               ::initClass();
     SoFCSelection                   ::initClass();
     SoFCUnifiedSelection            ::initClass();
     SoFCSelectionAction             ::initClass();
@@ -165,6 +167,7 @@ void Gui::SoFCDB::finish()
     SoFCEnableHighlightAction       ::finish();
     SoFCSelectionColorAction        ::finish();
     SoFCHighlightColorAction        ::finish();
+    SoObjectSeparator               ::finish();
 }
 
 // buffer acrobatics for inventor ****************************************************

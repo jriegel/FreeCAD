@@ -85,6 +85,7 @@
 #include <Gui/Command.h>
 #include <Gui/Application.h>
 #include <Gui/SoFCSelection.h>
+#include <Gui/SoObjectSeparator.h>
 #include <Gui/Selection.h>
 #include <Gui/View3DInventorViewer.h>
 

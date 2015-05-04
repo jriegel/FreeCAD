@@ -45,6 +45,8 @@
 #include <App/DocumentObject.h>
 #include <App/DocumentObjectGroup.h>
 
+#include "SoObjectSeparator.h"
+
 #include "Application.h"
 #include "MainWindow.h"
 #include "Tree.h"
@@ -560,19 +562,30 @@ ViewProvider* Document::getViewProviderByPathFromTail(SoPath * path) const
     // Make sure I'm the lowest LocHL in the pick path!
     for (int i = 0; i < path->getLength(); i++) {
         SoNode *node = path->getNodeFromTail(i);
-        if (node->isOfType(SoSeparator::getClassTypeId())) {
-            std::map<const App::DocumentObject*,ViewProviderDocumentObject*>::const_iterator it = d->_ViewProviderMap.begin();
-            for(;it!= d->_ViewProviderMap.end();++it)
-                if (node == it->second->getRoot())
-                    return it->second;
+        if (node->isOfType(SoObjectSeparator::getClassTypeId())) {
+            return static_cast<SoObjectSeparator*>(node)->getViewProvider();
             
-         }
+        }
     }
 
     return 0;
 }
 
+std::vector<ViewProvider*> Document::getPathFromTail(SoPath * path) const
+{
+    std::vector<ViewProvider*> result;
+    result.reserve(path->getLength());
 
+    // Make sure I'm the lowest LocHL in the pick path!
+    for (int i = 0; i < path->getLength(); i++) {
+        SoNode *node = path->getNodeFromTail(i);
+        if (node->isOfType(SoObjectSeparator::getClassTypeId())) {
+            result.push_back(static_cast<SoObjectSeparator*>(node)->getViewProvider());
+        }
+    }
+
+    return result;
+}
 
 App::Document* Document::getDocument(void) const
 {

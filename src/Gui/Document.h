@@ -162,6 +162,8 @@ public:
     void detachView(Gui::BaseView* pcView, bool bPassiv=false);
     /// helper for selection
     ViewProvider* getViewProviderByPathFromTail(SoPath * path) const;
+    /// helper for selection to retrive the path
+    std::vector<ViewProvider*> getPathFromTail(SoPath * path) const;
     /// call update on all attached views
     void onUpdate(void);
     /// call relabel to all attached views
