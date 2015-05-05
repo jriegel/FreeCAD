@@ -88,6 +88,7 @@ SET(Document_CPP_SRCS
     MeasureDistance.cpp
     Placement.cpp
     Plane.cpp
+    Line.cpp
     Transactions.cpp
     VRMLObject.cpp
     MaterialObject.cpp
@@ -114,6 +115,7 @@ SET(Document_HPP_SRCS
     MeasureDistance.h
     Placement.h
     Plane.h
+    Line.h
     Transactions.h
     VRMLObject.h
     MaterialObject.h
