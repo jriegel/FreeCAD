@@ -80,7 +80,8 @@ MDIView::~MDIView()
             }
         }
     }
-
+    if (connectDelObject.connected())
+      connectDelObject.disconnect();
 }
 
 void MDIView::deleteSelf()
