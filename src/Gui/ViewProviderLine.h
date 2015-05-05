@@ -21,8 +21,8 @@
  ***************************************************************************/
 
 
-#ifndef GUI_ViewProviderPlane_H
-#define GUI_ViewProviderPlane_H
+#ifndef GUI_ViewProviderLine_H
+#define GUI_ViewProviderLine_H
 
 #include "ViewProviderGeometryObject.h"
 #include <QObject>
@@ -42,14 +42,14 @@ namespace Gui
 {
 
 
-class GuiExport ViewProviderPlane : public ViewProviderGeometryObject
+class GuiExport ViewProviderLine : public ViewProviderGeometryObject
 {
-    PROPERTY_HEADER(Gui::ViewProviderPlane);
+    PROPERTY_HEADER(Gui::ViewProviderLine);
 
 public:
     /// Constructor
-    ViewProviderPlane(void);
-    virtual ~ViewProviderPlane();
+    ViewProviderLine(void);
+    virtual ~ViewProviderLine();
 
     App::PropertyFloat  Size;
 
@@ -65,10 +65,10 @@ public:
     /// return a hit element to the selection path or 0
     virtual std::string getElement(const SoDetail *) const;
     virtual SoDetail* getDetail(const char*) const;
-
+    
     virtual bool setEdit(int ModNum);
     virtual void unsetEdit(int ModNum);
-    
+
 protected:
     void onChanged(const App::Property* prop);
 
@@ -84,4 +84,4 @@ private:
 } //namespace Gui
 
 
-#endif // GUI_ViewProviderPlane_H
+#endif // GUI_ViewProviderLine_H

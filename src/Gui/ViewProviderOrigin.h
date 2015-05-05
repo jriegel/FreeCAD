@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2012     *
+ *   Copyright (c) Stefan TrÃ¶ger          (stefantroeger@gmx.net) 2015     *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -21,67 +21,36 @@
  ***************************************************************************/
 
 
-#ifndef GUI_ViewProviderPlane_H
-#define GUI_ViewProviderPlane_H
+#ifndef GUI_VIEWPROVIDER_ViewProviderOrigin_H
+#define GUI_VIEWPROVIDER_ViewProviderOrigin_H
 
-#include "ViewProviderGeometryObject.h"
-#include <QObject>
 
-class SoFontStyle;
-class SoText2;
-class SoBaseColor;
-class SoTranslation;
-class SoCoordinate3;
-class SoIndexedLineSet;
-class SoEventCallback;
-class SoMaterial;
-class SoAsciiText;
-class SoFont;
+#include "ViewProviderGeoFeatureGroup.h"
 
-namespace Gui
+#include <App/PropertyStandard.h>
+#include <App/Origin.h>
+
+
+
+namespace Gui {
+
+class GuiExport ViewProviderOrigin : public ViewProviderGeoFeatureGroup
 {
-
-
-class GuiExport ViewProviderPlane : public ViewProviderGeometryObject
-{
-    PROPERTY_HEADER(Gui::ViewProviderPlane);
+    PROPERTY_HEADER(Gui::ViewProviderOrigin);
 
 public:
-    /// Constructor
-    ViewProviderPlane(void);
-    virtual ~ViewProviderPlane();
-
-    App::PropertyFloat  Size;
-
-    void attach(App::DocumentObject *);
-    void updateData(const App::Property*);
-    std::vector<std::string> getDisplayModes(void) const;
-    void setDisplayMode(const char* ModeName);
-
-   /// indicates if the ViewProvider use the new Selection model
-    virtual bool useNewSelectionModel(void) const {return true;}
-    /// indicates if the ViewProvider can be selected
-    virtual bool isSelectable(void) const ;
-    /// return a hit element to the selection path or 0
-    virtual std::string getElement(const SoDetail *) const;
-    virtual SoDetail* getDetail(const char*) const;
-
+    /// constructor.
+    ViewProviderOrigin();
+    /// destructor.
+    virtual ~ViewProviderOrigin();
+    
     virtual bool setEdit(int ModNum);
     virtual void unsetEdit(int ModNum);
-    
-protected:
-    void onChanged(const App::Property* prop);
-
-private:
-    SoCoordinate3    * pCoords;
-    SoMaterial       * pMat;
-    SoIndexedLineSet * pLines;
-    SoAsciiText      * pText;
-    SoFont           * pFont;
-    SoTranslation    * pTranslation;
 };
 
-} //namespace Gui
+typedef ViewProviderPythonFeatureT<ViewProviderOrigin> ViewProviderOriginPython;
 
+} // namespace Gui
 
-#endif // GUI_ViewProviderPlane_H
+#endif // GUI_VIEWPROVIDER_DOCUMENTOBJECTGROUP_H
+

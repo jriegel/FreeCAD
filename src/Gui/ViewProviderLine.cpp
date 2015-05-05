@@ -44,7 +44,7 @@
 #include <Inventor/nodes/SoAnnotation.h>
 #include <Inventor/details/SoLineDetail.h>
 #include <Inventor/nodes/SoAsciiText.h>
-#include "ViewProviderPlane.h"
+#include "ViewProviderLine.h"
 #include "SoFCSelection.h"
 #include "Application.h"
 #include "Document.h"
@@ -60,10 +60,10 @@
 
 using namespace Gui;
 
-PROPERTY_SOURCE(Gui::ViewProviderPlane, Gui::ViewProviderGeometryObject)
+PROPERTY_SOURCE(Gui::ViewProviderLine, Gui::ViewProviderGeometryObject)
 
 
-ViewProviderPlane::ViewProviderPlane() 
+ViewProviderLine::ViewProviderLine() 
 {
 
     ADD_PROPERTY(Size,(1.0));
@@ -71,18 +71,17 @@ ViewProviderPlane::ViewProviderPlane()
     pMat = new SoMaterial();
     pMat->ref();
 
-    float size = Size.getValue(); // Note: If you change this, you need to also adapt App/Plane.cpp getBoundBox()
+    float size = Size.getValue(); // Note: If you change this, you need to also adapt App/Line.cpp getBoundBox()
 
     SbVec3f verts[4] =
     {
-        SbVec3f(size,size,0), SbVec3f(size,-size,0),
-        SbVec3f(-size,-size,0), SbVec3f(-size,size,0),
+        SbVec3f(-size,0,0), SbVec3f(size,0,0),
     };
 
     // indexes used to create the edges
     static const int32_t lines[6] =
     {
-        0,1,2,3,0,-1
+        0,1,-1
     };
 
     pMat->diffuseColor.setNum(1);
@@ -90,19 +89,19 @@ ViewProviderPlane::ViewProviderPlane()
 
     pCoords = new SoCoordinate3();
     pCoords->ref();
-    pCoords->point.setNum(4);
-    pCoords->point.setValues(0, 4, verts);
+    pCoords->point.setNum(2);
+    pCoords->point.setValues(0, 2, verts);
 
     pLines  = new SoIndexedLineSet();
     pLines->ref();
-    pLines->coordIndex.setNum(6);
-    pLines->coordIndex.setValues(0, 6, lines);
+    pLines->coordIndex.setNum(3);
+    pLines->coordIndex.setValues(0, 3, lines);
     
     pFont = new SoFont();
     pFont->size.setValue(Size.getValue()/10.);
     
     pTranslation = new SoTranslation();
-    pTranslation->translation.setValue(SbVec3f(-1,9./10.,0));
+    pTranslation->translation.setValue(SbVec3f(-1,0,0));
     
     pText = new SoAsciiText();
     pText->width.setValue(-1);
@@ -110,33 +109,32 @@ ViewProviderPlane::ViewProviderPlane()
     sPixmap = "view-measurement";
 }
 
-ViewProviderPlane::~ViewProviderPlane()
+ViewProviderLine::~ViewProviderLine()
 {
     pCoords->unref();
     pLines->unref();
     pMat->unref();
 }
 
-void ViewProviderPlane::onChanged(const App::Property* prop)
+void ViewProviderLine::onChanged(const App::Property* prop)
 {
         if (prop == &Size){
-                float size = Size.getValue(); // Note: If you change this, you need to also adapt App/Plane.cpp getBoundBox()
+                float size = Size.getValue(); // Note: If you change this, you need to also adapt App/Line.cpp getBoundBox()
 
-                SbVec3f verts[4] =
+                SbVec3f verts[2] =
                 {
-                    SbVec3f(size,size,0), SbVec3f(size,-size,0),
-                    SbVec3f(-size,-size,0), SbVec3f(-size,size,0),
+                    SbVec3f(-size,0,0), SbVec3f(size,0,0),
                 };
 
-                pCoords->point.setValues(0, 4, verts);
+                pCoords->point.setValues(0, 2, verts);
                 pFont->size.setValue(Size.getValue()/10.);
-                pTranslation->translation.setValue(SbVec3f(-size,size*9./10.,0));
+                pTranslation->translation.setValue(SbVec3f(-size,0,0));
         }
         else
          ViewProviderGeometryObject::onChanged(prop);
 }
 
-std::vector<std::string> ViewProviderPlane::getDisplayModes(void) const
+std::vector<std::string> ViewProviderLine::getDisplayModes(void) const
 {
     // add modes
     std::vector<std::string> StrList;
@@ -144,14 +142,14 @@ std::vector<std::string> ViewProviderPlane::getDisplayModes(void) const
     return StrList;
 }
 
-void ViewProviderPlane::setDisplayMode(const char* ModeName)
+void ViewProviderLine::setDisplayMode(const char* ModeName)
 {
     if (strcmp(ModeName, "Base") == 0)
         setDisplayMaskMode("Base");
     ViewProviderGeometryObject::setDisplayMode(ModeName);
 }
 
-void ViewProviderPlane::attach(App::DocumentObject* pcObject)
+void ViewProviderLine::attach(App::DocumentObject* pcObject)
 {
     ViewProviderGeometryObject::attach(pcObject);
 
@@ -186,13 +184,13 @@ void ViewProviderPlane::attach(App::DocumentObject* pcObject)
     addDisplayMaskMode(sep, "Base");
 }
 
-void ViewProviderPlane::updateData(const App::Property* prop)
+void ViewProviderLine::updateData(const App::Property* prop)
 {
     pText->string.setValue(SbString(pcObject->Label.getValue()));
     ViewProviderGeometryObject::updateData(prop);
 }
 
-std::string ViewProviderPlane::getElement(const SoDetail* detail) const
+std::string ViewProviderLine::getElement(const SoDetail* detail) const
 {
     if (detail) {
         if (detail->getTypeId() == SoLineDetail::getClassTypeId()) {
@@ -208,7 +206,7 @@ std::string ViewProviderPlane::getElement(const SoDetail* detail) const
     return std::string("");
 }
 
-SoDetail* ViewProviderPlane::getDetail(const char* subelement) const
+SoDetail* ViewProviderLine::getDetail(const char* subelement) const
 {
     SoLineDetail* detail = 0;
     std::string subelem(subelement); 
@@ -224,19 +222,19 @@ SoDetail* ViewProviderPlane::getDetail(const char* subelement) const
     return detail;
 }
 
-bool ViewProviderPlane::isSelectable(void) const 
+bool ViewProviderLine::isSelectable(void) const 
 {
     return true;
 }
 
-bool ViewProviderPlane::setEdit(int ModNum)
+bool ViewProviderLine::setEdit(int ModNum)
 {
     return true;
 }
 
-void ViewProviderPlane::unsetEdit(int ModNum)
+void ViewProviderLine::unsetEdit(int ModNum)
 {
-    
+   
 }
 
 // ----------------------------------------------------------------------------
