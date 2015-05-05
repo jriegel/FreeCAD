@@ -1064,13 +1064,13 @@ void StdCmdDelete::activated(int iMsg)
                     if (!links.empty()) {
                         // check if the referenced objects are groups or are selected too
                         for (std::vector<App::DocumentObject*>::iterator lt = links.begin(); lt != links.end(); ++lt) {
-                            if (!(*lt)->getTypeId().isDerivedFrom(App::DocumentObjectGroup::getClassTypeId()) && !rSel.isSelected(*lt)) {
+                            if (
+                                  (!(*lt)->getTypeId().isDerivedFrom(App::DocumentObjectGroup::getClassTypeId())) &&
+                                  (!rSel.isSelected(*lt)) &&
+                                  (!(*lt)->getTypeId().isDerivedFrom(Base::Type::fromName("Part::BodyBase")))
+                                ){
                                 autoDeletion = false;
-                                App::Property *property = (*lt)->getPropertyByName("Label");
-                                if (!property) continue;
-                                App::PropertyString *stringProp = dynamic_cast<App::PropertyString*>(property);
-                                if (!stringProp) continue;
-                                affectedLabels.insert(QString::fromUtf8(stringProp->getValue()));
+                                affectedLabels.insert(QString::fromUtf8((*lt)->Label.getValue()));
                             }
                         }
 
