@@ -86,6 +86,7 @@ SET(Document_CPP_SRCS
     GeoFeatureGroupPyImp.cpp
     GeoFeatureGroup.cpp
     Part.cpp
+    Origin.cpp
     Path.cpp
     InventorObject.cpp
     MeasureDistance.cpp
@@ -113,6 +114,7 @@ SET(Document_HPP_SRCS
     GeoFeature.h
     GeoFeatureGroup.h
     Part.h
+    Origin.h
     Path.h
     InventorObject.h
     MeasureDistance.h
