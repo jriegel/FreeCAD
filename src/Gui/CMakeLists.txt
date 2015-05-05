@@ -800,6 +800,7 @@ SET(Viewprovider_CPP_SRCS
     ViewProviderBuilder.cpp
     ViewProviderPlacement.cpp
     ViewProviderPlane.cpp
+    ViewProviderLine.cpp
     ViewProviderGeoFeatureGroup.cpp
     ViewProviderPart.cpp
     ViewProviderMaterialObject.cpp
@@ -820,6 +821,7 @@ SET(Viewprovider_SRCS
     ViewProviderBuilder.h
     ViewProviderPlacement.h
     ViewProviderPlane.h
+    ViewProviderLine.h
     ViewProviderGeoFeatureGroup.h
     ViewProviderPart.h
     ViewProviderMaterialObject.h
