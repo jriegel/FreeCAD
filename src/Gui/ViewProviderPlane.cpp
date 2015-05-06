@@ -63,11 +63,11 @@ using namespace Gui;
 PROPERTY_SOURCE(Gui::ViewProviderPlane, Gui::ViewProviderGeometryObject)
 
 
-ViewProviderPlane::ViewProviderPlane() 
+ViewProviderPlane::ViewProviderPlane()
 {
 
     ADD_PROPERTY(Size,(1.0));
- 
+
     pMat = new SoMaterial();
     pMat->ref();
 
@@ -97,16 +97,16 @@ ViewProviderPlane::ViewProviderPlane()
     pLines->ref();
     pLines->coordIndex.setNum(6);
     pLines->coordIndex.setValues(0, 6, lines);
-    
+
     pFont = new SoFont();
     pFont->size.setValue(Size.getValue()/10.);
-    
+
     pTranslation = new SoTranslation();
     pTranslation->translation.setValue(SbVec3f(-1,9./10.,0));
-    
+
     pText = new SoAsciiText();
     pText->width.setValue(-1);
-    
+
     sPixmap = "view-measurement";
 }
 
@@ -163,26 +163,26 @@ void ViewProviderPlane::attach(App::DocumentObject* pcObject)
 
     SoMaterialBinding* matBinding = new SoMaterialBinding;
     matBinding->value = SoMaterialBinding::OVERALL;
-    
+
     sep->addChild(matBinding);
     sep->addChild(pMat);
-    sep->addChild(getHighlightNode());
-    pcHighlight->addChild(style);
-    pcHighlight->addChild(pCoords);
-    pcHighlight->addChild(pLines);
-   
+//    sep->addChild(getHighlightNode());
+//    pcHighlight->addChild(style);
+//    pcHighlight->addChild(pCoords);
+//    pcHighlight->addChild(pLines);
+
     style = new SoDrawStyle();
     style->lineWidth = 2.0f;
     style->linePattern.setValue(0x00FF);
     lineSep->addChild(style);
     lineSep->addChild(pLines);
-    lineSep->addChild(pFont);    
+    lineSep->addChild(pFont);
     pText->string.setValue(SbString(pcObject->Label.getValue()));
     lineSep->addChild(pTranslation);
     lineSep->addChild(pText);
-    pcHighlight->addChild(lineSep);
-     
-    pcHighlight->style = SoFCSelection::EMISSIVE_DIFFUSE;
+//    pcHighlight->addChild(lineSep);
+//
+//    pcHighlight->style = SoFCSelection::EMISSIVE_DIFFUSE;
     addDisplayMaskMode(sep, "Base");
 }
 
@@ -211,7 +211,7 @@ std::string ViewProviderPlane::getElement(const SoDetail* detail) const
 SoDetail* ViewProviderPlane::getDetail(const char* subelement) const
 {
     SoLineDetail* detail = 0;
-    std::string subelem(subelement); 
+    std::string subelem(subelement);
     int edge = -1;
 
     if(subelem == "Main") edge = 0;
@@ -224,7 +224,7 @@ SoDetail* ViewProviderPlane::getDetail(const char* subelement) const
     return detail;
 }
 
-bool ViewProviderPlane::isSelectable(void) const 
+bool ViewProviderPlane::isSelectable(void) const
 {
     return true;
 }
@@ -236,7 +236,7 @@ bool ViewProviderPlane::setEdit(int ModNum)
 
 void ViewProviderPlane::unsetEdit(int ModNum)
 {
-    
+
 }
 
 // ----------------------------------------------------------------------------
