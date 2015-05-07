@@ -195,6 +195,7 @@ set(Gui_MOC_HDRS
     DlgTipOfTheDayImp.h
     DlgCheckableMessageBox.h
     DlgToolbarsImp.h
+    DlgWorkbenchesImp.h
     TaskDlgRelocation.h
     DlgUndoRedo.h
     DockWindow.h
@@ -221,6 +222,7 @@ set(Gui_MOC_HDRS
     PythonDebugger.h
     PythonEditor.h
     QuantitySpinBox.h
+    QListWidgetCustom.h
     ReportView.h
     SceneInspector.h
     SelectionView.h
@@ -292,6 +294,7 @@ SET(Gui_UIC_SRCS
     DlgCheckableMessageBox.ui
     DlgTipOfTheDay.ui
     DlgToolbars.ui
+    DlgWorkbenches.ui
     DlgTreeWidget.ui
     DlgLocationAngle.ui
     DlgLocationPos.ui
@@ -443,6 +446,8 @@ SET(Dialog_Customize_CPP_SRCS
     DlgCustomizeSpNavSettings.cpp
     DlgKeyboardImp.cpp
     DlgToolbarsImp.cpp
+    DlgWorkbenchesImp.cpp
+    QListWidgetCustom.cpp
 )
 SET(Dialog_Customize_HPP_SRCS
     DlgActionsImp.h
@@ -452,6 +457,8 @@ SET(Dialog_Customize_HPP_SRCS
     DlgCustomizeSpNavSettings.h
     DlgKeyboardImp.h
     DlgToolbarsImp.h
+    DlgWorkbenchesImp.h
+    QListWidgetCustom.h
 )
 SET(Dialog_Customize_SRCS
     ${Dialog_Customize_CPP_SRCS}
@@ -462,6 +469,7 @@ SET(Dialog_Customize_SRCS
     DlgCustomizeSpNavSettings.ui
     DlgKeyboard.ui
     DlgToolbars.ui
+    DlgWorkbenches.ui
 )
 SOURCE_GROUP("Dialog\\Customize" FILES ${Dialog_Customize_SRCS})
 
