@@ -57,10 +57,12 @@ using namespace PartDesign;
 
 const char* Pad::TypeEnums[]= {"Length","UpToLast","UpToFirst","UpToFace","TwoLengths",NULL};
 
-PROPERTY_SOURCE(PartDesign::Pad, PartDesign::Additive)
+PROPERTY_SOURCE(PartDesign::Pad, PartDesign::SketchBased)
 
 Pad::Pad()
 {
+    addSubType = FeatureAddSub::Additive;
+    
     ADD_PROPERTY_TYPE(Type,((long)0),"Pad",App::Prop_None,"Pad type");
     Type.setEnums(TypeEnums);
     ADD_PROPERTY_TYPE(Length,(100.0),"Pad",App::Prop_None,"Pad length");
@@ -76,7 +78,7 @@ short Pad::mustExecute() const
         Length.isTouched() ||
         Length2.isTouched())
         return 1;
-    return Additive::mustExecute();
+    return SketchBased::mustExecute();
 }
 
 App::DocumentObjectExecReturn *Pad::execute(void)
@@ -233,7 +235,9 @@ App::DocumentObjectExecReturn *Pad::execute(void)
 
         // set the additive shape property for later usage in e.g. pattern
         prism = refineShapeIfActive(prism);
-        this->AddShape.setValue(prism);
+        const char* name = AddSubShape.getName();
+        const char* name1 = this->getPropertyName(&AddSubShape);
+        this->AddSubShape.setValue(prism);
 
         if (!base.IsNull()) {
             // Let's call algorithm computing a fuse operation:
