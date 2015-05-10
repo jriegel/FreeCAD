@@ -41,8 +41,6 @@
 #include "FeatureChamfer.h"
 #include "FeatureDraft.h"
 #include "FeatureFace.h"
-#include "FeatureSubtractive.h"
-#include "FeatureAdditive.h"
 #include "FeatureTransformed.h"
 #include "FeatureMirrored.h"
 #include "FeatureLinearPattern.h"
@@ -85,9 +83,8 @@ void PartDesignExport init_PartDesign()
     PartDesign::Feature            ::init();
     PartDesign::Solid              ::init();
     PartDesign::DressUp            ::init();
+    PartDesign::FeatureAddSub      ::init();
     PartDesign::SketchBased        ::init();
-    PartDesign::Subtractive        ::init();
-    PartDesign::Additive           ::init();
     PartDesign::Transformed        ::init();
     PartDesign::Mirrored           ::init();
     PartDesign::LinearPattern      ::init();

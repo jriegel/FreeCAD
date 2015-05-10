@@ -90,10 +90,8 @@ SET(FeaturesSketchBased_SRCS
     FeatureRevolution.h
     FeatureGroove.cpp
     FeatureGroove.h
-    FeatureAdditive.cpp
-    FeatureAdditive.h
-    FeatureSubtractive.h
-    FeatureSubtractive.cpp
+    FeatureAddSub.cpp
+    FeatureAddSub.h
     FeatureHole.h
     FeatureHole.cpp
     FeatureBoolean.h
