@@ -152,11 +152,11 @@ App::DocumentObjectExecReturn *Pocket::execute(void)
                 getUpToFaceFromLinkSub(upToFace, UpToFace);
                 upToFace.Move(invObjLoc);
             }
-            getUpToFace(upToFace, support, supportface, sketchshape, method, dir);
+            getUpToFace(upToFace, base, supportface, sketchshape, method, dir, Offset.getValue());
 
             // #0001655: When 'supportshape' consists of several faces BRepFeat_MakePrism uses only the first face.
             // Thus, we have to iterate over the faces and use the algorithm for each of them.
-            TopoDS_Shape prism = support;
+            TopoDS_Shape prism = base;
             for (TopExp_Explorer xp(sketchshape, TopAbs_FACE); xp.More(); xp.Next()) {
                 // Special treatment because often the created stand-alone prism is invalid (empty) because
                 // BRepFeat_MakePrism(..., 2, 1) is buggy
