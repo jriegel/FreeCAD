@@ -236,9 +236,10 @@ bool TaskDlgDressUpParameters::reject()
     // roll back the done things
     Gui::Command::abortCommand();
     Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");    
+    Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
 
     // Body housekeeping
-	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>("Body");
+	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
 	if (activeBody != NULL) {
         // Make the new Tip and the previous solid feature visible again
 		App::DocumentObject* tip = activeBody->Tip.getValue();

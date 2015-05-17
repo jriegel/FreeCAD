@@ -43,6 +43,7 @@
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoAnnotation.h>
 #include <Inventor/details/SoLineDetail.h>
+#include <Inventor/nodes/SoAsciiText.h>
 #include "ViewProviderPlane.h"
 #include "SoFCSelection.h"
 #include "Application.h"
@@ -85,7 +86,7 @@ ViewProviderPlane::ViewProviderPlane()
     };
 
     pMat->diffuseColor.setNum(1);
-    pMat->diffuseColor.set1Value(0, SbColor(1.0f, 1.0f, 1.0f));
+    pMat->diffuseColor.set1Value(0, SbColor(50./255., 150./255., 250./255.));
 
     pCoords = new SoCoordinate3();
     pCoords->ref();
@@ -96,6 +97,16 @@ ViewProviderPlane::ViewProviderPlane()
     pLines->ref();
     pLines->coordIndex.setNum(6);
     pLines->coordIndex.setValues(0, 6, lines);
+    
+    pFont = new SoFont();
+    pFont->size.setValue(Size.getValue()/10.);
+    
+    pTranslation = new SoTranslation();
+    pTranslation->translation.setValue(SbVec3f(-1,9./10.,0));
+    
+    pText = new SoAsciiText();
+    pText->width.setValue(-1);
+    
     sPixmap = "view-measurement";
 }
 
@@ -118,6 +129,8 @@ void ViewProviderPlane::onChanged(const App::Property* prop)
                 };
 
                 pCoords->point.setValues(0, 4, verts);
+                pFont->size.setValue(Size.getValue()/10.);
+                pTranslation->translation.setValue(SbVec3f(-size,size*9./10.,0));
         }
         else
          ViewProviderGeometryObject::onChanged(prop);
@@ -142,29 +155,40 @@ void ViewProviderPlane::attach(App::DocumentObject* pcObject)
 {
     ViewProviderGeometryObject::attach(pcObject);
 
+    SoSeparator  *sep = new SoSeparator();
     SoAnnotation *lineSep = new SoAnnotation();
 
-
-    SoAutoZoomTranslation *zoom = new SoAutoZoomTranslation;
-
     SoDrawStyle* style = new SoDrawStyle();
-    style->lineWidth = 1.0f;
+    style->lineWidth = 2.0f;
 
     SoMaterialBinding* matBinding = new SoMaterialBinding;
-    matBinding->value = SoMaterialBinding::PER_FACE;
-
-    lineSep->addChild(zoom);
+    matBinding->value = SoMaterialBinding::OVERALL;
+    
+    sep->addChild(matBinding);
+    sep->addChild(pMat);
+    sep->addChild(getHighlightNode());
+    pcHighlight->addChild(style);
+    pcHighlight->addChild(pCoords);
+    pcHighlight->addChild(pLines);
+   
+    style = new SoDrawStyle();
+    style->lineWidth = 2.0f;
+    style->linePattern.setValue(0xF000);
     lineSep->addChild(style);
-    lineSep->addChild(matBinding);
-    lineSep->addChild(pMat);
-    lineSep->addChild(pCoords);
     lineSep->addChild(pLines);
- 
-    addDisplayMaskMode(lineSep, "Base");
+    lineSep->addChild(pFont);    
+    pText->string.setValue(SbString(pcObject->Label.getValue()));
+    lineSep->addChild(pTranslation);
+    lineSep->addChild(pText);
+    pcHighlight->addChild(lineSep);
+     
+    pcHighlight->style = SoFCSelection::EMISSIVE_DIFFUSE;
+    addDisplayMaskMode(sep, "Base");
 }
 
 void ViewProviderPlane::updateData(const App::Property* prop)
 {
+    pText->string.setValue(SbString(pcObject->Label.getValue()));
     ViewProviderGeometryObject::updateData(prop);
 }
 
@@ -204,6 +228,17 @@ bool ViewProviderPlane::isSelectable(void) const
 {
     return true;
 }
+
+bool ViewProviderPlane::setEdit(int ModNum)
+{
+    return true;
+}
+
+void ViewProviderPlane::unsetEdit(int ModNum)
+{
+    
+}
+
 // ----------------------------------------------------------------------------
 
 

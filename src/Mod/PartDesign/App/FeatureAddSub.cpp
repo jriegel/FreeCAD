@@ -26,19 +26,25 @@
 #endif
 
 
-#include "FeatureSubtractive.h"
+#include "FeatureAddSub.h"
 
 
+using namespace PartDesign;
 
 namespace PartDesign {
 
 
+PROPERTY_SOURCE(PartDesign::FeatureAddSub, PartDesign::Feature)
 
-PROPERTY_SOURCE(PartDesign::Subtractive,PartDesign::SketchBased)
-
-Subtractive::Subtractive()
+FeatureAddSub::FeatureAddSub()
+  :  addSubType(Additive)
 {
-    ADD_PROPERTY(SubShape,(TopoDS_Shape()));
+    ADD_PROPERTY(AddSubShape,(TopoDS_Shape()));
+}
+
+FeatureAddSub::Type FeatureAddSub::getAddSubType()
+{
+    return addSubType;
 }
 
 }

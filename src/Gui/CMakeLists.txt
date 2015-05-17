@@ -4,6 +4,10 @@ if(WIN32)
 add_definitions(-DFCGui -DQIIS_MAKEDLL -DOVR_OS_WIN32 -DQUARTER_INTERNAL -DQUARTER_MAKE_DLL -DCOIN_DLL)
 endif(WIN32)
 
+IF(CMAKE_BUILD_TYPE)
+    add_definitions(-DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+ENDIF(CMAKE_BUILD_TYPE)
+
 if (FREECAD_USE_3DCONNEXION)
     add_definitions(-D_USE_3DCONNEXION_SDK)
     if(APPLE)
@@ -746,8 +750,10 @@ SET(Viewprovider_CPP_SRCS
     ViewProviderBuilder.cpp
     ViewProviderPlacement.cpp
     ViewProviderPlane.cpp
+    ViewProviderLine.cpp
     ViewProviderGeoFeatureGroup.cpp
     ViewProviderPart.cpp
+    ViewProviderOrigin.cpp
     ViewProviderMaterialObject.cpp
 )
 SET(Viewprovider_SRCS
@@ -766,8 +772,10 @@ SET(Viewprovider_SRCS
     ViewProviderBuilder.h
     ViewProviderPlacement.h
     ViewProviderPlane.h
+    ViewProviderLine.h
     ViewProviderGeoFeatureGroup.h
     ViewProviderPart.h
+    ViewProviderOrigin.h
     ViewProviderMaterialObject.h
 )
 SOURCE_GROUP("View3D\\Viewprovider" FILES ${Viewprovider_SRCS})

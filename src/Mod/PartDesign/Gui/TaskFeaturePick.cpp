@@ -31,15 +31,17 @@
 #include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
 #include <Gui/MainWindow.h>
+#include <Gui/Document.h>
+#include <Gui/ViewProviderOrigin.h>
 #include <App/Document.h>
 #include <Base/Tools.h>
 
-#include "ui_FeaturePickDialog.h"
-#include "FeaturePickDialog.h"
+#include "ui_TaskFeaturePick.h"
+#include "TaskFeaturePick.h"
 
 using namespace PartDesignGui;
 
-const QString FeaturePickDialog::getFeatureStatusString(const featureStatus st)
+const QString TaskFeaturePick::getFeatureStatusString(const featureStatus st)
 {
     switch (st) {
         case validFeature: return tr("Valid");
@@ -54,11 +56,15 @@ const QString FeaturePickDialog::getFeatureStatusString(const featureStatus st)
     return tr("");
 }
 
-FeaturePickDialog::FeaturePickDialog(std::vector<App::DocumentObject*>& objects,
-                                     const std::vector<featureStatus>& status)
-  : QDialog(Gui::getMainWindow()), ui(new Ui_FeaturePickDialog)
+TaskFeaturePick::TaskFeaturePick(std::vector<App::DocumentObject*>& objects,
+                                     const std::vector<featureStatus>& status,
+                                     QWidget* parent)
+  : TaskBox(Gui::BitmapFactory().pixmap("edit-select-box"),
+            QString::fromAscii("Select feature"), true, parent), ui(new Ui_TaskFeaturePick)
 {
-    ui->setupUi(this);
+    
+    proxy = new QWidget(this);
+    ui->setupUi(proxy);
 
     connect(ui->checkReverse, SIGNAL(toggled(bool)), this, SLOT(onCheckReverse(bool)));
     connect(ui->checkOtherBody, SIGNAL(toggled(bool)), this, SLOT(onCheckOtherBody(bool)));
@@ -77,28 +83,51 @@ FeaturePickDialog::FeaturePickDialog(std::vector<App::DocumentObject*>& objects,
     // These are not implemented yet
     ui->radioDependent->setEnabled(false);
     ui->radioXRef->setEnabled(false);
+    
+    auto guidoc = Gui::Application::Instance->activeDocument();
+    auto origin_obj = App::GetApplication().getActiveDocument()->getObjectsOfType<App::Origin>();
 
+    assert(status.size() == objects.size());
     std::vector<featureStatus>::const_iterator st = status.begin();
     for (std::vector<App::DocumentObject*>::const_iterator o = objects.begin(); o != objects.end(); o++) {
         QListWidgetItem* item = new QListWidgetItem(QString::fromAscii((*o)->getNameInDocument()) +
                                                     QString::fromAscii(" (") + getFeatureStatusString(*st) + QString::fromAscii(")"));
         ui->listWidget->addItem(item);
         st++;
+        
+        //check if we need to set any origin in temporary visibility mode
+        for(App::Origin* obj : origin_obj) {
+            if(obj->hasObject(*o)) {
+                Gui::ViewProviderOrigin* vpo = static_cast<Gui::ViewProviderOrigin*>(guidoc->getViewProvider(obj));
+                if(!vpo->isTemporaryVisibilityMode())
+                    vpo->setTemporaryVisibilityMode(true, guidoc);
+                
+                vpo->setTemporaryVisibility(*o, true);
+                origins.push_back(vpo);
+                break;
+            }
+        }
     }
 
+    groupLayout()->addWidget(proxy);
     statuses = status;
     updateList();
 }
 
-FeaturePickDialog::~FeaturePickDialog()
+TaskFeaturePick::~TaskFeaturePick()
 {
+    for(Gui::ViewProviderOrigin* vpo : origins)
+        vpo->setTemporaryVisibilityMode(false, NULL);
 
 }
 
-void FeaturePickDialog::updateList()
+void TaskFeaturePick::updateList()
 {
     int index = 0;
-
+    
+    //get all origins in temporary mode
+    
+    
     for (std::vector<featureStatus>::const_iterator st = statuses.begin(); st != statuses.end(); st++) {
         QListWidgetItem* item = ui->listWidget->item(index);
 
@@ -116,21 +145,11 @@ void FeaturePickDialog::updateList()
     }
 }
 
-void FeaturePickDialog::onCheckReverse(bool checked)
+void TaskFeaturePick::onCheckReverse(bool checked)
 {
 }
 
-void FeaturePickDialog::onCheckOtherFeature(bool checked)
-{
-    ui->radioIndependent->setEnabled(checked);
-    // TODO: Not implemented yet
-    //ui->radioDependent->setEnabled(checked);
-    //ui->radioXRef->setEnabled(checked);
-
-    updateList();
-}
-
-void FeaturePickDialog::onCheckOtherBody(bool checked)
+void TaskFeaturePick::onCheckOtherFeature(bool checked)
 {
     ui->radioIndependent->setEnabled(checked);
     // TODO: Not implemented yet
@@ -140,17 +159,36 @@ void FeaturePickDialog::onCheckOtherBody(bool checked)
     updateList();
 }
 
-void FeaturePickDialog::onUpdate(bool)
+void TaskFeaturePick::onCheckOtherBody(bool checked)
+{
+    ui->radioIndependent->setEnabled(checked);
+    // TODO: Not implemented yet
+    //ui->radioDependent->setEnabled(checked);
+    //ui->radioXRef->setEnabled(checked);
+
+    updateList();
+}
+
+void TaskFeaturePick::onUpdate(bool)
 {
     updateList();
 }
 
-bool FeaturePickDialog::getReverse()
+bool TaskFeaturePick::getReverse()
 {
     return ui->checkReverse->isChecked();
 }
 
-std::vector<App::DocumentObject*> FeaturePickDialog::getFeatures() {
+std::vector<App::DocumentObject*> TaskFeaturePick::getFeatures() {
+    
+    features.clear();
+    QListIterator<QListWidgetItem*> i(ui->listWidget->selectedItems());
+    while (i.hasNext()) {
+        QString t = i.next()->text();
+        t = t.left(t.indexOf(QString::fromAscii("(")) - 1);
+        features.push_back(t);
+    }
+    
     std::vector<App::DocumentObject*> result;
 
     for (std::vector<QString>::const_iterator s = features.begin(); s != features.end(); s++)
@@ -159,18 +197,74 @@ std::vector<App::DocumentObject*> FeaturePickDialog::getFeatures() {
     return result;
 }
 
-
-
-void FeaturePickDialog::accept()
-{
-    features.clear();
-    QListIterator<QListWidgetItem*> i(ui->listWidget->selectedItems());
-    while (i.hasNext()) {
-        QString t = i.next()->text();
-        t = t.left(t.indexOf(QString::fromAscii("(")) - 1);
-        features.push_back(t);
+void TaskFeaturePick::onSelectionChanged(const Gui::SelectionChanges& msg)
+{    
+    ui->listWidget->clearSelection();
+    for(Gui::SelectionSingleton::SelObj obj :  Gui::Selection().getSelection()) {
+        
+        for(int row = 0; row < ui->listWidget->count(); row++) {
+            
+            QListWidgetItem *item = ui->listWidget->item(row);
+            QString t = item->text();
+            t = t.left(t.indexOf(QString::fromAscii("(")) - 1);
+            if(t.compare(QString::fromAscii(obj.FeatName))==0) {
+                ui->listWidget->setItemSelected(item, true);
+            }
+        }
     }
-
-    QDialog::accept();
+    
 }
-#include "moc_FeaturePickDialog.cpp"
+
+//**************************************************************************
+//**************************************************************************
+// TaskDialog
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+TaskDlgFeaturePick::TaskDlgFeaturePick(std::vector<App::DocumentObject*> &objects, 
+                                        const std::vector<TaskFeaturePick::featureStatus> &status,
+                                        boost::function<bool (std::vector<App::DocumentObject*>)> afunc,
+                                        boost::function<void (std::vector<App::DocumentObject*>)> wfunc)
+    : TaskDialog(), accepted(false)
+{
+    pick  = new TaskFeaturePick(objects, status);
+    Content.push_back(pick);
+    
+    acceptFunction = afunc;
+    workFunction = wfunc;
+}
+
+TaskDlgFeaturePick::~TaskDlgFeaturePick()
+{
+    //do the work now as before in accept() the dialog is still open, hence the work 
+    //function could not open annother dialog
+    if(accepted)
+        workFunction(pick->getFeatures());
+}
+
+//==== calls from the TaskView ===============================================================
+
+
+void TaskDlgFeaturePick::open()
+{
+    
+}
+
+void TaskDlgFeaturePick::clicked(int)
+{
+    
+}
+
+bool TaskDlgFeaturePick::accept()
+{
+    accepted = acceptFunction(pick->getFeatures());
+     
+    return accepted;
+}
+
+bool TaskDlgFeaturePick::reject()
+{
+    accepted = false;
+    return true;
+}
+
+#include "moc_TaskFeaturePick.cpp"

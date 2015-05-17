@@ -49,11 +49,9 @@ namespace PartDesignGui {
 //extern Gui::Document                   *ActiveGuiDoc;
 //extern App::Document                   *ActiveAppDoc;
 //extern Gui::ViewProviderDocumentObject *ActiveVp;
-// The names of the base planes
-extern const char* BaseplaneNames[3];
 
 /// Return active body or show a warning message
-PartDesign::Body *getBody(void);
+PartDesign::Body *getBody(bool messageIfNot);
 
 /**
  * @author Werner Mayer

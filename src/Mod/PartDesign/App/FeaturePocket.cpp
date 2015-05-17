@@ -54,10 +54,12 @@ using namespace PartDesign;
 
 const char* Pocket::TypeEnums[]= {"Length","ThroughAll","UpToFirst","UpToFace",NULL};
 
-PROPERTY_SOURCE(PartDesign::Pocket, PartDesign::Subtractive)
+PROPERTY_SOURCE(PartDesign::Pocket, PartDesign::SketchBased)
 
 Pocket::Pocket()
 {
+    addSubType = FeatureAddSub::Subtractive;
+    
     ADD_PROPERTY_TYPE(Type,((long)0),"Pocket",App::Prop_None,"Pocket type");
     Type.setEnums(TypeEnums);
     ADD_PROPERTY_TYPE(Length,(100.0),"Pocket",App::Prop_None,"Pocket length");
@@ -71,7 +73,7 @@ short Pocket::mustExecute() const
         Type.isTouched() ||
         Length.isTouched())
         return 1;
-    return Subtractive::mustExecute();
+    return SketchBased::mustExecute();
 }
 
 App::DocumentObjectExecReturn *Pocket::execute(void)
@@ -152,23 +154,21 @@ App::DocumentObjectExecReturn *Pocket::execute(void)
             }
             getUpToFace(upToFace, base, supportface, sketchshape, method, dir, Offset.getValue());
 
-            // BRepFeat_MakePrism(..., 2, 1) in combination with PerForm(upToFace) is buggy when the
-            // prism that is being created is contained completely inside the base solid
-            // In this case the resulting shape is empty. This is not a problem for the Pad or Pocket itself
-            // but it leads to an invalid SubShape
-            // The bug only occurs when the upToFace is limited (by a wire), not for unlimited upToFace. But
-            // other problems occur with unlimited concave upToFace so it is not an option to always unlimit upToFace
-            // Check supportface for limits, otherwise Perform() throws an exception
-            TopExp_Explorer Ex(supportface,TopAbs_WIRE);
-            if (!Ex.More())
-                supportface = TopoDS_Face();
-            BRepFeat_MakePrism PrismMaker;
-            PrismMaker.Init(base, sketchshape, supportface, dir, 0, 1);
-            PrismMaker.Perform(upToFace);
+            // #0001655: When 'supportshape' consists of several faces BRepFeat_MakePrism uses only the first face.
+            // Thus, we have to iterate over the faces and use the algorithm for each of them.
+            TopoDS_Shape prism = base;
+            for (TopExp_Explorer xp(sketchshape, TopAbs_FACE); xp.More(); xp.Next()) {
+                // Special treatment because often the created stand-alone prism is invalid (empty) because
+                // BRepFeat_MakePrism(..., 2, 1) is buggy
+                BRepFeat_MakePrism PrismMaker;
+                PrismMaker.Init(prism, xp.Current(), supportface, dir, 0, 1);
+                PrismMaker.Perform(upToFace);
 
-            if (!PrismMaker.IsDone())
-                return new App::DocumentObjectExecReturn("Pocket: Up to face: Could not extrude the sketch!");
-            TopoDS_Shape prism = PrismMaker.Shape();
+                if (!PrismMaker.IsDone())
+                    return new App::DocumentObjectExecReturn("Pocket: Up to face: Could not extrude the sketch!");
+                prism = PrismMaker.Shape();
+            }
+
             prism = refineShapeIfActive(prism);
 
             // And the really expensive way to get the SubShape...
@@ -177,7 +177,7 @@ App::DocumentObjectExecReturn *Pocket::execute(void)
                 return new App::DocumentObjectExecReturn("Pocket: Up to face: Could not get SubShape!");
             // FIXME: In some cases this affects the Shape property: It is set to the same shape as the SubShape!!!!
             TopoDS_Shape result = refineShapeIfActive(mkCut.Shape());
-            this->SubShape.setValue(result);
+            this->AddSubShape.setValue(result);
             this->Shape.setValue(prism);
         } else {
             TopoDS_Shape prism;
@@ -188,7 +188,7 @@ App::DocumentObjectExecReturn *Pocket::execute(void)
 
             // set the subtractive shape property for later usage in e.g. pattern
             prism = refineShapeIfActive(prism);
-            this->SubShape.setValue(prism);
+            this->AddSubShape.setValue(prism);
 
             // Cut the SubShape out of the base feature
             BRepAlgoAPI_Cut mkCut(base, prism);

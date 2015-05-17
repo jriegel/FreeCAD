@@ -99,7 +99,9 @@
 #include "ViewProviderMeasureDistance.h"
 #include "ViewProviderPlacement.h"
 #include "ViewProviderPlane.h"
+#include "ViewProviderLine.h"
 #include "ViewProviderPart.h"
+#include "ViewProviderOrigin.h"
 #include "ViewProviderMaterialObject.h"
 
 #include "Language/Translator.h"
@@ -1017,6 +1019,8 @@ bool Application::activateWorkbench(const char* name)
             type = result.as_std_string("ascii");
             if (Base::Type::fromName(type.c_str()).isDerivedFrom(Gui::PythonBaseWorkbench::getClassTypeId())) {
                 Workbench* wb = WorkbenchManager::instance()->createWorkbench(name, type);
+                if (!wb)
+                    throw Py::RuntimeError("Failed to instantiate workbench of type " + type);
                 handler.setAttr(std::string("__Workbench__"), Py::Object(wb->getPyObject(), true));
             }
 
@@ -1513,7 +1517,9 @@ void Application::initTypes(void)
     Gui::ViewProviderPythonGeometry             ::init();
     Gui::ViewProviderPlacement                  ::init();
     Gui::ViewProviderPlane                      ::init();
+    Gui::ViewProviderLine                       ::init();
     Gui::ViewProviderPart                       ::init();
+    Gui::ViewProviderOrigin                     ::init();
     Gui::ViewProviderMaterialObject             ::init();
     Gui::ViewProviderMaterialObjectPython       ::init();
 

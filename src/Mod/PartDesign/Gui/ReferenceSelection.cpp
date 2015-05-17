@@ -32,6 +32,7 @@
 
 #include <App/Plane.h>
 #include <App/Part.h>
+#include <App/Line.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Mod/Part/App/TopoShape.h>
@@ -51,7 +52,7 @@ using namespace Gui;
 
 bool ReferenceSelection::allow(App::Document* pDoc, App::DocumentObject* pObj, const char* sSubName)
 {
-	PartDesign::Body* ActivePartObject = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>("Body");
+	PartDesign::Body* ActivePartObject = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
 	App::Part*        activePart = Gui::Application::Instance->activeView()->getActiveObject<App::Part*>("Part");
 
     // Don't allow selection in other document
@@ -60,6 +61,9 @@ bool ReferenceSelection::allow(App::Document* pDoc, App::DocumentObject* pObj, c
 
     if (plane && (pObj->getTypeId().isDerivedFrom(App::Plane::getClassTypeId())))
         // Note: It is assumed that a Part has exactly 3 App::Plane objects at the root of the feature tree
+        return true;
+    
+    if (edge && (pObj->getTypeId().isDerivedFrom(App::Line::getClassTypeId())))
         return true;
 
     if (pObj->getTypeId().isDerivedFrom(Part::Datum::getClassTypeId())) {

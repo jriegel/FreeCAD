@@ -44,9 +44,8 @@
 #include <Gui/Selection.h>
 #include <Gui/Command.h>
 #include <Mod/PartDesign/App/FeatureTransformed.h>
-#include <Mod/PartDesign/App/FeatureAdditive.h>
-#include <Mod/PartDesign/App/FeatureSubtractive.h>
 #include <Mod/PartDesign/App/Body.h>
+#include <Mod/PartDesign/App/FeatureAddSub.h>
 #include "ReferenceSelection.h"
 
 using namespace PartDesignGui;
@@ -104,8 +103,7 @@ const bool TaskTransformedParameters::originalSelected(const Gui::SelectionChang
 
         PartDesign::Transformed* pcTransformed = getObject();
         App::DocumentObject* selectedObject = pcTransformed->getDocument()->getObject(msg.pObjectName);
-        if (selectedObject->isDerivedFrom(PartDesign::Additive::getClassTypeId()) ||
-            selectedObject->isDerivedFrom(PartDesign::Subtractive::getClassTypeId())) {
+        if (selectedObject->isDerivedFrom(PartDesign::FeatureAddSub::getClassTypeId())) {
 
             // Do the same like in TaskDlgTransformedParameters::accept() but without doCommand
             std::vector<App::DocumentObject*> originals = pcTransformed->Originals.getValues();
@@ -244,7 +242,7 @@ void TaskTransformedParameters::showObject()
 void TaskTransformedParameters::hideBase()
 {
     Gui::Document* doc = Gui::Application::Instance->activeDocument();
-    PartDesign::Body* pcActiveBody = PartDesignGui::getBody();
+    PartDesign::Body* pcActiveBody = PartDesignGui::getBody(/*messageIfNot = */false);
     if (doc && pcActiveBody) {
         App::DocumentObject* prevFeature;
         if (insideMultiTransform) {
@@ -260,7 +258,7 @@ void TaskTransformedParameters::hideBase()
 void TaskTransformedParameters::showBase()
 {
     Gui::Document* doc = Gui::Application::Instance->activeDocument();
-    PartDesign::Body* pcActiveBody = PartDesignGui::getBody();
+    PartDesign::Body* pcActiveBody = PartDesignGui::getBody(/*messageIfNot = */false);
     if (doc && pcActiveBody) {
         App::DocumentObject* prevFeature;
         if (insideMultiTransform) {
@@ -339,7 +337,7 @@ bool TaskDlgTransformedParameters::reject()
     Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
 
     // Body housekeeping
-	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>("Body");
+	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
 	if (activeBody != NULL) {
         // Make the new Tip and the previous solid feature visible again
 		App::DocumentObject* tip = activeBody->Tip.getValue();

@@ -84,11 +84,13 @@ SET(Document_CPP_SRCS
     GeoFeatureGroupPyImp.cpp
     GeoFeatureGroup.cpp
     Part.cpp
+    Origin.cpp
     Path.cpp
     InventorObject.cpp
     MeasureDistance.cpp
     Placement.cpp
     Plane.cpp
+    Line.cpp
     Transactions.cpp
     VRMLObject.cpp
     MaterialObject.cpp
@@ -111,11 +113,13 @@ SET(Document_HPP_SRCS
     GeoFeature.h
     GeoFeatureGroup.h
     Part.h
+    Origin.h
     Path.h
     InventorObject.h
     MeasureDistance.h
     Placement.h
     Plane.h
+    Line.h
     Transactions.h
     VRMLObject.h
     MaterialObject.h

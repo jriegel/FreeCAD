@@ -135,7 +135,7 @@ public:
     /** @name Methods used by the Tree
       * If you want to take control over the 
       * appearance of your object in the tree you
-      * can reimplementing this methods.
+      * can reimplemnt these methods.
      */
     //@{
     /// deliver the icon shown in the tree view

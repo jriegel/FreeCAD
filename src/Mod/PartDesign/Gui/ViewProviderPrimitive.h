@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2011 Juergen Riegel <FreeCAD@juergen-riegel.net>        *
+ *   Copyright (c) 2015 Stefan Tröger <stefantroeger@gmx.net>              *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -21,24 +21,29 @@
  ***************************************************************************/
 
 
-#include "PreCompiled.h"
-#ifndef _PreComp_
-#endif
+#ifndef PARTGUI_ViewProviderPrimitive_H
+#define PARTGUI_ViewProviderPrimitive_H
+
+#include "ViewProvider.h"
 
 
-#include "FeatureAdditive.h"
+namespace PartDesignGui {
 
-
-using namespace PartDesign;
-
-namespace PartDesign {
-
-
-PROPERTY_SOURCE(PartDesign::Additive,PartDesign::SketchBased)
-
-Additive::Additive()
+class PartDesignGuiExport ViewProviderPrimitive : public ViewProvider
 {
-    ADD_PROPERTY(AddShape,(TopoDS_Shape()));
-}
+    PROPERTY_HEADER(PartDesignGui::ViewProviderPrimitive);
 
-}
+public:
+    /// constructor
+    ViewProviderPrimitive();
+    /// destructor
+    virtual ~ViewProviderPrimitive();
+    
+protected:
+    virtual bool setEdit(int ModNum);
+};
+
+} // namespace PartDesignGui
+
+
+#endif // PARTGUI_ViewProviderBoolean_H

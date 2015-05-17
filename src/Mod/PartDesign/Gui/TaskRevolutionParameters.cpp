@@ -101,9 +101,9 @@ TaskRevolutionParameters::TaskRevolutionParameters(ViewProviderRevolution *Revol
     const std::vector<std::string> &subReferenceAxis = pcRevolution->ReferenceAxis.getSubValues();
     if (pcReferenceAxis && pcReferenceAxis == pcRevolution->Sketch.getValue()) {
         assert(subReferenceAxis.size()==1);
-        if (subReferenceAxis[0] == "V_Axis")
+        if (subReferenceAxis[0] == "H_Axis")
             pos = 0;
-        else if (subReferenceAxis[0] == "H_Axis")
+        else if (subReferenceAxis[0] == "V_Axis")
             pos = 1;
         else if (subReferenceAxis[0].size() > 4 && subReferenceAxis[0].substr(0,4) == "Axis")
             pos = 2 + std::atoi(subReferenceAxis[0].substr(4,4000).c_str());

@@ -101,6 +101,7 @@ void View3DInventorPy::init_type()
     add_varargs_method("setAnimationEnabled",&View3DInventorPy::setAnimationEnabled,"setAnimationEnabled()");
     add_varargs_method("isAnimationEnabled",&View3DInventorPy::isAnimationEnabled,"isAnimationEnabled()");
     add_varargs_method("dump",&View3DInventorPy::dump,"dump()");
+    add_varargs_method("dumpSelection",&View3DInventorPy::dumpSelection,"dumpSelection()");
     add_varargs_method("dumpNode",&View3DInventorPy::dumpNode,"dumpNode(node)");
     add_varargs_method("setStereoType",&View3DInventorPy::setStereoType,"setStereoType()");
     add_varargs_method("getStereoType",&View3DInventorPy::getStereoType,"getStereoType()");
@@ -175,7 +176,9 @@ void View3DInventorPy::init_type()
         "Remove the DraggerCalback function from the coin node\n"
         "Possibles types :\n"
         "'addFinishCallback','addStartCallback','addMotionCallback','addValueChangedCallback'\n");
-	add_varargs_method("setActiveObject", &View3DInventorPy::setActiveObject, "setActiveObject(name,object)\nadd or set a new active object");
+    add_varargs_method("setActiveObject", &View3DInventorPy::setActiveObject, "setActiveObject(name,object)\nadd or set a new active object");
+    add_varargs_method("getActiveObject", &View3DInventorPy::getActiveObject, "getActiveObject(name)\nreturns the active object for the given type");
+
 }
 
 View3DInventorPy::View3DInventorPy(View3DInventor *vi)
@@ -991,6 +994,27 @@ Py::Object View3DInventorPy::dump(const Py::Tuple& args)
 
     try {
         _view->dump(filename);
+        return Py::None();
+    }
+    catch (const Base::Exception& e) {
+        throw Py::Exception(e.what());
+    }
+    catch (const std::exception& e) {
+        throw Py::Exception(e.what());
+    }
+    catch(...) {
+        throw Py::Exception("Unknown C++ exception");
+    }
+}
+
+Py::Object View3DInventorPy::dumpSelection(const Py::Tuple& args)
+{
+    char* filename;
+    if (!PyArg_ParseTuple(args.ptr(), "s", &filename))
+        throw Py::Exception();
+
+    try {
+        _view->dumpSelection(filename);
         return Py::None();
     }
     catch (const Base::Exception& e) {
@@ -2163,12 +2187,34 @@ Py::Object View3DInventorPy::setActiveObject(const Py::Tuple& args)
 {
 	PyObject* docObject = 0;
 	char* name;
-	if (!PyArg_ParseTuple(args.ptr(), "sO!", &name, &App::DocumentObjectPy::Type, &docObject))
+	
+        //allow reset of active object by setting "None"
+        if( args.length() == 2 && args.back() == Py::None() ) {
+            PyArg_Parse(args.front().ptr(), "s", &name);
+            _view->setActiveObject(NULL, name);
+            return Py::None();
+        }
+        
+        if (!PyArg_ParseTuple(args.ptr(), "sO!", &name, &App::DocumentObjectPy::Type, &docObject))
 		throw Py::Exception();
+                
 
 	if (docObject){
 		App::DocumentObject* obj = static_cast<App::DocumentObjectPy*>(docObject)->getDocumentObjectPtr();
 		_view->setActiveObject(obj, name);
 	}
 	return Py::None();
+}
+
+Py::Object View3DInventorPy::getActiveObject(const Py::Tuple& args)
+{
+    char* name;
+    if (!PyArg_ParseTuple(args.ptr(), "s", &name))
+                throw Py::Exception();
+    
+    App::DocumentObject* obj = _view->getActiveObject<App::DocumentObject*>(name);
+    if(!obj)
+        return Py::None();
+    
+    return Py::Object(obj->getPyObject());
 }

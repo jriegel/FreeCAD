@@ -53,6 +53,7 @@ PROPERTY_SOURCE(PartDesign::Body, Part::BodyBase)
 
 Body::Body()
 {
+    Placement.StatusBits.set(3, true);
     //ADD_PROPERTY(IsActive,(0));
 }
 
@@ -212,6 +213,7 @@ const bool Body::isSolidFeature(const App::DocumentObject* f)
         // Transformed Features inside a MultiTransform are not solid features
         return !isMemberOfMultiTransform(f);
     }
+    return false;//DeepSOIC: work-in-progress?
 }
 
 const bool Body::isAllowed(const App::DocumentObject* f)
@@ -324,6 +326,17 @@ void Body::removeFeature(App::DocumentObject* feature)
     model.erase(it);
     Model.setValues(model);
 }
+
+bool Body::isFeature(App::DocumentObject* feature)
+{
+    for(App::DocumentObject* obj : Model.getValues()) {
+        
+        if(obj == feature)
+            return true;
+    }
+    return false;
+}
+
 
 App::DocumentObjectExecReturn *Body::execute(void)
 {

@@ -41,8 +41,6 @@
 #include "FeatureChamfer.h"
 #include "FeatureDraft.h"
 #include "FeatureFace.h"
-#include "FeatureSubtractive.h"
-#include "FeatureAdditive.h"
 #include "FeatureTransformed.h"
 #include "FeatureMirrored.h"
 #include "FeatureLinearPattern.h"
@@ -54,6 +52,7 @@
 #include "DatumLine.h"
 #include "DatumPoint.h"
 #include "FeatureBoolean.h"
+#include "FeaturePrimitive.h"
 
 extern struct PyMethodDef PartDesign_methods[];
 
@@ -85,9 +84,8 @@ void PartDesignExport init_PartDesign()
     PartDesign::Feature            ::init();
     PartDesign::Solid              ::init();
     PartDesign::DressUp            ::init();
+    PartDesign::FeatureAddSub      ::init();
     PartDesign::SketchBased        ::init();
-    PartDesign::Subtractive        ::init();
-    PartDesign::Additive           ::init();
     PartDesign::Transformed        ::init();
     PartDesign::Mirrored           ::init();
     PartDesign::LinearPattern      ::init();
@@ -108,6 +106,10 @@ void PartDesignExport init_PartDesign()
     PartDesign::Line               ::init();
     PartDesign::Point              ::init();
     PartDesign::Boolean            ::init();
+    PartDesign::FeaturePrimitive   ::init();
+    PartDesign::Box                ::init();
+    PartDesign::AdditiveBox        ::init();
+    PartDesign::SubtractiveBox     ::init();
 
     PartDesign::Point::initHints();
     PartDesign::Line ::initHints();

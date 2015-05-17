@@ -95,7 +95,9 @@
 #include "MeasureDistance.h"
 #include "Placement.h"
 #include "Plane.h"
+#include "Line.h"
 #include "Part.h"
+#include "Origin.h"
 #include "MaterialObject.h"
 
 // If you stumble here, run the target "BuildExtractRevision" on Windows systems
@@ -272,9 +274,9 @@ void Application::renameDocument(const char *OldName, const char *NewName)
         DocMap[NewName] = temp;
         signalRenameDocument(*temp);
     }
-    else
-        Base::Exception("Application::renameDocument(): no document with this name to rename!");
-
+    else {
+        throw Base::Exception("Application::renameDocument(): no document with this name to rename!");
+    }
 }
 
 Document* Application::newDocument(const char * Name, const char * UserName)
@@ -1107,7 +1109,9 @@ void Application::initTypes(void)
     App ::MaterialObjectPython      ::init();
     App ::Placement                 ::init();
     App ::Plane                     ::init();
+    App ::Line                      ::init();
     App ::Part                      ::init();
+    App ::Origin                    ::init();
 }
 
 void Application::initConfig(int argc, char ** argv)
@@ -1467,8 +1471,6 @@ pair<string, string> customSyntax(const string& s)
         return make_pair(string("foreground"), string("null"));
     else if (s.find("-fg") == 0)
         return make_pair(string("fg"), string("null"));
-    else if (s.find("-button") == 0)
-        return make_pair(string("button"), string("null"));
     else if (s.find("-button") == 0)
         return make_pair(string("button"), string("null"));
     else if (s.find("-btn") == 0)

@@ -36,6 +36,8 @@
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/Plane.h>
+#include <App/Line.h>
+#include <App/Part.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
@@ -44,6 +46,7 @@
 #include <Base/Console.h>
 #include <Gui/Selection.h>
 #include <Gui/Command.h>
+#include <Gui/ViewProviderOrigin.h>
 #include <Mod/Part/App/PrimitiveFeature.h>
 #include <Mod/Part/App/DatumFeature.h>
 #include <Mod/PartDesign/App/Body.h>
@@ -62,8 +65,9 @@ const QString makeRefString(const App::DocumentObject* obj, const std::string& s
         return QObject::tr("No reference selected");
 
     if (obj->getTypeId().isDerivedFrom(App::Plane::getClassTypeId()) ||
+        obj->getTypeId().isDerivedFrom(App::Line::getClassTypeId()) ||
         obj->getTypeId().isDerivedFrom(Part::Datum::getClassTypeId()))
-        // App::Plane or Datum feature
+        // App::Plane, Liine or Datum feature
         return QString::fromAscii(obj->getNameInDocument());
 
     if ((sub.size() > 4) && (sub.substr(0,4) == "Face")) {
@@ -183,6 +187,22 @@ TaskDatumParameters::TaskDatumParameters(ViewProviderDatum *DatumView,QWidget *p
     ui->buttonRef3->blockSignals(false);
     ui->lineRef3->blockSignals(false);
     updateUI();
+    
+    //temporary show coordinate systems for selection
+    for(App::Part* part : App::GetApplication().getActiveDocument()->getObjectsOfType<App::Part>()) {
+    
+        if(part->hasObject(DatumView->getObject(), true)) {
+            auto app_origin = part->getObjectsOfType(App::Origin::getClassTypeId());
+            if(!app_origin.empty()) {
+                ViewProviderOrigin* origin;
+                origin = static_cast<ViewProviderOrigin*>(Gui::Application::Instance->activeDocument()->getViewProvider(app_origin[0]));
+                static_cast<Gui::ViewProviderOrigin*>(origin)->setTemporaryVisibilityMode(true, Gui::Application::Instance->activeDocument());
+                static_cast<Gui::ViewProviderOrigin*>(origin)->setTemporaryVisibilityAxis(true);
+                static_cast<Gui::ViewProviderOrigin*>(origin)->setTemporaryVisibilityPlanes(true);
+            }            
+            break;
+        }
+    }    
 }
 
 const QString makeRefText(std::set<QString> hint)
@@ -363,6 +383,7 @@ void TaskDatumParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
 
         // Remove subname for planes and datum features
         if (selObj->getTypeId().isDerivedFrom(App::Plane::getClassTypeId()) ||
+            selObj->getTypeId().isDerivedFrom(App::Line::getClassTypeId()) ||
             selObj->getTypeId().isDerivedFrom(Part::Datum::getClassTypeId()))
             subname = "";
 
@@ -435,7 +456,7 @@ void TaskDatumParameters::onCheckFlip(bool on)
 void TaskDatumParameters::onButtonRef(const bool pressed, const int idx)
 {
     // Note: Even if there is no solid, App::Plane and Part::Datum can still be selected
-	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>("Body");
+	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
 	App::DocumentObject* solid = activeBody->getPrevSolidFeature();
 
     if (pressed) {
@@ -507,13 +528,16 @@ void TaskDatumParameters::onRefName(const QString& text, const int idx)
     if (obj == NULL) return;
 
     std::string subElement;
-	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>("Body");
+	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
 
     if (obj->getTypeId().isDerivedFrom(App::Plane::getClassTypeId())) {
         // everything is OK (we assume a Part can only have exactly 3 App::Plane objects located at the base of the feature tree)
         subElement = "";
+    } else if (obj->getTypeId().isDerivedFrom(App::Line::getClassTypeId())) {
+        // everything is OK (we assume a Part can only have exactly 3 App::Line objects located at the base of the feature tree)
+        subElement = "";
     } else if (obj->getTypeId().isDerivedFrom(Part::Datum::getClassTypeId())) {
-		if (!activeBody->hasFeature(obj))
+        if (!activeBody->hasFeature(obj))
             return;
         subElement = "";
     } else {
@@ -625,6 +649,20 @@ QString TaskDatumParameters::getReference(const int idx) const
 
 TaskDatumParameters::~TaskDatumParameters()
 {
+    //end temporary view mode of coordinate system
+     for(App::Part* part : App::GetApplication().getActiveDocument()->getObjectsOfType<App::Part>()) {
+    
+        if(part->hasObject(DatumView->getObject(), true)) {
+            auto app_origin = part->getObjectsOfType(App::Origin::getClassTypeId());
+            if(!app_origin.empty()) {
+                ViewProviderOrigin* origin;
+                origin = static_cast<ViewProviderOrigin*>(Gui::Application::Instance->activeDocument()->getViewProvider(app_origin[0]));
+                static_cast<Gui::ViewProviderOrigin*>(origin)->setTemporaryVisibilityMode(false);
+            }            
+            break;
+        }
+    }
+    
     delete ui;
 }
 
@@ -715,7 +753,7 @@ bool TaskDlgDatumParameters::accept()
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Angle = %f",name.c_str(),parameter->getAngle());
         //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.Checked = %i",name.c_str(),parameter->getCheckBox1()?1:0);
 
-		PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>("Body");
+		PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
 		App::DocumentObject* solid = activeBody->getPrevSolidFeature();
         if (solid != NULL) {
             QString buf = QString::fromAscii("[");
@@ -748,8 +786,9 @@ bool TaskDlgDatumParameters::reject()
     // roll back the done things
     Gui::Command::abortCommand();
     Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
+    Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
 
-	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>("Body");
+	PartDesign::Body* activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
     // Body housekeeping
 	if (activeBody != NULL) {
         // Make the new Tip and the previous solid feature visible again

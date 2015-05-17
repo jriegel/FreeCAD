@@ -1056,6 +1056,7 @@ void StdCmdDelete::activated(int iMsg)
             }
             else {
                 // check if we can delete the object
+                std::set<QString> affectedLabels;
                 for (std::vector<Gui::SelectionObject>::iterator ft = sel.begin(); ft != sel.end(); ++ft) {
                     App::DocumentObject* obj = ft->getObject();
                     Gui::ViewProvider* vp = pGuiDoc->getViewProvider(ft->getObject());
@@ -1063,9 +1064,13 @@ void StdCmdDelete::activated(int iMsg)
                     if (!links.empty()) {
                         // check if the referenced objects are groups or are selected too
                         for (std::vector<App::DocumentObject*>::iterator lt = links.begin(); lt != links.end(); ++lt) {
-                            if (!(*lt)->getTypeId().isDerivedFrom(App::DocumentObjectGroup::getClassTypeId()) && !rSel.isSelected(*lt)) {
+                            if (
+                                  (!(*lt)->getTypeId().isDerivedFrom(App::DocumentObjectGroup::getClassTypeId())) &&
+                                  (!rSel.isSelected(*lt)) &&
+                                  (!(*lt)->getTypeId().isDerivedFrom(Base::Type::fromName("Part::BodyBase")))
+                                ){
                                 autoDeletion = false;
-                                break;
+                                affectedLabels.insert(QString::fromUtf8((*lt)->Label.getValue()));
                             }
                         }
 
@@ -1076,10 +1081,16 @@ void StdCmdDelete::activated(int iMsg)
                 }
 
                 if (!autoDeletion) {
+                    QString bodyMessage;
+                    QTextStream bodyMessageStream(&bodyMessage);
+                    bodyMessageStream << qApp->translate("Std_Delete",
+                                                         "The following, referencing objects might break.\n\n"
+                                                         "Are you sure you want to continue?\n\n");
+                    for (const auto &currentLabel : affectedLabels)
+                      bodyMessageStream << currentLabel << '\n';
+                    
                     int ret = QMessageBox::question(Gui::getMainWindow(),
-                        qApp->translate("Std_Delete", "Object dependencies"),
-                        qApp->translate("Std_Delete", "This object is referenced by other objects and thus these objects might get broken.\n"
-                                                      "Are you sure to continue?"),
+                        qApp->translate("Std_Delete", "Object dependencies"), bodyMessage,
                         QMessageBox::Yes, QMessageBox::No);
                     if (ret == QMessageBox::Yes)
                         autoDeletion = true;
@@ -1102,6 +1113,7 @@ void StdCmdDelete::activated(int iMsg)
                 }
             }
         }
+        doCommand(Doc,"App.getDocument(\"%s\").recompute()", (*it)->getName());
     }
 }
 
