@@ -431,7 +431,7 @@ PyObject* Application::sExport(PyObject * /*self*/, PyObject *args,PyObject * /*
                 }
                 else {
                     QString cmd = QString::fromLatin1(
-                        "Gui.getDocument(\"%1\").mdiViewsOfType('Gui::View3DInventor')[0].dump(\"%2\")"
+                        "Gui.getDocument(\"%1\").mdiViewsOfType('Gui::View3DInventor')[0].dumpSelection(\"%2\")"
                         ).arg(QLatin1String(doc->getName())).arg(fi.absoluteFilePath());
                     Base::Interpreter().runString(cmd.toUtf8());
                 }
@@ -480,7 +480,7 @@ PyObject* Application::sSendActiveView(PyObject * /*self*/, PyObject *args,PyObj
 
     Py_INCREF(Py_None);
     return Py_None;
-} 
+}
 
 PyObject* Application::sGetMainWindow(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -507,7 +507,7 @@ PyObject* Application::sUpdateGui(PyObject * /*self*/, PyObject *args,PyObject *
 
     Py_INCREF(Py_None);
     return Py_None;
-} 
+}
 
 PyObject* Application::sUpdateLocale(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -518,7 +518,7 @@ PyObject* Application::sUpdateLocale(PyObject * /*self*/, PyObject *args,PyObjec
 
     Py_INCREF(Py_None);
     return Py_None;
-} 
+}
 
 PyObject* Application::sGetLocale(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -527,7 +527,7 @@ PyObject* Application::sGetLocale(PyObject * /*self*/, PyObject *args,PyObject *
 
     std::string locale = Translator::instance()->activeLanguage();
     return PyString_FromString(locale.c_str());
-} 
+}
 
 PyObject* Application::sCreateDialog(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -546,7 +546,7 @@ PyObject* Application::sCreateDialog(PyObject * /*self*/, PyObject *args,PyObjec
     }
 
     return pPyResource;
-} 
+}
 
 PyObject* Application::sAddPreferencePage(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -565,7 +565,7 @@ PyObject* Application::sAddPreferencePage(PyObject * /*self*/, PyObject *args,Py
 
     Py_INCREF(Py_None);
     return Py_None;
-} 
+}
 
 PyObject* Application::sActivateWorkbenchHandler(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -606,7 +606,7 @@ PyObject* Application::sActivateWorkbenchHandler(PyObject * /*self*/, PyObject *
 
     Py_INCREF(Py_None);
     return Py_None;
-} 
+}
 
 PyObject* Application::sAddWorkbenchHandler(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -684,7 +684,7 @@ PyObject* Application::sRemoveWorkbenchHandler(PyObject * /*self*/, PyObject *ar
 
     Py_INCREF(Py_None);
     return Py_None;
-} 
+}
 
 PyObject* Application::sGetWorkbenchHandler(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -701,13 +701,13 @@ PyObject* Application::sGetWorkbenchHandler(PyObject * /*self*/, PyObject *args,
 
     Py_INCREF(pcWorkbench);
     return pcWorkbench;
-} 
+}
 
 PyObject* Application::sListWorkbenchHandlers(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
     Py_INCREF(Instance->_pcWorkbenchDictionary);
     return Instance->_pcWorkbenchDictionary;
-} 
+}
 
 PyObject* Application::sActiveWorkbenchHandler(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -731,7 +731,7 @@ PyObject* Application::sActiveWorkbenchHandler(PyObject * /*self*/, PyObject *ar
     // object get incremented
     Py_INCREF(pcWorkbench);
     return pcWorkbench;
-} 
+}
 
 PyObject* Application::sAddResPath(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -862,7 +862,7 @@ PyObject* Application::sAddCommand(PyObject * /*self*/, PyObject *args,PyObject 
     Application::Instance->commandManager().addCommand(new PythonCommand(pName,pcCmdObj,source.c_str()));
 #else
     try {
-		Application::Instance->commandManager().addCommand(new PythonCommand(pName,pcCmdObj,pSource));
+        Application::Instance->commandManager().addCommand(new PythonCommand(pName,pcCmdObj,pSource));
     }
     catch (const Base::Exception& e) {
         PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
@@ -893,7 +893,7 @@ PyObject* Application::sRunCommand(PyObject * /*self*/, PyObject *args,PyObject 
         PyErr_Format(Base::BaseExceptionFreeCADError, "No such command '%s'", pName);
         return 0;
     }
-} 
+}
 
 PyObject* Application::sDoCommand(PyObject * /*self*/, PyObject *args,PyObject * /*kwd*/)
 {
@@ -928,4 +928,4 @@ PyObject* Application::sShowDownloads(PyObject * /*self*/, PyObject *args,PyObje
         return NULL;                             // NULL triggers exception 
     Gui::Dialog::DownloadManager::getInstance();
     return Py_None;
-} 
+}

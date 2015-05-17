@@ -33,6 +33,7 @@
 # include <TopoDS_Solid.hxx>
 # include <TopoDS_Face.hxx>
 # include <TopoDS_Wire.hxx>
+# include <TopoDS_Compound.hxx>
 # include <TopExp_Explorer.hxx>
 # include <BRepAlgoAPI_Fuse.hxx>
 # include <Precision.hxx>
