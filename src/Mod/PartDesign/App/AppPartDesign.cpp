@@ -53,6 +53,7 @@
 #include "DatumPoint.h"
 #include "FeatureBoolean.h"
 #include "FeaturePrimitive.h"
+#include "DatumCS.h"
 
 extern struct PyMethodDef PartDesign_methods[];
 
@@ -105,15 +106,17 @@ void PartDesignExport init_PartDesign()
     PartDesign::Plane              ::init();
     PartDesign::Line               ::init();
     PartDesign::Point              ::init();
+    PartDesign::CoordinateSystem   ::init();
     PartDesign::Boolean            ::init();
     PartDesign::FeaturePrimitive   ::init();
     PartDesign::Box                ::init();
     PartDesign::AdditiveBox        ::init();
     PartDesign::SubtractiveBox     ::init();
 
-    PartDesign::Point::initHints();
-    PartDesign::Line ::initHints();
-    PartDesign::Plane::initHints();
+    PartDesign::Point              ::initHints();
+    PartDesign::Line               ::initHints();
+    PartDesign::Plane              ::initHints();
+    PartDesign::CoordinateSystem   ::initHints();
 }
 
 } // extern "C"
