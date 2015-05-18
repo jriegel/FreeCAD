@@ -112,7 +112,13 @@ void PartDesignExport init_PartDesign()
     PartDesign::Box                ::init();
     PartDesign::AdditiveBox        ::init();
     PartDesign::SubtractiveBox     ::init();
-
+    PartDesign::Cylinder           ::init();
+    PartDesign::AdditiveCylinder   ::init();
+    PartDesign::SubtractiveCylinder::init();
+    PartDesign::Sphere             ::init();
+    PartDesign::AdditiveSphere     ::init();
+    PartDesign::SubtractiveSphere  ::init();
+    
     PartDesign::Point              ::initHints();
     PartDesign::Line               ::initHints();
     PartDesign::Plane              ::initHints();
