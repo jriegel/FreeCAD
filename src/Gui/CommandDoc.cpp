@@ -1057,6 +1057,8 @@ void StdCmdDelete::activated(int iMsg)
             else {
                 // check if we can delete the object
                 std::set<QString> affectedLabels;
+                std::set<QString> currentLabel;
+
                 for (std::vector<Gui::SelectionObject>::iterator ft = sel.begin(); ft != sel.end(); ++ft) {
                     App::DocumentObject* obj = ft->getObject();
                     Gui::ViewProvider* vp = pGuiDoc->getViewProvider(ft->getObject());
@@ -1086,8 +1088,8 @@ void StdCmdDelete::activated(int iMsg)
                     bodyMessageStream << qApp->translate("Std_Delete",
                                                          "The following, referencing objects might break.\n\n"
                                                          "Are you sure you want to continue?\n\n");
-                    for (const auto &currentLabel : affectedLabels)
-                      bodyMessageStream << currentLabel << '\n';
+                    for (unsigned int a = 0; a < sizeof(affectedLabels)/sizeof(affectedLabels[0]); a = a + 1)
+                      bodyMessageStream << affectedLabels[a] << '\n';
                     
                     int ret = QMessageBox::question(Gui::getMainWindow(),
                         qApp->translate("Std_Delete", "Object dependencies"), bodyMessage,

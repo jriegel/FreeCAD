@@ -45,7 +45,7 @@ class GuiExport SoObjectSeparator : public SoSeparator {
 public:
     static void initClass(void);
     static void finish(void);
-    SoObjectSeparator(Gui::ViewProvider *vp = nullptr);
+    SoObjectSeparator(Gui::ViewProvider *vp = NULL);
 
     Gui::ViewProvider *getViewProvider(){ return viewProvider; }
  
