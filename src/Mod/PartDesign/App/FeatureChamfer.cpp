@@ -30,6 +30,7 @@
 # include <TopoDS_Edge.hxx>
 # include <TopTools_IndexedMapOfShape.hxx>
 # include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
+#include <BRep_Tool.hxx>
 #endif
 
 #include <Base/Exception.h>
@@ -69,8 +70,10 @@ App::DocumentObjectExecReturn *Chamfer::execute(void)
         return new App::DocumentObjectExecReturn(e.what());
     }
 
-    const std::vector<std::string>& SubVals = Base.getSubValuesStartsWith("Edge");
-    if (SubVals.size() == 0)
+    std::vector<std::string> SubNames = std::vector<std::string>(Base.getSubValues());
+    getContiniusEdges(TopShape, SubNames);
+
+    if (SubNames.size() == 0)
         return new App::DocumentObjectExecReturn("No edges specified");
 
     double size = Size.getValue();
@@ -87,7 +90,7 @@ App::DocumentObjectExecReturn *Chamfer::execute(void)
         TopExp::MapShapesAndAncestors(baseShape._Shape, TopAbs_EDGE, TopAbs_FACE, mapEdgeFace);
         TopExp::MapShapes(baseShape._Shape, TopAbs_EDGE, mapOfEdges);
 
-        for (std::vector<std::string>::const_iterator it=SubVals.begin(); it != SubVals.end(); ++it) {
+        for (std::vector<std::string>::const_iterator it=SubNames.begin(); it != SubNames.end(); ++it) {
             TopoDS_Edge edge = TopoDS::Edge(baseShape.getSubShape(it->c_str()));
             const TopoDS_Face& face = TopoDS::Face(mapEdgeFace.FindFromKey(edge).First());
             mkChamfer.Add(size, edge, face);
