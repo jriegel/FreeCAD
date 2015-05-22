@@ -104,28 +104,30 @@ void CmdPartDesignBody::activated(int iMsg)
     openCommand("Add a body feature");
     std::string FeatName = getUniqueObjectName("Body");
 
-	// first check if Part is already created:
-	App::Part *actPart =  getDocument()->Tip.getValue<App::Part *>();
-	std::string PartName;
-	if(!actPart){
-		// if not, creating a part and set it up by calling the appropiated function in Workbench
-		PartName = getUniqueObjectName("Part");
-		doCommand(Doc,"App.activeDocument().Tip = App.activeDocument().addObject('App::Part','%s')",PartName.c_str());
-		doCommand(Doc,"App.activeDocument().ActiveObject.Label = '%s'", QObject::tr(PartName.c_str()).toStdString().c_str());
-		PartDesignGui::Workbench::setUpPart(dynamic_cast<App::Part *>(getDocument()->getObject(PartName.c_str())));
-	}else
-		PartName = actPart->getNameInDocument();
-
-    // add the Body feature itself, and make it active
-    doCommand(Doc,"App.activeDocument().addObject('PartDesign::Body','%s')",FeatName.c_str());
-    //doCommand(Doc,"App.activeDocument().%s.Model = []",FeatName.c_str());
-    //doCommand(Doc,"App.activeDocument().%s.Tip = None",FeatName.c_str());
-    addModule(Gui,"PartDesignGui"); // import the Gui module only once a session
-    doCommand(Gui::Command::Gui, "Gui.activeView().setActiveObject('%s', App.activeDocument().%s)", PDBODYKEY, FeatName.c_str());
-    // Make the "Create sketch" prompt appear in the task panel
-    doCommand(Gui,"Gui.Selection.clearSelection()");
-    doCommand(Gui,"Gui.Selection.addSelection(App.ActiveDocument.%s)", FeatName.c_str());
-    doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.%s)",PartName.c_str(),FeatName.c_str());
+    // first check if Part is already created:
+    App::Part *actPart =  getDocument()->Tip.getValue<App::Part *>();
+    std::string PartName;
+    
+    if(!actPart){
+        // if not, creating a part and set it up by calling the appropiated function in Workbench
+        //if we create a new part we automaticly get a new body, there is no need to create a second one
+        PartName = getUniqueObjectName("Part");
+        doCommand(Doc,"App.activeDocument().Tip = App.activeDocument().addObject('App::Part','%s')",PartName.c_str());
+        doCommand(Doc,"App.activeDocument().ActiveObject.Label = '%s'", QObject::tr(PartName.c_str()).toStdString().c_str());
+        PartDesignGui::Workbench::setUpPart(dynamic_cast<App::Part *>(getDocument()->getObject(PartName.c_str())));
+    } else {
+        PartName = actPart->getNameInDocument();
+        // add the Body feature itself, and make it active
+        doCommand(Doc,"App.activeDocument().addObject('PartDesign::Body','%s')",FeatName.c_str());
+        //doCommand(Doc,"App.activeDocument().%s.Model = []",FeatName.c_str());
+        //doCommand(Doc,"App.activeDocument().%s.Tip = None",FeatName.c_str());
+        addModule(Gui,"PartDesignGui"); // import the Gui module only once a session
+        doCommand(Gui::Command::Gui, "Gui.activeView().setActiveObject('%s', App.activeDocument().%s)", PDBODYKEY, FeatName.c_str());
+        // Make the "Create sketch" prompt appear in the task panel
+        doCommand(Gui,"Gui.Selection.clearSelection()");
+        doCommand(Gui,"Gui.Selection.addSelection(App.ActiveDocument.%s)", FeatName.c_str());
+        doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.%s)",PartName.c_str(),FeatName.c_str());
+    }
 
     updateActive();
 }
@@ -1265,78 +1267,7 @@ void makeChamferOrFillet(Gui::Command* cmd, const std::string& which)
         return;
     }
 
-    const Part::TopoShape& TopShape = base->Shape.getShape();
-    if (TopShape._Shape.IsNull()){
-        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
-            QObject::tr("Shape of selected Part is empty"));
-        return;
-    }
-
-    TopTools_IndexedMapOfShape mapOfEdges;
-    TopTools_IndexedDataMapOfShapeListOfShape mapEdgeFace;
-    TopExp::MapShapesAndAncestors(TopShape._Shape, TopAbs_EDGE, TopAbs_FACE, mapEdgeFace);
-    TopExp::MapShapes(TopShape._Shape, TopAbs_EDGE, mapOfEdges);
-
     std::vector<std::string> SubNames = std::vector<std::string>(selection[0].getSubNames());
-
-    unsigned int i = 0;
-
-    while(i < SubNames.size())
-    {
-        std::string aSubName = static_cast<std::string>(SubNames.at(i));
-
-        if (aSubName.size() > 4 && aSubName.substr(0,4) == "Edge") {
-            TopoDS_Edge edge = TopoDS::Edge(TopShape.getSubShape(aSubName.c_str()));
-            const TopTools_ListOfShape& los = mapEdgeFace.FindFromKey(edge);
-
-            if(los.Extent() != 2)
-            {
-                SubNames.erase(SubNames.begin()+i);
-                continue;
-            }
-
-            const TopoDS_Shape& face1 = los.First();
-            const TopoDS_Shape& face2 = los.Last();
-            GeomAbs_Shape cont = BRep_Tool::Continuity(TopoDS::Edge(edge),
-                                                       TopoDS::Face(face1),
-                                                       TopoDS::Face(face2));
-            if (cont != GeomAbs_C0) {
-                SubNames.erase(SubNames.begin()+i);
-                continue;
-            }
-
-            i++;
-        }
-        else if(aSubName.size() > 4 && aSubName.substr(0,4) == "Face") {
-            TopoDS_Face face = TopoDS::Face(TopShape.getSubShape(aSubName.c_str()));
-
-            TopTools_IndexedMapOfShape mapOfFaces;
-            TopExp::MapShapes(face, TopAbs_EDGE, mapOfFaces);
-
-            for(int j = 1; j <= mapOfFaces.Extent(); ++j) {
-                TopoDS_Edge edge = TopoDS::Edge(mapOfFaces.FindKey(j));
-
-                int id = mapOfEdges.FindIndex(edge);
-
-                std::stringstream buf;
-                buf << "Edge";
-                buf << id;
-
-                if(std::find(SubNames.begin(),SubNames.end(),buf.str()) == SubNames.end())
-                {
-                    SubNames.push_back(buf.str());
-                }
-
-            }
-
-            SubNames.erase(SubNames.begin()+i);
-        }
-        // empty name or any other sub-element
-        else {
-            SubNames.erase(SubNames.begin()+i);
-        }
-    }
-
     if (SubNames.size() == 0) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
         QString::fromStdString(which) + QObject::tr(" not possible on selected faces/edges"));
@@ -1537,6 +1468,108 @@ bool CmdPartDesignDraft::isActive(void)
     return hasActiveDocument();
 }
 
+
+//===========================================================================
+// PartDesign_Thickness
+//===========================================================================
+DEF_STD_CMD_A(CmdPartDesignThickness);
+
+CmdPartDesignThickness::CmdPartDesignThickness()
+  :Command("PartDesign_Thickness")
+{
+    sAppModule    = "PartDesign";
+    sGroup        = QT_TR_NOOP("PartDesign");
+    sMenuText     = QT_TR_NOOP("Thickness");
+    sToolTipText  = QT_TR_NOOP("Make a thick solid");
+    sWhatsThis    = "PartDesign_Thickness";
+    sStatusTip    = sToolTipText;
+    sPixmap       = "PartDesign_Thickness";
+}
+
+void CmdPartDesignThickness::activated(int iMsg)
+{
+    PartDesign::Body *pcActiveBody = PartDesignGui::getBody(/*messageIfNot = */true);
+    if (!pcActiveBody) return;
+
+    std::vector<Gui::SelectionObject> selection = getSelection().getSelectionEx();
+
+    if (selection.size() < 1) {
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
+            QObject::tr("Select one or more faces."));
+        return;
+    }
+
+    if (!selection[0].isObjectTypeOf(Part::Feature::getClassTypeId())){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong object type"),
+            QObject::tr("Thickness works only on parts"));
+        return;
+    }
+
+    Part::Feature *base = static_cast<Part::Feature*>(selection[0].getObject());
+
+    if (base != pcActiveBody->getPrevSolidFeature(NULL, true)) {
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong base feature"),
+            QObject::tr("Only the current Tip of the active Body can be selected as the base feature"));
+        return;
+    }
+
+    const Part::TopoShape& TopShape = base->Shape.getShape();
+    if (TopShape._Shape.IsNull()){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
+            QObject::tr("Shape of selected Part is empty"));
+        return;
+    }
+
+    std::vector<std::string> SubNames = std::vector<std::string>(selection[0].getSubNames());
+    unsigned int i = 0;
+
+    while(i < SubNames.size())
+    {
+        std::string aSubName = static_cast<std::string>(SubNames.at(i));
+
+        if(aSubName.size() > 4 && aSubName.substr(0,4) != "Face") {
+            // empty name or any other sub-element
+            SubNames.erase(SubNames.begin()+i);
+        }
+        i++;
+    }
+
+    if (SubNames.size() == 0) {
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
+        QObject::tr("No thickness possible with selected faces"));
+        return;
+    }
+
+    std::string SelString;
+    SelString += "(App.";
+    SelString += "ActiveDocument";
+    SelString += ".";
+    SelString += selection[0].getFeatName();
+    SelString += ",[";
+    for(std::vector<std::string>::const_iterator it = SubNames.begin();it!=SubNames.end();++it){
+        SelString += "\"";
+        SelString += *it;
+        SelString += "\"";
+        if(it != --SubNames.end())
+            SelString += ",";
+    }
+    SelString += "])";
+
+    std::string FeatName = getUniqueObjectName("Thickness");
+
+    openCommand("Make Thickness");
+    doCommand(Doc,"App.activeDocument().addObject(\"PartDesign::Thickness\",\"%s\")",FeatName.c_str());
+    doCommand(Doc,"App.activeDocument().%s.Base = %s",FeatName.c_str(),SelString.c_str());
+    doCommand(Doc,"App.activeDocument().%s.Value = %f",FeatName.c_str(), 1.);
+
+    finishFeature(this, FeatName);
+}
+
+bool CmdPartDesignThickness::isActive(void)
+{
+    return hasActiveDocument();
+}
+
 //===========================================================================
 // Common functions for all Transformed features
 //===========================================================================
@@ -1645,10 +1678,16 @@ void CmdPartDesignMirrored::activated(int iMsg)
         if (features.empty())
         return;
         
-        Part::Part2DObject *sketch = (static_cast<PartDesign::SketchBased*>(features.front()))->getVerifiedSketch();
-        if (sketch)
-            Gui::Command::doCommand(Doc,"App.activeDocument().%s.MirrorPlane = (App.activeDocument().%s, [\"V_Axis\"])",
-                    FeatName.c_str(), sketch->getNameInDocument());
+        if(features.front()->isDerivedFrom(PartDesign::SketchBased::getClassTypeId())) {
+            Part::Part2DObject *sketch = (static_cast<PartDesign::SketchBased*>(features.front()))->getVerifiedSketch();
+            if (sketch)
+                Gui::Command::doCommand(Doc,"App.activeDocument().%s.MirrorPlane = (App.activeDocument().%s, [\"V_Axis\"])",
+                        FeatName.c_str(), sketch->getNameInDocument());
+        }
+        else {
+            doCommand(Doc,"App.activeDocument().%s.MirrorPlane = (App.activeDocument().%s, [\"\"])", FeatName.c_str(),
+                      App::Part::BaseplaneTypes[0]);
+        }
 
         finishTransformed(cmd, FeatName);
     };
@@ -1684,12 +1723,18 @@ void CmdPartDesignLinearPattern::activated(int iMsg)
     auto worker = [cmd](std::string FeatName, std::vector<App::DocumentObject*> features) {
         
         if (features.empty())
-        return;
+            return;
 
-        Part::Part2DObject *sketch = (static_cast<PartDesign::SketchBased*>(features.front()))->getVerifiedSketch();
-        if (sketch)
-            doCommand(Doc,"App.activeDocument().%s.Direction = (App.activeDocument().%s, [\"H_Axis\"])",
-                    FeatName.c_str(), sketch->getNameInDocument());
+        if(features.front()->isDerivedFrom(PartDesign::SketchBased::getClassTypeId())) {
+            Part::Part2DObject *sketch = (static_cast<PartDesign::SketchBased*>(features.front()))->getVerifiedSketch();
+            if (sketch)
+                doCommand(Doc,"App.activeDocument().%s.Direction = (App.activeDocument().%s, [\"H_Axis\"])",
+                        FeatName.c_str(), sketch->getNameInDocument());
+        }
+        else {
+            doCommand(Doc,"App.activeDocument().%s.Direction = (App.activeDocument().%s, [\"\"])", FeatName.c_str(),
+                      App::Part::BaselineTypes[0]);
+        }
         doCommand(Doc,"App.activeDocument().%s.Length = 100", FeatName.c_str());
         doCommand(Doc,"App.activeDocument().%s.Occurrences = 2", FeatName.c_str());
 
@@ -1729,10 +1774,17 @@ void CmdPartDesignPolarPattern::activated(int iMsg)
         if (features.empty())
             return;
         
-        Part::Part2DObject *sketch = (static_cast<PartDesign::SketchBased*>(features.front()))->getVerifiedSketch();
-        if (sketch)
-            doCommand(Doc,"App.activeDocument().%s.Axis = (App.activeDocument().%s, [\"N_Axis\"])",
-                    FeatName.c_str(), sketch->getNameInDocument());
+        if(features.front()->isDerivedFrom(PartDesign::SketchBased::getClassTypeId())) {
+            Part::Part2DObject *sketch = (static_cast<PartDesign::SketchBased*>(features.front()))->getVerifiedSketch();
+            if (sketch)
+                doCommand(Doc,"App.activeDocument().%s.Axis = (App.activeDocument().%s, [\"N_Axis\"])",
+                        FeatName.c_str(), sketch->getNameInDocument());
+        }
+        else {
+            doCommand(Doc,"App.activeDocument().%s.Axis = (App.activeDocument().%s, [\"\"])", FeatName.c_str(),
+                      App::Part::BaselineTypes[0]);
+        }
+        
         doCommand(Doc,"App.activeDocument().%s.Angle = 360", FeatName.c_str());
         doCommand(Doc,"App.activeDocument().%s.Occurrences = 2", FeatName.c_str());
 
@@ -1982,6 +2034,7 @@ void CreatePartDesignCommands(void)
     rcCmdMgr.addCommand(new CmdPartDesignFillet());
     rcCmdMgr.addCommand(new CmdPartDesignDraft());    
     rcCmdMgr.addCommand(new CmdPartDesignChamfer());
+    rcCmdMgr.addCommand(new CmdPartDesignThickness());    
 
     rcCmdMgr.addCommand(new CmdPartDesignMirrored());
     rcCmdMgr.addCommand(new CmdPartDesignLinearPattern());

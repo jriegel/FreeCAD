@@ -46,6 +46,8 @@ SET(DatumFeatures_SRCS
     DatumLine.h
     DatumPoint.cpp
     DatumPoint.h
+    DatumCS.h
+    DatumCS.cpp
 )
 SOURCE_GROUP("DatumFeatures" FILES ${DatumFeatures_SRCS})
 
@@ -74,6 +76,8 @@ SET(FeaturesDressUp_SRCS
     FeatureChamfer.h
     FeatureDraft.cpp
     FeatureDraft.h
+    FeatureThickness.cpp
+    FeatureThickness.h
 )
 SOURCE_GROUP("DressUpFeatures" FILES ${FeaturesDressUp_SRCS})
 

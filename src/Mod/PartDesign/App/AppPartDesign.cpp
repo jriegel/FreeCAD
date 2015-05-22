@@ -53,6 +53,8 @@
 #include "DatumPoint.h"
 #include "FeatureBoolean.h"
 #include "FeaturePrimitive.h"
+#include "DatumCS.h"
+#include "FeatureThickness.h"
 
 extern struct PyMethodDef PartDesign_methods[];
 
@@ -102,18 +104,42 @@ void PartDesignExport init_PartDesign()
     PartDesign::Chamfer            ::init();
     PartDesign::Face               ::init();
     PartDesign::Draft              ::init();
+    PartDesign::Thickness          ::init();
     PartDesign::Plane              ::init();
     PartDesign::Line               ::init();
     PartDesign::Point              ::init();
+    PartDesign::CoordinateSystem   ::init();
     PartDesign::Boolean            ::init();
     PartDesign::FeaturePrimitive   ::init();
     PartDesign::Box                ::init();
     PartDesign::AdditiveBox        ::init();
     PartDesign::SubtractiveBox     ::init();
-
-    PartDesign::Point::initHints();
-    PartDesign::Line ::initHints();
-    PartDesign::Plane::initHints();
+    PartDesign::Cylinder           ::init();
+    PartDesign::AdditiveCylinder   ::init();
+    PartDesign::SubtractiveCylinder::init();
+    PartDesign::Sphere             ::init();
+    PartDesign::AdditiveSphere     ::init();
+    PartDesign::SubtractiveSphere  ::init();
+    PartDesign::Cone               ::init();
+    PartDesign::AdditiveCone       ::init();
+    PartDesign::SubtractiveCone    ::init();
+    PartDesign::Ellipsoid          ::init();
+    PartDesign::AdditiveEllipsoid  ::init();
+    PartDesign::SubtractiveEllipsoid  ::init();
+    PartDesign::Torus              ::init();
+    PartDesign::AdditiveTorus      ::init();
+    PartDesign::SubtractiveTorus   ::init();
+    PartDesign::Prism              ::init();
+    PartDesign::AdditivePrism      ::init();
+    PartDesign::SubtractivePrism   ::init();
+    PartDesign::Wedge              ::init();
+    PartDesign::AdditiveWedge      ::init();
+    PartDesign::SubtractiveWedge   ::init();
+    
+    PartDesign::Point              ::initHints();
+    PartDesign::Line               ::initHints();
+    PartDesign::Plane              ::initHints();
+    PartDesign::CoordinateSystem   ::initHints();
 }
 
 } // extern "C"

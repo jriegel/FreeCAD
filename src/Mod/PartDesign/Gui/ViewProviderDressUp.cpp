@@ -111,7 +111,8 @@ void ViewProviderDressUp::highlightReferences(const bool on)
                     colors[idx] = App::Color(1.0,0.0,1.0); // magenta
             }
             vp->DiffuseColor.setValues(colors);
-        } else if (!edges.empty() && originalLineColors.empty()) {
+        } 
+        if (!edges.empty() && originalLineColors.empty()) {
             TopTools_IndexedMapOfShape eMap;
             TopExp::MapShapes(base->Shape.getValue(), TopAbs_EDGE, eMap);
             originalLineColors = vp->LineColorArray.getValues();
@@ -129,7 +130,8 @@ void ViewProviderDressUp::highlightReferences(const bool on)
         if (!faces.empty() && !originalFaceColors.empty()) {
             vp->DiffuseColor.setValues(originalFaceColors);
             originalFaceColors.clear();
-        } else if (!edges.empty() && !originalLineColors.empty()) {
+        } 
+        if (!edges.empty() && !originalLineColors.empty()) {
             vp->LineColorArray.setValues(originalLineColors);
             originalLineColors.clear();
         }

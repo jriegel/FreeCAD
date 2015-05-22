@@ -52,6 +52,8 @@
 #include "ViewProviderDatumPlane.h"
 #include "ViewProviderBoolean.h"
 #include "ViewProviderPrimitive.h"
+#include "ViewProviderDatumCS.h"
+#include "ViewProviderThickness.h"
 
 //#include "resources/qrc_PartDesign.cpp"
 
@@ -106,6 +108,7 @@ void PartDesignGuiExport initPartDesignGui()
     PartDesignGui::ViewProviderChamfer       ::init();
     PartDesignGui::ViewProviderFillet        ::init();
     PartDesignGui::ViewProviderDraft         ::init();
+    PartDesignGui::ViewProviderThickness     ::init();
     PartDesignGui::ViewProviderTransformed   ::init();
     PartDesignGui::ViewProviderMirrored      ::init();
     PartDesignGui::ViewProviderLinearPattern ::init();
@@ -116,6 +119,7 @@ void PartDesignGuiExport initPartDesignGui()
     PartDesignGui::ViewProviderDatumPoint    ::init();
     PartDesignGui::ViewProviderDatumLine     ::init();
     PartDesignGui::ViewProviderDatumPlane    ::init();
+    PartDesignGui::ViewProviderDatumCoordinateSystem::init();
     PartDesignGui::ViewProviderBoolean       ::init();
     PartDesignGui::ViewProviderPrimitive     ::init();
 

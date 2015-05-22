@@ -55,6 +55,8 @@ PROPERTY_SOURCE(PartDesignGui::ViewProviderDatumLine,PartDesignGui::ViewProvider
 
 ViewProviderDatumLine::ViewProviderDatumLine()
 {
+    sPixmap = "PartDesign_Line.svg";
+    
     SoMaterial* material = new SoMaterial();
     material->diffuseColor.setValue(0.9f, 0.9f, 0.13f);
     material->transparency.setValue(0.2f);
