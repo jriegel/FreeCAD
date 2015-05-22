@@ -78,7 +78,7 @@ protected:
 
 private:
     void onSelectionChanged(const Gui::SelectionChanges& msg);
-    void updateUI();
+    void updateUI(std::string message = std::string(), bool isWarning = false);
 
     void makeRefStrings(std::vector<QString>& refstrings, std::vector<std::string>& refnames);
     QLineEdit* getLine(const int idx);
