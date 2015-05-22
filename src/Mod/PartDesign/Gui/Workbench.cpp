@@ -677,7 +677,8 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     Gui::MenuItem* part = new Gui::MenuItem;
     root->insertItem(item, part);
     part->setCommand("&Part Design");
-    *part << "PartDesign_Body"
+    *part << "PartDesign_Part"
+          << "PartDesign_Body"
           << "PartDesign_NewSketch"
           << "Sketcher_LeaveSketch"
           << "Sketcher_ViewSketch"
@@ -732,7 +733,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
     Gui::ToolBarItem* root = StdWorkbench::setupToolBars();
     Gui::ToolBarItem* part = new Gui::ToolBarItem(root);
     part->setCommand("Part Design");
-    *part << "PartDesign_Body"
+    *part << "PartDesign_Part"
+          << "PartDesign_Body"
           << "PartDesign_NewSketch"
           << "Sketcher_ViewSketch"
           << "Sketcher_MapSketch"
