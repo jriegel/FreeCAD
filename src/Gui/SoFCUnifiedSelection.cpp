@@ -349,7 +349,7 @@ SoFCUnifiedSelection::handleEvent(SoHandleEventAction * action)
             // check to see if the mouse is over our geometry...
             const SoPickedPoint * pp = this->getPickedPoint(action);
             SoFullPath *pPath = (pp != NULL) ? (SoFullPath *) pp->getPath() : NULL;
-            ViewProvider *vp = 0;
+            //ViewProvider *vp = 0;
             ViewProviderDocumentObject* vpd = 0;
             std::vector<ViewProvider*> vpList;
             if (this->pcDocument && pPath && pPath->containsPath(action->getCurPath()))
@@ -384,8 +384,8 @@ SoFCUnifiedSelection::handleEvent(SoHandleEventAction * action)
                                        ,pp->getPoint()[2])){
 
                     SoSearchAction sa;
-                    sa.setNode(vp->getRoot());
-                    sa.apply(vp->getRoot());
+                    sa.setNode(vpd->getRoot());
+                    sa.apply(vpd->getRoot());
                     if (sa.getPath()) {
                         highlighted = TRUE;
                         if (currenthighlight && currenthighlight->getTail() != sa.getPath()->getTail()) {
