@@ -689,6 +689,7 @@ SET(View3D_CPP_SRCS
     CoinRiftWidget.cpp
     View3DPy.cpp
     View3DViewerPy.cpp
+	VisualCache.cpp
 )
 SET(View3D_SRCS
     ${View3D_CPP_SRCS}
@@ -705,6 +706,7 @@ SET(View3D_SRCS
     View3DInventorRiftViewer.h
     CoinRiftWidget.h
     View3DViewerPy.h
+	VisualCache.h
 )
 SOURCE_GROUP("View3D" FILES ${View3D_SRCS})
 
@@ -755,6 +757,7 @@ SET(Viewprovider_CPP_SRCS
     ViewProviderPart.cpp
     ViewProviderOrigin.cpp
     ViewProviderMaterialObject.cpp
+	ViewProviderCacheObject.cpp
 )
 SET(Viewprovider_SRCS
     ${Viewprovider_CPP_SRCS}
@@ -777,6 +780,7 @@ SET(Viewprovider_SRCS
     ViewProviderPart.h
     ViewProviderOrigin.h
     ViewProviderMaterialObject.h
+	ViewProviderCacheObject.h
 )
 SOURCE_GROUP("View3D\\Viewprovider" FILES ${Viewprovider_SRCS})
 

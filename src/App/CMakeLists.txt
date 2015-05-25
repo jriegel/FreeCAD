@@ -95,6 +95,7 @@ SET(Document_CPP_SRCS
     VRMLObject.cpp
     MaterialObject.cpp
     MergeDocuments.cpp
+	CacheObject.cpp
 )
 
 SET(Document_HPP_SRCS
@@ -124,6 +125,7 @@ SET(Document_HPP_SRCS
     VRMLObject.h
     MaterialObject.h
     MergeDocuments.h
+	CacheObject.h
 )
 SET(Document_SRCS
     ${Document_CPP_SRCS}
