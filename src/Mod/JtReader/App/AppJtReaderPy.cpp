@@ -37,8 +37,12 @@
 #include <Mod/Mesh/App/Core/Elements.h>
 #include <Mod/Mesh/App/MeshPy.h>
 #include <Mod/Mesh/App/MeshFeature.h>
+#include <App/PartPy.h>
+
 
 #include "TestJtReader.h"
+#include "JcadLibReader.h"
+
 using std::vector;
 using namespace MeshCore;
 
@@ -234,13 +238,40 @@ insert(PyObject *self, PyObject *args)
 	Py_Return;    
 }
 
+static PyObject * readJtPart(PyObject *self, PyObject *args)
+{
+    char* Name;
+    PyObject* PartObject = 0;
+    if (!PyArg_ParseTuple(args, "etO!", "utf-8", &Name, &(App::PartPy::Type), &PartObject))
+        return 0;
+    std::string Utf8Name = std::string(Name);
+    PyMem_Free(Name);
+    App::Part* Part = static_cast<App::PartPy*>(PartObject)->getPartPtr();
+
+    PY_TRY{
+
+        JcadLibReader reader;
+
+        reader.read(Utf8Name.c_str());
+
+        Base::Console().Message(reader.getLog().toStdString().c_str());
+
+
+
+    }
+        PY_CATCH
+
+        Py_Return;
+}
 
 /* registration table  */
 struct PyMethodDef JtReader_methods[] = {
     {"open"       ,open ,       Py_NEWARGS, "open a jt file in a new Document"},				
     {"insert"     ,insert,      Py_NEWARGS, "isert a jt file in a existing document"},
     {"read"       ,read,        Py_NEWARGS, "Read a Mesh from a jt file and returns a Mesh object."},
-    {NULL, NULL}                   
+    { "readJtPart", readJtPart, METH_VARARGS,
+    "readJtPart(JtFilePath,PartObject) -- Read a Jt into a PartObject" },
+    { NULL, NULL }
 };
 
 

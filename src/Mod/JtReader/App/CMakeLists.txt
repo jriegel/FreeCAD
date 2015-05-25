@@ -33,6 +33,8 @@ SET(JtReader_SRCS
     TestJtReader.h
 	FcLodHandler.h
 	FcLodHandler.cpp
+    JcadLibReader.h
+    JcadLibReader.cpp
 )
 
 FILE( GLOB JRJT_SRCS JrJt/*.cpp JrJt/*.h )

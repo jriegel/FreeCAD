@@ -31,7 +31,7 @@
 
 
 
-class RaytracingWorkbench ( Workbench ):
+class JtReaderWorkbench ( Workbench ):
 	"Raytracing workbench object"
 	Icon = """
 			/* XPM */
@@ -57,14 +57,14 @@ class RaytracingWorkbench ( Workbench ):
 			"..#aa...........",
 			"..aaa..........."};
 			"""
-	MenuText = "Raytracing"
-	ToolTip = "Raytracing workbench"
+	MenuText = "JtReader"
+	ToolTip = "JtReader workbench"
 
 	def Initialize(self):
 		# load the module
-		import PartGui
-		import RaytracingGui
-	def GetClassName(self):
-		return "RaytracingGui::Workbench"
+		import JtReaderGui
 
-Gui.addWorkbench(RaytracingWorkbench())
+	def GetClassName(self):
+		return "JtReaderGui::Workbench"
+
+#Gui.addWorkbench(JtReaderWorkbench())
