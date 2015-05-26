@@ -28,8 +28,10 @@
 #include <Inventor/SbImage.h>
 #include <Inventor/SbColor.h>
 #include <Base/Tools2D.h>
+#include <Base/Placement.h>
 #include <Gui/Selection.h>
 #include <Gui/GLPainter.h>
+#include <App/Part.h>
 #include <boost/signals.hpp>
 #include <QCoreApplication>
 
@@ -337,6 +339,9 @@ protected:
     void removeSelectPoint(int SelectPoint);
     void clearSelectPoints(void);
 
+    // handle stacked placements of App::Parts
+    Base::Placement getPlacement();
+    
     // modes while sketching
     SketchMode Mode;
 
@@ -376,6 +381,7 @@ protected:
     int antiAliasing;
 
     Gui::Rubberband* rubberband;
+    App::Part* parentPart = nullptr;
 };
 
 } // namespace PartGui
