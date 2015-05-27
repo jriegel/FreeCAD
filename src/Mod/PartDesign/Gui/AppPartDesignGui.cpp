@@ -54,6 +54,7 @@
 #include "ViewProviderPrimitive.h"
 #include "ViewProviderDatumCS.h"
 #include "ViewProviderThickness.h"
+#include "ViewProviderPipe.h"
 
 //#include "resources/qrc_PartDesign.cpp"
 
@@ -122,6 +123,7 @@ void PartDesignGuiExport initPartDesignGui()
     PartDesignGui::ViewProviderDatumCoordinateSystem::init();
     PartDesignGui::ViewProviderBoolean       ::init();
     PartDesignGui::ViewProviderPrimitive     ::init();
+    PartDesignGui::ViewProviderPipe          ::init();
 
      // add resources and reloads the translators
     loadPartDesignResource();
