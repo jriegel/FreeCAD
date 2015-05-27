@@ -102,6 +102,8 @@ SET(FeaturesSketchBased_SRCS
     FeatureBoolean.cpp
     FeaturePrimitive.h
     FeaturePrimitive.cpp
+    FeaturePipe.h
+    FeaturePipe.cpp
 )
 
 SOURCE_GROUP("SketchBasedFeatures" FILES ${FeaturesSketchBased_SRCS})
