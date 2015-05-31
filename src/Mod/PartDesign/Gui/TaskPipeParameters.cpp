@@ -84,9 +84,21 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView,bool newObj, Q
             this, SLOT(onBaseButton(bool)));
     
     this->groupLayout()->addWidget(proxy);
-         
-    //add initial values
+    
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(PipeView->getObject());
+    Gui::Document* doc = Gui::Application::Instance->activeDocument(); 
+    
+    //make sure th euser sees al important things: the base feature to select edges and the 
+    //spine/auxillery spine he already selected 
+    if(pipe->BaseFeature.getValue())
+        doc->getViewProvider(pipe->BaseFeature.getValue())->show();
+    if(pipe->Spine.getValue()) {
+        auto* svp = doc->getViewProvider(pipe->Spine.getValue());
+        spineShow = svp->isShow();
+        svp->setVisible(true);
+    }
+        
+    //add initial values    
     std::vector<std::string> strings = pipe->Spine.getSubValues();
     for (std::vector<std::string>::const_iterator i = strings.begin(); i != strings.end(); i++)
         ui->listWidgetReferences->addItem(QString::fromStdString(*i));
@@ -127,7 +139,8 @@ void TaskPipeParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
                 ui->listWidgetReferences->clear();
                 ui->profileBaseEdit->setText(QString::fromAscii(msg.pObjectName));
             }
-            //clearButtons(none);
+            clearButtons();
+            static_cast<ViewProviderPipe*>(vp)->highlightReferences(false, false);
             recomputeFeature();
         } 
         clearButtons();
@@ -137,6 +150,20 @@ void TaskPipeParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
 
 TaskPipeParameters::~TaskPipeParameters()
 {
+    PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
+    Gui::Document* doc = Gui::Application::Instance->activeDocument(); 
+    
+    //make sure th euser sees al important things: the base feature to select edges and the 
+    //spine/auxillery spine he already selected 
+    if(pipe->BaseFeature.getValue())
+        doc->getViewProvider(pipe->BaseFeature.getValue())->hide();
+    if(pipe->Spine.getValue()) {
+        auto* svp = doc->getViewProvider(pipe->Spine.getValue());
+        svp->setVisible(spineShow);
+        spineShow = false;
+    }
+    static_cast<ViewProviderPipe*>(vp)->highlightReferences(false, false);
+    
     delete ui;
 }
 
@@ -157,7 +184,7 @@ void TaskPipeParameters::onButtonRefAdd(bool checked) {
         //hideObject();
         Gui::Selection().clearSelection();
         selectionMode = refAdd;
-        //DressUpView->highlightReferences(true);
+        static_cast<ViewProviderPipe*>(vp)->highlightReferences(true, false);
     }
 }
 
@@ -168,7 +195,7 @@ void TaskPipeParameters::onButtonRefRemove(bool checked) {
         //hideObject();
         Gui::Selection().clearSelection();        
         selectionMode = refRemove;
-        //DressUpView->highlightReferences(true);
+        static_cast<ViewProviderPipe*>(vp)->highlightReferences(true, false);
     }
 }
 
@@ -295,9 +322,19 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool newObj
             this, SLOT(onBinormalChanged(double)));
     
     this->groupLayout()->addWidget(proxy);
+    
+    PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(PipeView->getObject());
+    Gui::Document* doc = Gui::Application::Instance->activeDocument(); 
+    
+    //make sure th euser sees al important things: the base feature to select edges and the 
+    //spine/auxillery spine he already selected 
+    if(pipe->AuxillerySpine.getValue()) {
+        auto* svp = doc->getViewProvider(pipe->AuxillerySpine.getValue());
+        auxSpineShow = svp->isShow();
+        svp->show();
+    }
 
     //add initial values
-    PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(PipeView->getObject());
     std::vector<std::string> strings = pipe->AuxillerySpine.getSubValues();
     for (std::vector<std::string>::const_iterator i = strings.begin(); i != strings.end(); i++)
         ui->listWidgetReferences->addItem(QString::fromStdString(*i));
@@ -311,6 +348,18 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool newObj
 
 TaskPipeOrientation::~TaskPipeOrientation() {
 
+    PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
+    Gui::Document* doc = Gui::Application::Instance->activeDocument(); 
+    
+    //make sure th euser sees al important things: the base feature to select edges and the 
+    //spine/auxillery spine he already selected 
+    if(pipe->AuxillerySpine.getValue()) {
+        auto* svp = doc->getViewProvider(pipe->AuxillerySpine.getValue());
+        svp->setVisible(auxSpineShow);
+        auxSpineShow = false;
+    }
+    
+    static_cast<ViewProviderPipe*>(vp)->highlightReferences(false, true);
 }
 
 void TaskPipeOrientation::onOrientationChanged(int idx) {
@@ -336,6 +385,7 @@ void TaskPipeOrientation::onButtonRefAdd(bool checked) {
     if (checked) {
         Gui::Selection().clearSelection();        
         selectionMode = refAdd;
+        static_cast<ViewProviderPipe*>(vp)->highlightReferences(true, true);
     }
 }
 
@@ -344,6 +394,7 @@ void TaskPipeOrientation::onButtonRefRemove(bool checked) {
     if (checked) {
         Gui::Selection().clearSelection();        
         selectionMode = refRemove;
+        static_cast<ViewProviderPipe*>(vp)->highlightReferences(true, true);
     }
 }
 
@@ -402,7 +453,8 @@ void TaskPipeOrientation::onSelectionChanged(const SelectionChanges& msg) {
                 ui->listWidgetReferences->clear();
                 ui->profileBaseEdit->setText(QString::fromAscii(msg.pObjectName));
             }
-            //clearButtons(none);
+            clearButtons();
+            static_cast<ViewProviderPipe*>(vp)->highlightReferences(false, true);
             recomputeFeature();
         } 
         clearButtons();
