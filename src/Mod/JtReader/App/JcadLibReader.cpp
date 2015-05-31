@@ -34,6 +34,7 @@
 #include <QDir>
 #include <QUuid>
 #include <QDebug>
+#include <QTextStream>
 
 #include <App/Application.h>
 
@@ -57,52 +58,126 @@ JcadLibReader::~JcadLibReader()
 
 bool JcadLibReader::read(const char* fileName)
 {
-    Base::Console().Log("JcadLibReader::run(%s)", fileName);
+    qDebug() <<  "JcadLibReader::run(" << fileName << ")";
     log.clear();
 
     QFileInfo info(QString::fromUtf8(fileName));
-    QDir sysTempDir(QDir::tempPath());
+ /*   QDir sysTempDir(QDir::tempPath());
     QString tempDir = QUuid::createUuid();
     if (!sysTempDir.mkdir(tempDir)){
         log = QString::fromAscii("Error: can not create temp dir!\n");
         return false;
     }
-    QString tempDirPath = QDir::tempPath() + QString::fromAscii("/") + tempDir;
+    QString tempDirPath = QDir::tempPath() + QString::fromAscii("/") + tempDir;*/
 
     std::string jarFile = App::GetApplication().getHomePath();
     jarFile += "Mod/JtReader/FcJtPlugin.jar";
 
     if (!info.exists()){
         log = QString::fromAscii("Error: File not found!\n");
-        sysTempDir.rmdir(tempDir);
+       // sysTempDir.rmdir(tempDir);
        return false;
 
     }
  
     QProcess proc;
     QStringList args;
-    args << QString::fromAscii("-jar") << QString::fromUtf8(jarFile.c_str()) << QString::fromUtf8(fileName) << tempDirPath;
+    args << QString::fromAscii("-jar") << QString::fromUtf8(jarFile.c_str()) << QString::fromUtf8(fileName);// << tempDirPath;
 
     qDebug() << args;
 
 
-
-#ifdef FC_OS_WIN32
-    QString exe = QString::fromAscii("java.exe");
-#else
     QString exe = QString::fromAscii("java");
-#endif
-
     proc.start(exe, args);
+
     if (!proc.waitForStarted()) {
+        log = QString::fromAscii("Error: waitForStarted() failed\n");
+        return false;
+    }
+    if (!proc.waitForFinished(120000)){
+        log = QString::fromAscii("Error: waitForFinished(120000) failed\n");
         return false;
     }
 
-    if (!proc.waitForFinished(120000))
-        return false;
-
     log += QString::fromUtf8(proc.readAllStandardError());
-    log += QString::fromUtf8(proc.readAllStandardOutput());
+    QByteArray out = proc.readAllStandardOutput();
+
+    QTextStream inputStream(&out,QFile::ReadOnly);
+
+    QByteArray line;
+    std::vector<Buffer>::iterator actBuffer = Faces.end();
+    
+    do {
+        line = inputStream.readLine().toUtf8();
+        if (line[0] == ':'){
+            if (line[1] == 'V'){
+                if (line[2] == 'C'){
+                    actBuffer->Vertexes.reserve(line.right(line.length() - 4).toInt());
+                }
+                else{
+                    QList<QByteArray> v = line.right(line.length() - 3).split(';');
+                    MiniVec vc;
+                    vc.vec[0] = v[0].toFloat();
+                    vc.vec[1] = v[1].toFloat();
+                    vc.vec[2] = v[2].toFloat();
+                    actBuffer->Vertexes.push_back(vc);
+                }
+            }
+            else if (line[1] == 'C'){
+                if (line[2] == 'C'){
+                    actBuffer->Colors.reserve(line.right(line.length() - 4).toInt());
+                }
+                else{
+                    QList<QByteArray> v = line.right(line.length() - 3).split(';');
+                    MiniVec vc;
+                    vc.vec[0] = v[0].toFloat();
+                    vc.vec[1] = v[1].toFloat();
+                    vc.vec[2] = v[2].toFloat();
+                    actBuffer->Colors.push_back(vc);
+                }
+
+            }
+            else if (line[1] == 'N'){
+                if (line[2] == 'C'){
+                    actBuffer->Normals.reserve(line.right(line.length() - 4).toInt());
+                }
+                else{
+                    QList<QByteArray> v = line.right(line.length() - 3).split(';');
+                    MiniVec vc;
+                    vc.vec[0] = v[0].toFloat();
+                    vc.vec[1] = v[1].toFloat();
+                    vc.vec[2] = v[2].toFloat();
+                    actBuffer->Normals.push_back(vc);
+                }
+            }
+            else if (line[1] == 'I'){
+                if (line[2] == 'C'){
+                    actBuffer->Indexes.reserve(line.right(line.length() - 4).toInt());
+                }
+                else{
+                    int idx = line.right(line.length() - 3).toInt();
+                    actBuffer->Indexes.push_back(idx);
+                }
+            }
+            else if (line[1] == 'F'){
+                QString FaceName = QString::fromUtf8(line.right(line.length() - 3));
+                Names.push_back(FaceName);  
+                Faces.push_back(Buffer());
+                actBuffer = Faces.end() - 1;
+
+            }
+            else{
+                log += QString::fromAscii("Error: Unknown Char in key sequence:") + QString::fromUtf8(line) +QString::fromAscii("\n");
+            }
+                
+
+
+        }else
+            log += QString::fromUtf8(line) + QString::fromAscii("\n");
+    } while (!line.isNull());
+
+
+    log += QString::fromAscii("Sizes: %1  %2").arg(Faces.size()).arg(Faces[0].Vertexes.size()) ;
 
     return true;
 

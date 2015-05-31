@@ -25,10 +25,13 @@
 
 
 import xml.etree.ElementTree as ET
+import os
 
 FreeCAD_On = False
 FreeCAD_Doc = None
 FreeCAD_ObjList = []
+
+actDirName =""
 
 def ParseUserData(element):
     res = {}
@@ -38,7 +41,7 @@ def ParseUserData(element):
     return res
 
 def addPart(partElement):
-    global FreeCAD_On,FreeCAD_Doc,FreeCAD_ObjList
+    global FreeCAD_On,FreeCAD_Doc,FreeCAD_ObjList,actDirName
     print "=== Part ======================================================"
     name = partElement.attrib['name']
     id = partElement.attrib['id']
@@ -54,11 +57,15 @@ def addPart(partElement):
     print id, name, userData, format, location
     if FreeCAD_On:
         import FreeCAD,Assembly
-        print"Create Reference"
+        print"Create Part"
         partObject =FreeCAD_Doc.addObject("App::Part",id)
         FreeCAD_ObjList.append(partObject)
         partObject.Label = name
         partObject.Meta = userData
+        if format == "JT":
+            import JtReader
+            location = os.path.join(actDirName,location)
+            JtReader.readJtPart(location,partObject)
 
 def addAssembly(asmElement):
     global FreeCAD_On,FreeCAD_Doc,FreeCAD_ObjList
@@ -98,6 +105,7 @@ def addReference(refElement):
         FreeCAD_ObjList.append(refObject)
         refObject.Label = name
         refObject.Meta = userData
+        refObject.Placement = FreeCAD.Placement(FreeCAD.Matrix(mtrx[0],mtrx[1],mtrx[2],mtrx[3],mtrx[4],mtrx[5],mtrx[6],mtrx[7],mtrx[8],mtrx[9],mtrx[10],mtrx[11],mtrx[12],mtrx[13],mtrx[14],mtrx[15]))
 
 def resolveRefs():
     global FreeCAD_On,FreeCAD_Doc,FreeCAD_ObjList
@@ -141,7 +149,8 @@ def main():
     parse('../../../../data/tests/Jt/Engine/2_Cylinder_Engine3.plmxml')
 
 def parse(fileName):
-
+    global actDirName
+    actDirName = os.path.dirname(fileName)
     tree = ET.parse(fileName)
     root = tree.getroot()
     ProductDef = root.find('{http://www.plmxml.org/Schemas/PLMXMLSchema}ProductDef')

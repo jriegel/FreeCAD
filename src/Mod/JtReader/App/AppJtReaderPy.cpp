@@ -254,6 +254,36 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
 
         reader.read(Utf8Name.c_str());
 
+        if (reader.getFaceCount() == 1){
+
+            const JcadLibReader::Buffer &buf = reader.getBuffer(0);
+
+
+            MeshPointArray meshPoints;// (buf.Vertexes.size());
+            MeshFacetArray meshFacets;// (buf.Indexes.size() / 3);
+
+            for (auto verts : buf.Vertexes){
+                meshPoints.push_back(MeshPoint(Base::Vector3f(verts.vec[0], verts.vec[1], verts.vec[2])));
+            }
+            for (std::vector<int32_t>::const_iterator it = buf.Indexes.begin(); it != buf.Indexes.end(); it += 3){
+                meshFacets.push_back(MeshFacet(*it, *(it + 1), *(it + 2)));
+            }
+ 
+            MeshKernel tmp;
+            tmp.Adopt(meshPoints, meshFacets,true);
+
+            App::Document *doc = Part->getDocument();
+            App::DocumentObject *obj = doc->addObject("Mesh::Feature", reader.getName(0).toStdString().c_str());
+
+            Part->addObject(obj);
+
+            Mesh::Feature *meshObj = dynamic_cast<Mesh::Feature*>(obj);
+
+            meshObj->Mesh.setValue(tmp);
+
+        }
+
+ 
         Base::Console().Message(reader.getLog().toStdString().c_str());
 
 

@@ -25,6 +25,7 @@
 
 
 #include <QString>
+#include <vector>
 
 class AppJtReaderExport JcadLibReader
 {
@@ -37,6 +38,25 @@ public:
     bool read(const char* fileName);
 
     const QString& getLog(){ return log; }
+
+    struct MiniVec {
+        float vec[3];
+    };
+    struct Buffer {
+        std::vector<MiniVec> Vertexes;
+        std::vector<MiniVec> Normals;
+        std::vector<MiniVec> Colors;
+        std::vector<int32_t> Indexes;
+    };
+
+    int getFaceCount() const{ return Faces.size(); }
+    const Buffer& getBuffer(int n)const { return Faces[0]; }
+    const QString& getName(int n)const { return Names[n]; }
+
+protected:
+    std::vector<Buffer> Faces;
+    std::vector<QString> Names;
+
 
 };
 
