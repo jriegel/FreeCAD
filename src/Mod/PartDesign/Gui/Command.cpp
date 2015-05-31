@@ -1148,7 +1148,7 @@ void CmdPartDesignPad::activated(int iMsg)
         Gui::Command::updateActive();
 
         finishSketchBased(cmd, sketch, FeatName);
-        //adjustCameraPosition();
+        cmd->adjustCameraPosition();
     };
     
     prepareSketchBased(this, "Pad", worker);
@@ -1185,7 +1185,7 @@ void CmdPartDesignPocket::activated(int iMsg)
         
         Gui::Command::doCommand(Doc,"App.activeDocument().%s.Length = 5.0",FeatName.c_str());
         finishSketchBased(cmd, sketch, FeatName);
-        //adjustCameraPosition();
+        cmd->adjustCameraPosition();
     };
     
     prepareSketchBased(this, "Pocket", worker);
@@ -1228,7 +1228,7 @@ void CmdPartDesignRevolution::activated(int iMsg)
             Gui::Command::doCommand(Doc,"App.activeDocument().%s.Reversed = 1",FeatName.c_str());
     
         finishSketchBased(cmd, sketch, FeatName);
-        //adjustCameraPosition();
+        cmd->adjustCameraPosition();
     };
     
     prepareSketchBased(this, "Revolution", worker);
@@ -1271,7 +1271,7 @@ void CmdPartDesignGroove::activated(int iMsg)
             Gui::Command::doCommand(Doc,"App.activeDocument().%s.Reversed = 1",FeatName.c_str());
     
         finishSketchBased(cmd, sketch, FeatName);
-        //adjustCameraPosition();
+        cmd->adjustCameraPosition();
     };
     
     prepareSketchBased(this, "Groove", worker);
@@ -1318,7 +1318,7 @@ void CmdPartDesignAdditivePipe::activated(int iMsg)
         Gui::Command::updateActive();
 
         finishSketchBased(cmd, sketch, FeatName);
-        //adjustCameraPosition();
+        cmd->adjustCameraPosition();
     };
     
     prepareSketchBased(this, "AdditivePipe", worker);
@@ -1366,7 +1366,7 @@ void CmdPartDesignSubtractivePipe::activated(int iMsg)
         Gui::Command::updateActive();
 
         finishSketchBased(cmd, sketch, FeatName);
-        //adjustCameraPosition();
+        cmd->adjustCameraPosition();
     };
     
     prepareSketchBased(this, "SubtractivePipe", worker);
