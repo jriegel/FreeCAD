@@ -122,6 +122,7 @@ void PartDesignGuiExport initPartDesignGui()
     PartDesignGui::ViewProviderDatumPlane    ::init();
     PartDesignGui::ViewProviderDatumCoordinateSystem::init();
     PartDesignGui::ViewProviderBoolean       ::init();
+    PartDesignGui::ViewProviderAddSub        ::init();
     PartDesignGui::ViewProviderPrimitive     ::init();
     PartDesignGui::ViewProviderPipe          ::init();
 
