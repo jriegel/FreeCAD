@@ -51,7 +51,7 @@ class GuiExport DlgCheckableMessageBox : public QDialog
     Q_PROPERTY(QString text READ text WRITE setText)
     Q_PROPERTY(QPixmap iconPixmap READ iconPixmap WRITE setIconPixmap)
     Q_PROPERTY(bool isChecked READ isChecked WRITE setChecked)
-    Q_PROPERTY(QString prefEntry WRITE setPrefEntry)
+    Q_PROPERTY(QString prefEntry READ getPrefEntry WRITE setPrefEntry)
     Q_PROPERTY(QString checkBoxText READ checkBoxText WRITE setCheckBoxText)
     Q_PROPERTY(QDialogButtonBox::StandardButtons buttons READ standardButtons WRITE setStandardButtons)
     Q_PROPERTY(QDialogButtonBox::StandardButton defaultButton READ defaultButton WRITE setDefaultButton)
@@ -71,7 +71,8 @@ public:
     QString text() const;
     void setText(const QString &);
 
-    void setPrefEntry( const QString& entry );
+    void setPrefEntry(const QString& entry);
+    QString getPrefEntry() const;
 
     virtual void accept();
     virtual void reject();

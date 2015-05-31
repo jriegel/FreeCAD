@@ -97,11 +97,16 @@ DlgCheckableMessageBox::~DlgCheckableMessageBox()
     delete m_d;
 }
 
-void DlgCheckableMessageBox::setPrefEntry( const QString& entry )
+void DlgCheckableMessageBox::setPrefEntry(const QString& entry)
 {
-  paramEntry = toParamEntry(entry);
-  bool checked = App::GetApplication().GetParameterGroupByPath( QByteArray("User parameter:BaseApp/CheckMessages"))->GetBool(paramEntry);
-  setChecked(checked);
+    paramEntry = toParamEntry(entry);
+    bool checked = App::GetApplication().GetParameterGroupByPath(QByteArray("User parameter:BaseApp/CheckMessages"))->GetBool(paramEntry);
+    setChecked(checked);
+}
+
+QString DlgCheckableMessageBox::getPrefEntry() const
+{
+    return QString::fromLatin1(paramEntry);
 }
 
 

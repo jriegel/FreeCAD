@@ -101,7 +101,7 @@ void ViewProviderPart::onObjectChanged(const App::DocumentObject& obj, const App
         SoGetBoundingBoxAction bboxAction(viewer->getSoRenderManager()->getViewportRegion());
         
         //calculate for everything but planes
-        SbBox3f bbox(1e-9, 1e-9, 1e-9, 1e-9, 1e-9, 1e-9);
+        SbBox3f bbox(1e-9f, 1e-9f, 1e-9f, 1e-9f, 1e-9f, 1e-9f);
         for(App::DocumentObject* obj : part->getObjects()) {
             if(obj->getTypeId() != App::Origin::getClassTypeId() &&
                obj->getTypeId() != App::Plane::getClassTypeId() && 
@@ -122,9 +122,9 @@ void ViewProviderPart::onObjectChanged(const App::DocumentObject& obj, const App
         }
         
         //get the bounding box values
-        SbVec3f size = bbox.getSize()*1.3;
-        SbVec3f max = bbox.getMax()*1.3;
-        SbVec3f min = bbox.getMin()*1.3;
+        SbVec3f size = bbox.getSize()*1.3f;
+        SbVec3f max = bbox.getMax()*1.3f;
+        SbVec3f min = bbox.getMin()*1.3f;
        
         auto origins = part->getObjectsOfType(App::Origin::getClassTypeId());
         if (origins.empty())
