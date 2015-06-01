@@ -99,6 +99,8 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView,bool newObj, Q
     }
         
     //add initial values    
+    if(pipe->Spine.getValue())
+        ui->profileBaseEdit->setText(QString::fromUtf8(pipe->Spine.getValue()->getNameInDocument()));
     std::vector<std::string> strings = pipe->Spine.getSubValues();
     for (std::vector<std::string>::const_iterator i = strings.begin(); i != strings.end(); i++)
         ui->listWidgetReferences->addItem(QString::fromStdString(*i));
@@ -131,13 +133,13 @@ void TaskPipeParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
             else if (selectionMode == refRemove) {
                 QString sub = QString::fromStdString(msg.pSubName);
                 if(!sub.isEmpty())
-                    removeFromListWidget(ui->listWidgetReferences, QString::fromAscii(msg.pSubName));
+                    removeFromListWidget(ui->listWidgetReferences, QString::fromUtf8(msg.pSubName));
                 else {
                     ui->profileBaseEdit->clear();
                 }                
             } else if(selectionMode == refObjAdd) {
                 ui->listWidgetReferences->clear();
-                ui->profileBaseEdit->setText(QString::fromAscii(msg.pObjectName));
+                ui->profileBaseEdit->setText(QString::fromUtf8(msg.pObjectName));
             }
             clearButtons();
             static_cast<ViewProviderPipe*>(vp)->highlightReferences(false, false);
@@ -306,8 +308,6 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool newObj
             this, SLOT(onButtonRefAdd(bool)));
     connect(ui->buttonRefRemove, SIGNAL(toggled(bool)),
             this, SLOT(onButtonRefRemove(bool)));
-    connect(ui->tangent, SIGNAL(toggled(bool)), 
-            this, SLOT(onTangentChanged(bool)));
     connect(ui->buttonProfileBase, SIGNAL(toggled(bool)),
             this, SLOT(onBaseButton(bool)));
     connect(ui->stackedWidget, SIGNAL(currentChanged(int)),
@@ -335,15 +335,16 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool newObj
     }
 
     //add initial values
+    if(pipe->AuxillerySpine.getValue())
+        ui->profileBaseEdit->setText(QString::fromUtf8(pipe->AuxillerySpine.getValue()->getNameInDocument()));
     std::vector<std::string> strings = pipe->AuxillerySpine.getSubValues();
     for (std::vector<std::string>::const_iterator i = strings.begin(); i != strings.end(); i++)
         ui->listWidgetReferences->addItem(QString::fromStdString(*i));
         
     ui->comboBoxMode->setCurrentIndex(pipe->Mode.getValue());
-    ui->tangent->setChecked(pipe->AuxillerySpineTangent.getValue());
     ui->curvelinear->setChecked(pipe->AuxilleryCurvelinear.getValue());    
 
-    updateUI(0);
+    updateUI(pipe->Mode.getValue());
 }
 
 TaskPipeOrientation::~TaskPipeOrientation() {
@@ -450,13 +451,13 @@ void TaskPipeOrientation::onSelectionChanged(const SelectionChanges& msg) {
             else if (selectionMode == refRemove) {
                 QString sub = QString::fromStdString(msg.pSubName);
                 if(!sub.isEmpty())
-                    removeFromListWidget(ui->listWidgetReferences, QString::fromAscii(msg.pSubName));
+                    removeFromListWidget(ui->listWidgetReferences, QString::fromUtf8(msg.pSubName));
                 else {
                     ui->profileBaseEdit->clear();
                 }                
             } else if(selectionMode == refObjAdd) {
                 ui->listWidgetReferences->clear();
-                ui->profileBaseEdit->setText(QString::fromAscii(msg.pObjectName));
+                ui->profileBaseEdit->setText(QString::fromUtf8(msg.pObjectName));
             }
             clearButtons();
             static_cast<ViewProviderPipe*>(vp)->highlightReferences(false, true);
@@ -559,7 +560,7 @@ TaskPipeScaling::TaskPipeScaling(ViewProviderPipe* PipeView, bool newObj, QWidge
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(PipeView->getObject());
     ui->comboBoxScaling->setCurrentIndex(pipe->Transformation.getValue());
     
-    updateUI(0);
+    updateUI(pipe->Mode.getValue());
 }
 
 TaskPipeScaling::~TaskPipeScaling() {
@@ -748,7 +749,7 @@ bool TaskDlgPipeParameters::accept()
         Gui::Command::commitCommand();
     }
     catch (const Base::Exception& e) {
-        QMessageBox::warning(parameter, tr("Input error"), QString::fromAscii(e.what()));
+        QMessageBox::warning(parameter, tr("Input error"), QString::fromUtf8(e.what()));
         return false;
     }
 
