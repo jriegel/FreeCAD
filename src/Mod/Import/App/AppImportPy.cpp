@@ -49,7 +49,7 @@
 #endif
 
 #include "ImportOCAF.h"
-#include "ImportOCAFAssembly.h"
+//#include "ImportOCAFAssembly.h"
 #include <Base/PyObjectBase.h>
 #include <Base/Console.h>
 #include <App/Application.h>
@@ -62,7 +62,7 @@
 #include <Mod/Part/App/encodeFilename.h>
 
 /* module functions */
-
+/*
 static PyObject * importAssembly(PyObject *self, PyObject *args)
 {
     char* Name;
@@ -169,7 +169,7 @@ static PyObject * importAssembly(PyObject *self, PyObject *args)
     PY_CATCH
 
     Py_Return;
-}
+}*/
 
 
 
@@ -399,7 +399,7 @@ struct PyMethodDef Import_Import_methods[] = {
      "insert(string,string) -- Insert the file into the given document."},
     {"export"     ,exporter  ,METH_VARARGS,
      "export(list,string) -- Export a list of objects into a single file."},
-    {"importAssembly"     ,importAssembly  ,METH_VARARGS,
-     "importAssembly(FileName,Target) -- Import a Assembly file and creates a Assembly structure."},
+//     {"importAssembly"     ,importAssembly  ,METH_VARARGS,
+//      "importAssembly(FileName,Target) -- Import a Assembly file and creates a Assembly structure."},
     {NULL, NULL}                   /* end of table marker */
 };
