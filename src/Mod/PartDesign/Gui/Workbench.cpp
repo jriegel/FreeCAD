@@ -653,6 +653,8 @@ void Workbench::activated()
         "PartDesign_Groove",
         "PartDesign_AdditivePipe",
         "PartDesign_SubtractivePipe",
+        "PartDesign_AdditiveLoft",
+        "PartDesign_SubtractiveLoft",
         0};
     Watcher.push_back(new Gui::TaskView::TaskWatcherCommands(
         "SELECT Sketcher::SketchObject COUNT 1",
@@ -749,6 +751,8 @@ Gui::MenuItem* Workbench::setupMenuBar() const
           << "PartDesign_Groove"
           << "PartDesign_AdditivePipe"
           << "PartDesign_SubtractivePipe"
+          << "PartDesign_AdditiveLoft"
+          << "PartDesign_SubtractiveLoft"
           << "PartDesign_Fillet"
           << "PartDesign_Chamfer"
           << "PartDesign_Draft"
@@ -806,6 +810,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
           << "PartDesign_Groove"
           << "PartDesign_AdditivePipe"
           << "PartDesign_SubtractivePipe"
+          << "PartDesign_AdditiveLoft"
+          << "PartDesign_SubtractiveLoft"
           << "PartDesign_Fillet"
           << "PartDesign_Chamfer"
           << "PartDesign_Draft"
