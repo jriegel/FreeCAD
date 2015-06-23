@@ -49,6 +49,7 @@
 #include <qvariant.h>
 #include <QWaitCondition>
 // QtGui
+#include <QAbstractEventDispatcher>
 #include <QAbstractItemModel>
 #include <QStandardItemModel>
 #include <QAbstractTextDocumentLayout>
