@@ -71,9 +71,12 @@ void CoordinateSystem::initHints()
 
     std::multiset<QString> key;
     std::set<QString> value;
+    
+    //Point first ----------------------
     key.insert(POINT);
     value.insert(PLANE);
     value.insert(LINE);
+    value.insert(POINT);
     value.insert(DONE);
     hints[key] = value;  
     
@@ -81,6 +84,7 @@ void CoordinateSystem::initHints()
     key.insert(POINT);
     key.insert(PLANE);
     value.insert(LINE);
+    value.insert(POINT);
     value.insert(DONE);
     hints[key] = value;
     
@@ -92,24 +96,167 @@ void CoordinateSystem::initHints()
     
     key.clear(); value.clear();
     key.insert(POINT);
+    key.insert(PLANE);
+    key.insert(POINT);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(POINT);
     key.insert(LINE);
-
+    value.insert(PLANE);
+    value.insert(LINE);
+    value.insert(POINT);
     value.insert(DONE);
     hints[key] = value;
     
-    /*
+    key.clear(); value.clear();
+    key.insert(POINT);
+    key.insert(LINE);
+    key.insert(PLANE);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(POINT);
+    key.insert(LINE);
+    key.insert(LINE);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(POINT);
+    key.insert(LINE);
+    key.insert(POINT);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(POINT);
+    key.insert(POINT);
+    value.insert(PLANE);
+    value.insert(LINE);
+    value.insert(POINT);
+    value.insert(DONE);
+    hints[key] = value;
+    
+    key.clear(); value.clear();
+    key.insert(POINT);
+    key.insert(POINT);
+    key.insert(PLANE);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(POINT);
+    key.insert(POINT);
+    key.insert(LINE);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(POINT);
+    key.insert(POINT);
+    key.insert(POINT);
+    hints[key] = Done;
+   
+    //Plane First -------------------------
     key.clear(); value.clear();
     key.insert(PLANE);
     value.insert(LINE);
+    value.insert(POINT);
     value.insert(DONE);
     hints[key] = value;
     
     key.clear(); value.clear();
     key.insert(PLANE);
     key.insert(LINE);
-    value.insert(LINE);
+    value.insert(POINT);
     value.insert(DONE);
-    hints[key] = value;*/
+    hints[key] = value;
+        
+    key.clear(); value.clear();
+    key.insert(PLANE);
+    key.insert(LINE);
+    key.insert(POINT);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(PLANE);
+    key.insert(POINT);
+    value.insert(LINE);
+    value.insert(POINT);
+    value.insert(DONE);
+    hints[key] = value;
+    
+    key.clear(); value.clear();
+    key.insert(PLANE);
+    key.insert(POINT);
+    key.insert(LINE);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(PLANE);
+    key.insert(POINT);
+    key.insert(POINT);
+    hints[key] = Done;
+    
+    
+    //Line First -------------------------
+    key.clear(); value.clear();
+    key.insert(LINE);
+    value.insert(PLANE);
+    value.insert(LINE);
+    value.insert(POINT);
+    value.insert(DONE);
+    hints[key] = value;
+    
+    key.clear(); value.clear();
+    key.insert(LINE);
+    key.insert(PLANE);
+    value.insert(POINT);
+    value.insert(DONE);
+    hints[key] = value;
+       
+    key.clear(); value.clear();
+    key.insert(LINE);
+    key.insert(PLANE);
+    key.insert(POINT);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(LINE);
+    key.insert(LINE);
+    value.insert(POINT);
+    value.insert(DONE);
+    hints[key] = value;
+    
+    key.clear(); value.clear();
+    key.insert(LINE);
+    key.insert(LINE);
+    key.insert(POINT);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(LINE);
+    key.insert(POINT);
+    value.insert(PLANE);
+    value.insert(LINE);
+    value.insert(POINT);
+    value.insert(DONE);
+    hints[key] = value;
+    
+    key.clear(); value.clear();
+    key.insert(LINE);
+    key.insert(POINT);
+    key.insert(PLANE);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(LINE);
+    key.insert(POINT);
+    key.insert(POINT);
+    hints[key] = Done;
+    
+    key.clear(); value.clear();
+    key.insert(LINE);
+    key.insert(PLANE);
+    key.insert(POINT);
+    hints[key] = Done;
 }
 
 // ============================================================================
@@ -148,7 +295,7 @@ void CoordinateSystem::onChanged(const App::Property *prop)
         const std::vector<std::string>&          subrefs = References.getSubValues();
         
         if (refs.size() != subrefs.size())
-            return; //throw Base::Exception("Size of references and subreferences do not match");
+            throw Base::Exception("Size of references and subreferences do not match");
         
         refTypes.clear();
         for (int r = 0; r < refs.size(); r++)
@@ -156,25 +303,31 @@ void CoordinateSystem::onChanged(const App::Property *prop)
 
         std::set<QString> hint = getHint();
         if (refs.size() != 0 && !(hint.find(QObject::tr("Done")) != hint.end()))
-            return; //throw Base::Exception("Can not build coordinate system from given references"); // incomplete references
+            throw Base::Exception("Can not build coordinate system from given references"); // incomplete references
             
         //build the placement from the references
-        bool plane = false, lineX = false, lineY = false, origin = false;
+        bool plane = false, line1 = false, line2 = false, point1 = false, point2=false, point3=false;
         gp_Pln pln;
-        gp_Lin linX, linY;
-        gp_Pnt org;
+        gp_Lin lin1, lin2;
+        gp_Pnt p1,  p2, p3;
         
         int count = 0;
         for(int i = 0; i < refs.size(); i++) {
             
             if (refs[i]->getTypeId().isDerivedFrom(PartDesign::Point::getClassTypeId())) {
                 PartDesign::Point* p = static_cast<PartDesign::Point*>(refs[i]);
-                if(!origin) {
-                    org = GP_POINT(p->getPoint());
-                    origin=true;
+                if(!point1) {
+                    p1 = GP_POINT(p->getPoint());
+                    point1=true;
+                } else if(!point2) {
+                    p2 = GP_POINT(p->getPoint());
+                    point2=true;
+                } else if(!point3) {
+                    p3 = GP_POINT(p->getPoint());
+                    point3=true;
                 }
                 else 
-                    return; //throw Base::Exception("Too many points in coordinate system references"); //too much points selected
+                    throw Base::Exception("Too many points in coordinate system references"); //too much points selected
             }
             else if (refs[i]->getTypeId().isDerivedFrom(PartDesign::Plane::getClassTypeId())) {
                 PartDesign::Plane* p = static_cast<PartDesign::Plane*>(refs[i]);
@@ -183,96 +336,102 @@ void CoordinateSystem::onChanged(const App::Property *prop)
                     plane=true;
                 }
                 else 
-                    return; //throw Base::Exception("Too many planes in coordinate syste references");
+                    throw Base::Exception("Too many planes in coordinate syste references");
             } else if (refs[i]->getTypeId().isDerivedFrom(App::Plane::getClassTypeId())) {
                 App::Plane* p = static_cast<App::Plane*>(refs[i]);
                 if(!plane) {
                     gp_Pnt base(0,0,0);
                     gp_Dir dir(0,0,1);
-                    if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[0]) == 0)
+                    if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[0]) == 0)
                         dir = gp_Dir(0,0,1);
-                    else if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[1]) == 0)
+                    else if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[1]) == 0)
                         dir = gp_Dir(0,1,0);
-                    else if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[2]) == 0)
+                    else if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[2]) == 0)
                         dir = gp_Dir(1,0,0);
                     
                     pln = gp_Pln(base, dir);
                     plane=true;
                 }
                 else 
-                    return; //throw Base::Exception("Too many planes in coordinate syste references"); //too much planes selected
+                    throw Base::Exception("Too many planes in coordinate syste references"); //too much planes selected
             }
             else if (refs[i]->getTypeId().isDerivedFrom(PartDesign::Line::getClassTypeId())) {
                 PartDesign::Line* p = static_cast<PartDesign::Line*>(refs[i]);
-                if(!lineX) {
-                    linX = gp_Lin(GP_POINT(p->getBasePoint()), GP_DIR(p->getDirection()));
-                    lineX = true;
+                if(!line1) {
+                    lin1 = gp_Lin(GP_POINT(p->getBasePoint()), GP_DIR(p->getDirection()));
+                    line1 = true;
                 }
-                else if(!lineY) {
-                    linY = gp_Lin(GP_POINT(p->getBasePoint()), GP_DIR(p->getDirection()));
-                    lineY = true;
+                else if(!line2) {
+                    lin2 = gp_Lin(GP_POINT(p->getBasePoint()), GP_DIR(p->getDirection()));
+                    line2 = true;
                 }
                 else 
-                    return; //throw Base::Exception("Too many lines in coordinate syste references");; //too much lines selected
+                    throw Base::Exception("Too many lines in coordinate syste references");; //too much lines selected
                 
             } else if (refs[i]->getTypeId().isDerivedFrom(App::Line::getClassTypeId())) {
                 App::Line* p = static_cast<App::Line*>(refs[i]);
                 gp_Pnt base(0,0,0);
                 gp_Dir dir(0,0,1);
-                if (strcmp(p->getNameInDocument(), App::Part::BaselineTypes[0]) == 0)
+                if (strcmp(p->LineType.getValue(), App::Part::BaselineTypes[0]) == 0)
                     dir = gp_Dir(1,0,0);
-                else if (strcmp(p->getNameInDocument(), App::Part::BaselineTypes[1]) == 0)
+                else if (strcmp(p->LineType.getValue(), App::Part::BaselineTypes[1]) == 0)
                     dir = gp_Dir(0,1,0);
-                else if (strcmp(p->getNameInDocument(), App::Part::BaselineTypes[2]) == 0)
+                else if (strcmp(p->LineType.getValue(), App::Part::BaselineTypes[2]) == 0)
                     dir = gp_Dir(0,0,1);
                 
-                if(!lineX) {    
-                    linX = gp_Lin(base, dir);
-                    lineX=true;
+                if(!line1) {    
+                    lin1 = gp_Lin(base, dir);
+                    line1=true;
                 }
-                else if(!lineY) {    
-                    linY = gp_Lin(base, dir);
-                    lineY=true;
+                else if(!line2) {    
+                    lin2 = gp_Lin(base, dir);
+                    line2=true;
                 }
                 else 
-                    return; //throw Base::Exception("Too many lines in coordinate syste references");
+                    throw Base::Exception("Too many lines in coordinate syste references");
             }
             else if (refs[i]->getTypeId().isDerivedFrom(Part::Feature::getClassTypeId())) {
                 Part::Feature* feature = static_cast<Part::Feature*>(refs[i]);
                 const TopoDS_Shape& sh = feature->Shape.getValue();
                 if (sh.IsNull())
-                    return; //throw Base::Exception("Invalid shape in reference");
+                    throw Base::Exception("Invalid shape in reference");
                 // Get subshape
                 TopoDS_Shape subshape = feature->Shape.getShape().getSubShape(subrefs[i].c_str());
                 if (subshape.IsNull())
-                    return; //throw Base::Exception("Reference has Null shape");
+                    throw Base::Exception("Reference has Null shape");
 
                 if (subshape.ShapeType() == TopAbs_VERTEX) {
                     TopoDS_Vertex v = TopoDS::Vertex(subshape);
 
-                    if(!origin) {
-                        org = BRep_Tool::Pnt(v);
-                        origin=true;
+                    if(!point1) {
+                        p1 = BRep_Tool::Pnt(v);
+                        point1=true;
+                    } else if(!point2) {
+                        p2 = BRep_Tool::Pnt(v);
+                        point2=true;
+                    } else if(!point3) {
+                        p3 = BRep_Tool::Pnt(v);
+                        point3=true;
                     }
                     else 
-                        return; //throw Base::Exception("Too many points in coordinate system references");
+                        throw Base::Exception("Too many points in coordinate system references");
                 }
                 else if (subshape.ShapeType() == TopAbs_EDGE) { 
                     TopoDS_Edge e = TopoDS::Edge(subshape);
                     BRepAdaptor_Curve adapt(e);
                     if (adapt.GetType() != GeomAbs_Line)
-                        return; //throw Base::Exception("Only straight edges are supported");
+                        throw Base::Exception("Only straight edges are supported");
                         
-                    if(!lineX) {    
-                        linX = adapt.Line();
-                        lineX=true;
+                    if(!line1) {    
+                        lin1 = adapt.Line();
+                        line1=true;
                     }
-                    else if(!lineY) {    
-                        linY = adapt.Line();
-                        lineY=true;
+                    else if(!line2) {    
+                        lin2 = adapt.Line();
+                        line2=true;
                     }
                     else 
-                        return; //throw Base::Exception("Too many lines in coordinate system references");           
+                        throw Base::Exception("Too many lines in coordinate system references");           
                         
                 } else if (subshape.ShapeType() == TopAbs_FACE) {
                     TopoDS_Face f = TopoDS::Face(subshape);
@@ -290,10 +449,10 @@ void CoordinateSystem::onChanged(const App::Property *prop)
                             plane     = true;
                         }
                         else 
-                            return; //throw Base::Exception("Too many planes in coordinate system references");
+                            throw Base::Exception("Too many planes in coordinate system references");
                             
                     } else {
-                        return; //throw Base::Exception("Only planar faces allowed");
+                        throw Base::Exception("Only planar faces allowed");
                     }
                 }
             }
@@ -302,40 +461,93 @@ void CoordinateSystem::onChanged(const App::Property *prop)
         };
         
         gp_Ax3 ax;
-        if(origin) {            
-            Base::Vector3d base(org.X(), org.Y(), org.Z());
+        if(point1) {            
             
             if(plane) {
-                if(!pln.Contains(org, Precision::Confusion()))
-                    return; //throw Base::Exception("Point must lie on plane");
+                if(!pln.Contains(p1, Precision::Confusion()))
+                    throw Base::Exception("Point must lie on plane");
                     
-                if(lineX) {
-                    if(!pln.Contains(linX, Precision::Confusion(), Precision::Confusion()))
-                        return; //throw Base::Exception("Line must lie on plane");
+                if(point2) {
+                    if(!pln.Contains(p2, Precision::Confusion()))
+                        throw Base::Exception("Point must lie on plane");
                     
-                    ax = gp_Ax3(org, pln.Axis().Direction(), linX.Direction());         
+                    if(p1.Distance(p2) < Precision::Confusion())
+                        throw Base::Exception("Point must not be coincident");
+                    
+                    ax = gp_Ax3(p1, pln.Axis().Direction(), gp_Dir((p2.XYZ()-p1.XYZ())));
+                }
+                else if(line1) {
+                    if(!pln.Contains(lin1, Precision::Confusion(), Precision::Confusion()))
+                        throw Base::Exception("Line must lie on plane");
+                    
+                    if(line2)
+                        throw Base::Exception("Two lines and a plain are not supportet");
+                    
+                    ax = gp_Ax3(p1, pln.Axis().Direction(), lin1.Direction());         
                 }
                 else {
-                    ax = gp_Ax3(org, pln.Axis().Direction(), pln.XAxis().Direction());
+                    ax = gp_Ax3(p1, pln.Axis().Direction(), pln.XAxis().Direction());
                 }
             }
-            else if(lineX) {
+            else if(line1) {
                 
-                if(lineY) {
-                    if(linY.Angle(linX)<Precision::Angular())
+                if(point2) {
+                    if(!gp_Lin(p1, lin1.Direction()).Contains(p2, Precision::Confusion()))
+                        throw Base::Exception("Second Point must not lie on z-axis");
+                    
+                    if(p1.Distance(p2) < Precision::Confusion())
+                        throw Base::Exception("Points must not be coincident");
+                    
+                    ax = gp_Ax3(p1, lin1.Direction(), gp_Dir((p2.XYZ()-p1.XYZ())));
+                } 
+                else if(line2) {
+                    if(lin2.Angle(lin1)<Precision::Angular())
                         return;
                     
-                    ax = gp_Ax3(org, linX.Direction().Crossed(linY.Direction()), linX.Direction());
-                }
-                else if(!linX.Contains(org, Precision::Confusion())) {
-                    gp_Lin nor = linX.Normal(org);
-                    ax = gp_Ax3(nor.Location(), nor.Direction().Crossed(linX.Direction()), linX.Direction());
+                    ax = gp_Ax3(p1, lin1.Direction(), lin2.Direction());
                 }
                 else 
-                    return;
+                    ax = gp_Ax3(p1, lin1.Direction());
+            }
+            else if(point2) {
+             
+                if(p1.Distance(p2) < Precision::Confusion())
+                        throw Base::Exception("Points must not be coincident");
+                
+                if(point3) {
+                    if(p1.Distance(p3) < 2*Precision::Confusion())
+                        throw Base::Exception("Points must not be coincident");
+                    
+                    ax = gp_Ax3(p1, gp_Dir((p2.XYZ()-p1.XYZ())), gp_Dir((p3.XYZ()-p2.XYZ())));
+                }
+                else {
+                    ax = gp_Ax3(p1, gp_Dir((p2.XYZ()-p1.XYZ())));
+                }
             }
             else
-                ax = gp_Ax3(org, gp_Dir(0,0,1), gp_Dir(1,0,0));
+                ax = gp_Ax3(p1, gp_Dir(0,0,1), gp_Dir(1,0,0));
+        }
+        else if(plane) {
+                
+            if(line1) {
+                if(!pln.Contains(lin1, Precision::Confusion(), Precision::Confusion()))
+                        throw Base::Exception("Line must lie on plane");
+                
+                ax = gp_Ax3(pln.Location(), pln.Axis().Direction(), lin1.Direction());        
+            }
+            else {
+                ax = gp_Ax3(pln.Location(), pln.Axis().Direction(), pln.XAxis().Direction());
+            }            
+        }
+        else if(line1) {
+            
+            if(line2) {
+                if(! (fabs(lin1.Angle(lin2) - M_PI/2.0) < Precision::Angular()) )
+                        throw Base::Exception("Lines must be perpendicular");
+                ax = gp_Ax3(lin1.Location(), lin1.Direction(), lin2.Direction());
+            }
+            else 
+                ax = gp_Ax3(lin1.Location(), lin1.Direction());
         }
             
         //build the placement

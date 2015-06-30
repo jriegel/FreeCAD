@@ -31,6 +31,9 @@
 #include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include <App/Part.h>
+#include <App/Origin.h>
+#include <App/Line.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
@@ -39,6 +42,7 @@
 #include <Base/Console.h>
 #include <Gui/Selection.h>
 #include <Gui/Command.h>
+#include <Gui/ViewProviderOrigin.h>
 #include <Mod/PartDesign/App/DatumLine.h>
 #include <Mod/PartDesign/App/FeatureRevolution.h>
 #include <Mod/Sketcher/App/SketchObject.h>
@@ -90,9 +94,9 @@ TaskRevolutionParameters::TaskRevolutionParameters(ViewProviderRevolution *Revol
 
     int count=pcRevolution->getSketchAxisCount();
 
-    for (int i=ui->axis->count()-1; i >= count+2; i--)
+    for (int i=ui->axis->count()-1; i >= count+5; i--)
         ui->axis->removeItem(i);
-    for (int i=ui->axis->count(); i < count+2; i++)
+    for (int i=ui->axis->count(); i < count+5; i++)
         ui->axis->addItem(QString::fromAscii("Sketch axis %1").arg(i-2));
 
     int pos=-1;
@@ -102,11 +106,20 @@ TaskRevolutionParameters::TaskRevolutionParameters(ViewProviderRevolution *Revol
     if (pcReferenceAxis && pcReferenceAxis == pcRevolution->Sketch.getValue()) {
         assert(subReferenceAxis.size()==1);
         if (subReferenceAxis[0] == "H_Axis")
-            pos = 0;
+            pos = 3;
         else if (subReferenceAxis[0] == "V_Axis")
-            pos = 1;
+            pos = 4;
         else if (subReferenceAxis[0].size() > 4 && subReferenceAxis[0].substr(0,4) == "Axis")
-            pos = 2 + std::atoi(subReferenceAxis[0].substr(4,4000).c_str());
+            pos = 5 + std::atoi(subReferenceAxis[0].substr(4,4000).c_str());
+    }
+    else if(pcReferenceAxis && pcReferenceAxis->isDerivedFrom(App::Line::getClassTypeId())) {
+        
+        if( strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[0])==0)
+            pos=0;
+        else if(strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[1])==0)
+            pos=1;
+        else if(strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[2])==0)
+            pos=2;
     }
 
     if (pos < 0 || pos >= ui->axis->count()) {
@@ -125,6 +138,18 @@ TaskRevolutionParameters::TaskRevolutionParameters(ViewProviderRevolution *Revol
     ui->checkBoxReversed->blockSignals(false);
 
     setFocus ();
+    
+    //show the parts coordinate system axis for selection
+    App::Part* part = getPartFor(vp->getObject(), false);
+    if(part) {        
+        auto app_origin = part->getObjectsOfType(App::Origin::getClassTypeId());
+        if(!app_origin.empty()) {
+            ViewProviderOrigin* origin;
+            origin = static_cast<ViewProviderOrigin*>(Gui::Application::Instance->activeDocument()->getViewProvider(app_origin[0]));
+            origin->setTemporaryVisibilityMode(true, Gui::Application::Instance->activeDocument());
+            origin->setTemporaryVisibilityAxis(true);
+        }            
+     } 
 }
 
 void TaskRevolutionParameters::updateUI()
@@ -140,23 +165,31 @@ void TaskRevolutionParameters::updateUI()
 
     // Add user-defined sketch axes to the reference selection combo box
     Sketcher::SketchObject *pcSketch = static_cast<Sketcher::SketchObject*>(pcRevolution->Sketch.getValue());
-    int maxcount=2;
+    int maxcount=5;
     if (pcSketch)
         maxcount += pcSketch->getAxisCount();
 
-    for (int i=ui->axis->count()-1; i >= 2; i--)
+    for (int i=ui->axis->count()-1; i >= 5; i--)
         ui->axis->removeItem(i);
     for (int i=ui->axis->count(); i < maxcount; i++)
         ui->axis->addItem(QString::fromAscii("Sketch axis %1").arg(i-5));
 
     bool undefined = false;
-    if (pcReferenceAxis != NULL && !sub.empty()) {
-        if (sub.front() == "H_Axis")
+    if (pcReferenceAxis != NULL) {
+        bool is_base_line = pcReferenceAxis->isDerivedFrom(App::Line::getClassTypeId());
+        
+        if(is_base_line && strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[0])==0)
             ui->axis->setCurrentIndex(0);
-        else if (sub.front() == "V_Axis")
+        else if(is_base_line && strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[1])==0)
             ui->axis->setCurrentIndex(1);
-        else if (sub.front().size() > 4 && sub.front().substr(0,4) == "Axis") {
-            int pos = 2 + std::atoi(sub.front().substr(4,4000).c_str());
+        else if(is_base_line && strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[2])==0)
+            ui->axis->setCurrentIndex(2);
+        else if(!sub.empty() && sub.front() == "H_Axis")
+            ui->axis->setCurrentIndex(3);
+        else if(!sub.empty() && sub.front() == "V_Axis")
+            ui->axis->setCurrentIndex(4);
+        else if(!sub.empty() && sub.front().size() > 4 && sub.front().substr(0,4) == "Axis") {
+            int pos = 5 + std::atoi(sub.front().substr(4,4000).c_str());
             if (pos <= maxcount)
                 ui->axis->setCurrentIndex(pos);
             else
@@ -192,7 +225,7 @@ void TaskRevolutionParameters::onSelectionChanged(const Gui::SelectionChanges& m
         }
         else {
             Sketcher::SketchObject *pcSketch = static_cast<Sketcher::SketchObject*>(pcRevolution->Sketch.getValue());
-            int maxcount=2;
+            int maxcount=5;
             if (pcSketch)
                 maxcount += pcSketch->getAxisCount();
             for (int i=ui->axis->count()-1; i >= maxcount; i--)
@@ -227,14 +260,23 @@ void TaskRevolutionParameters::onAxisChanged(int num)
         App::DocumentObject *oldRefAxis = pcRevolution->ReferenceAxis.getValue();
         std::vector<std::string> oldSubRefAxis = pcRevolution->ReferenceAxis.getSubValues();
 
-        int maxcount = pcSketch->getAxisCount()+2;
+        int maxcount = pcSketch->getAxisCount()+5;
         if (num == 0) {
+            pcRevolution->ReferenceAxis.setValue(getPartLines(App::Part::BaselineTypes[0]), std::vector<std::string>(1,""));
+        }
+        else if (num == 1) {
+            pcRevolution->ReferenceAxis.setValue(getPartLines(App::Part::BaselineTypes[1]), std::vector<std::string>(1,""));
+        }
+        else if (num == 2) {
+            pcRevolution->ReferenceAxis.setValue(getPartLines(App::Part::BaselineTypes[2]), std::vector<std::string>(1,""));
+        }
+        else if (num == 3) {
             pcRevolution->ReferenceAxis.setValue(pcSketch, std::vector<std::string>(1,"H_Axis"));
             exitSelectionMode();
-        } else if (num == 1) {
+        } else if (num == 4) {
             pcRevolution->ReferenceAxis.setValue(pcSketch, std::vector<std::string>(1,"V_Axis"));
             exitSelectionMode();
-        } else if (num >= 2 && num < maxcount) {
+        } else if (num >= 5 && num < maxcount) {
             QString buf = QString::fromUtf8("Axis%1").arg(num-2);
             std::string str = buf.toStdString();
             pcRevolution->ReferenceAxis.setValue(pcSketch, std::vector<std::string>(1,str));
@@ -298,17 +340,23 @@ void TaskRevolutionParameters::getReferenceAxis(App::DocumentObject*& obj, std::
     PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(vp->getObject());
     obj = static_cast<Sketcher::SketchObject*>(pcRevolution->Sketch.getValue());
     sub = std::vector<std::string>(1,"");
-    int maxcount=2;
+    int maxcount=5;
     if (obj)
         maxcount += static_cast<Part::Part2DObject*>(obj)->getAxisCount();
 
     if (obj) {
         int num = ui->axis->currentIndex();
-        if (num == 0)
+        if(num  == 0) 
+            obj = getPartLines(App::Part::BaselineTypes[0]);
+        else if(num == 1)
+            obj = getPartLines(App::Part::BaselineTypes[1]);
+        else if(num == 2)
+            obj = getPartLines(App::Part::BaselineTypes[2]);
+        else if (num == 3)
             sub[0] = "H_Axis";
-        else if (num == 1)
+        else if (num == 4)
             sub[0] = "V_Axis";
-        else if (num >= 2  && num < maxcount) {
+        else if (num >= 5  && num < maxcount) {
             QString buf = QString::fromUtf8("Axis%1").arg(num-2);
             sub[0] = buf.toStdString();
         } else if (num == maxcount && ui->axis->count() == maxcount + 2) {
@@ -336,6 +384,17 @@ bool   TaskRevolutionParameters::getReversed(void) const
 
 TaskRevolutionParameters::~TaskRevolutionParameters()
 {
+    //hide the parts coordinate system axis for selection
+    App::Part* part = getPartFor(vp->getObject(), false);
+    if(part) {
+        auto app_origin = part->getObjectsOfType(App::Origin::getClassTypeId());
+        if(!app_origin.empty()) {
+            ViewProviderOrigin* origin;
+            origin = static_cast<ViewProviderOrigin*>(Gui::Application::Instance->activeDocument()->getViewProvider(app_origin[0]));
+            origin->setTemporaryVisibilityMode(false);
+        }            
+    }
+    
     delete ui;
 }
 

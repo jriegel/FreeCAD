@@ -159,7 +159,7 @@ void Line::onChanged(const App::Property *prop)
         std::vector<App::DocumentObject*> refs = References.getValues();
         std::vector<std::string> refnames = References.getSubValues();
         if (refs.size() != refnames.size())
-            return;
+            throw Base::Exception("Reference Missmatch");
 
         for (int r = 0; r < refs.size(); r++)
             refTypes.insert(getRefType(refs[r], refnames[r]));
@@ -212,11 +212,11 @@ void Line::onChanged(const App::Property *prop)
             } else if (refs[i]->getTypeId().isDerivedFrom(App::Line::getClassTypeId())) {
                 App::Line* l = static_cast<App::Line*>(refs[i]);
                 gp_Dir ldir;
-                if (strcmp(l->getNameInDocument(), App::Part::BaselineTypes[0]) == 0)
+                if (strcmp(l->LineType.getValue(), App::Part::BaselineTypes[0]) == 0)
                     ldir = gp_Dir(1,0,0);
-                else if (strcmp(l->getNameInDocument(), App::Part::BaselineTypes[1]) == 0)
+                else if (strcmp(l->LineType.getValue(), App::Part::BaselineTypes[1]) == 0)
                     ldir = gp_Dir(0,1,0);
-                else if (strcmp(l->getNameInDocument(), App::Part::BaselineTypes[2]) == 0)
+                else if (strcmp(l->LineType.getValue(), App::Part::BaselineTypes[2]) == 0)
                     ldir = gp_Dir(0,0,1);
                 
                 if (s1.IsNull()) {
@@ -226,7 +226,7 @@ void Line::onChanged(const App::Property *prop)
                     // Create plane through line normal to s1
                     Handle_Geom_Plane pl = Handle_Geom_Plane::DownCast(s1);
                     if (pl.IsNull())
-                        return; // Non-planar first surface
+                        throw Base::Exception("Non-planar first surface"); // Non-planar first surface
                     gp_Dir normal = ldir.Crossed(pl->Axis().Direction());
                     double offset1 = Offset.getValue();
                     double offset2 = Offset2.getValue();
@@ -259,11 +259,11 @@ void Line::onChanged(const App::Property *prop)
                 // Note: We only handle the three base planes here
                 gp_Pnt base(0,0,0);
                 gp_Dir normal;
-                if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[0]) == 0)
+                if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[0]) == 0)
                     normal = gp_Dir(0,0,1);
-                else if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[2]) == 0)
+                else if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[2]) == 0)
                     normal = gp_Dir(1,0,0);
-                else if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[1]) == 0)
+                else if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[1]) == 0)
                     normal = gp_Dir(0,1,0);
 
                 double offset1 = Offset.getValue();
@@ -375,7 +375,7 @@ void Line::onChanged(const App::Property *prop)
             // Line from two surfaces
             GeomAPI_IntSS intersectorSS(s1, s2, Precision::Confusion());
             if (!intersectorSS.IsDone() || (intersectorSS.NbLines() == 0))
-                return;
+                throw Base::Exception("Intersection of surfaces failed");
             if (intersectorSS.NbLines() > 1)
                 Base::Console().Warning("More than one intersection curve for datum line from surfaces\n");
             Handle_Geom_Line l = Handle_Geom_Line::DownCast(intersectorSS.Line(1));

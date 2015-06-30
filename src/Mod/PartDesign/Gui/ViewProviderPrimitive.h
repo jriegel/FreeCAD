@@ -25,13 +25,12 @@
 #define PARTGUI_ViewProviderPrimitive_H
 
 #include "ViewProvider.h"
+#include "ViewProviderAddSub.h"
 #include <Mod/Part/Gui/SoBrepFaceSet.h>
-
-class SoSwitch;
 
 namespace PartDesignGui {
 
-class PartDesignGuiExport ViewProviderPrimitive : public ViewProvider
+class PartDesignGuiExport ViewProviderPrimitive : public ViewProviderAddSub
 {
     PROPERTY_HEADER(PartDesignGui::ViewProviderPrimitive);
 
@@ -52,7 +51,7 @@ protected:
     
     void updateAddSubShapeIndicator();
     
-    SoSwitch*                   previewSwitch;
+    std::string                 displayMode;
     SoSeparator*                previewShape;
     PartGui::SoBrepFaceSet*     previewFaceSet;
     SoCoordinate3*              previewCoords;

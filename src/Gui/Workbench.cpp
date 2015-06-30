@@ -619,6 +619,14 @@ DockWindowItems* StdWorkbench::setupDockWindows() const
     root->addDockWidget("Std_ReportView", Qt::BottomDockWidgetArea, true, true);
     //root->addDockWidget("Std_TaskPanelView", Qt::RightDockWidgetArea, false, false);
     root->addDockWidget("Std_PythonView", Qt::BottomDockWidgetArea, true, true);
+    
+    //Dagview through parameter.
+    ParameterGrp::handle group = App::GetApplication().GetUserParameter().
+          GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("DAGView");
+    bool enabled = group->GetBool("Enabled", false);
+    if (enabled)
+      root->addDockWidget("Std_DAGView", Qt::RightDockWidgetArea, false, false);
+    
     return root;
 }
 

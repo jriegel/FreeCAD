@@ -205,11 +205,11 @@ void Point::onChanged(const App::Property* prop)
                 // Note: We only handle the three base planes here
                 gp_Pnt base(0,0,0);
                 gp_Dir normal;
-                if (strcmp(l->getNameInDocument(), App::Part::BaselineTypes[0]) == 0)
+                if (strcmp(l->LineType.getValue(), App::Part::BaselineTypes[0]) == 0)
                     normal = gp_Dir(1,0,0);
-                else if (strcmp(l->getNameInDocument(), App::Part::BaselineTypes[1]) == 0)
+                else if (strcmp(l->LineType.getValue(), App::Part::BaselineTypes[1]) == 0)
                     normal = gp_Dir(0,1,0);
-                else if (strcmp(l->getNameInDocument(), App::Part::BaselineTypes[2]) == 0)
+                else if (strcmp(l->LineType.getValue(), App::Part::BaselineTypes[2]) == 0)
                     normal = gp_Dir(0,0,1);
 
                 if (s1.IsNull())
@@ -222,11 +222,11 @@ void Point::onChanged(const App::Property* prop)
                 // Note: We only handle the three base planes here
                 gp_Pnt base(0,0,0);
                 gp_Dir normal;
-                if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[0]) == 0)
+                if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[0]) == 0)
                     normal = gp_Dir(0,0,1);
-                else if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[2]) == 0)
+                else if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[2]) == 0)
                     normal = gp_Dir(1,0,0);
-                else if (strcmp(p->getNameInDocument(), App::Part::BaseplaneTypes[1]) == 0)
+                else if (strcmp(p->PlaneType.getValue(), App::Part::BaseplaneTypes[1]) == 0)
                     normal = gp_Dir(0,1,0);
 
                 if (s1.IsNull())
@@ -310,7 +310,7 @@ void Point::onChanged(const App::Property* prop)
                 // Point from intersection of two curves                                    
                 GeomAPI_ExtremaCurveCurve intersector(c1, c2);
                 if ((intersector.LowerDistance() > Precision::Confusion()) || (intersector.NbExtrema() == 0))
-                    return; // No intersection
+                    throw Base::Exception("Curve-Curve intersection failed"); // No intersection
                 // Note: We don't check for multiple intersection points
                 gp_Pnt p, p2;
                 intersector.Points(1, p, p2);
@@ -330,7 +330,7 @@ void Point::onChanged(const App::Property* prop)
                     // Intersect again
                     intersector = GeomAPI_ExtremaCurveCurve(c1, c2);
                     if ((intersector.LowerDistance() > Precision::Confusion()) || (intersector.NbExtrema() == 0))
-                        return; // No intersection
+                        throw Base::Exception("Curve-Curve intersection failed"); // No intersection
                     // Note: We don't check for multiple intersection points
                     intersector.Points(1, p, p2);
                 }
@@ -339,7 +339,7 @@ void Point::onChanged(const App::Property* prop)
             } else if (!s1.IsNull()) {
                 GeomAPI_IntCS intersector(c1, s1);
                 if (!intersector.IsDone() || (intersector.NbPoints() == 0))
-                    return;
+                    throw Base::Exception("Curve-Surface intersection failed");
                 if (intersector.NbPoints() > 1)
                     Base::Console().Warning("More than one intersection point for datum point from curve and surface\n");
 

@@ -71,6 +71,8 @@
 #include <Base/Exception.h>
 #include <Base/Parameter.h>
 #include <App/Application.h>
+#include <App/Line.h>
+#include <App/Part.h>
 #include <Mod/Part/App/modelRefine.h>
 #include "FeatureSketchBased.h"
 #include "DatumPlane.h"
@@ -1052,11 +1054,26 @@ void SketchBased::getAxis(const App::DocumentObject *pcReferenceAxis, const std:
         base = line->getBasePoint();
         dir = line->getDirection();
 
-        // Check that axis is co-planar with sketch plane!
-        if (!sketchplane.Contains(gp_Lin(gp_Pnt(base.x, base.y, base.z), gp_Dir(dir.x, dir.y, dir.z)), Precision::Confusion(), Precision::Confusion()))
-            throw Base::Exception("Rotation axis must be coplanar with the sketch plane");
-    } else if (pcReferenceAxis->getTypeId().isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
-        if (subReferenceAxis[0].empty())
+        // Check that axis is perpendicular with sketch plane!
+        if (sketchplane.Axis().Direction().Angle(gp_Dir(dir.x, dir.y, dir.z))< Precision::Angular())
+             throw Base::Exception("Rotation axis must not be perpendicular with the sketch plane");
+    }
+    else if (pcReferenceAxis->getTypeId().isDerivedFrom(App::Line::getClassTypeId())) {
+        const App::Line* line = static_cast<const App::Line*>(pcReferenceAxis);
+        base = Base::Vector3d(0,0,0);
+        if( strcmp(line->LineType.getValue(), App::Part::BaselineTypes[0]) == 0)
+            dir = Base::Vector3d(1,0,0);
+        else if( strcmp(line->LineType.getValue(), App::Part::BaselineTypes[1]) == 0)
+            dir = Base::Vector3d(0,1,0);
+        else if( strcmp(line->LineType.getValue(), App::Part::BaselineTypes[2]) == 0)
+            dir = Base::Vector3d(0,0,1);
+
+        // Check that axis is perpendicular with sketch plane!
+        if (sketchplane.Axis().Direction().Angle(gp_Dir(dir.x, dir.y, dir.z)) < Precision::Angular())
+             throw Base::Exception("Rotation axis must not be perpendicular with the sketch plane");
+    }
+    else if (pcReferenceAxis->getTypeId().isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
+        if (subReferenceAxis.empty())
             throw Base::Exception("No rotation axis reference specified");
         const Part::Feature* refFeature = static_cast<const Part::Feature*>(pcReferenceAxis);
         Part::TopoShape refShape = refFeature->Shape.getShape();
@@ -1075,8 +1092,9 @@ void SketchBased::getAxis(const App::DocumentObject *pcReferenceAxis, const std:
             gp_Dir d = adapt.Line().Direction();
             dir = Base::Vector3d(d.X(), d.Y(), d.Z());
             // Check that axis is co-planar with sketch plane!
-            if (!sketchplane.Contains(adapt.Line(), Precision::Confusion(), Precision::Confusion()))
-                throw Base::Exception("Rotation axis must be coplanar with the sketch plane");
+            // Check that axis is perpendicular with sketch plane!
+            if (sketchplane.Axis().Direction().Angle(d) < Precision::Angular())
+                throw Base::Exception("Rotation axis must not be perpendicular with the sketch plane");
         } else {
             throw Base::Exception("Rotation reference must be an edge");
         }

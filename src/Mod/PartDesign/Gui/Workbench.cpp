@@ -74,7 +74,7 @@ namespace PartDesignGui {
 
 PartDesign::Body *getBody(bool messageIfNot)
 {
-	PartDesign::Body * activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
+    PartDesign::Body * activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
 
     if (!activeBody && messageIfNot){
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("No active Body"),
@@ -84,9 +84,58 @@ PartDesign::Body *getBody(bool messageIfNot)
                         "PartDesign to put them into a Body."
                         ));
     }
-	return activeBody;
+    return activeBody;
 
 }
+
+PartDesign::Body *getBodyFor(App::DocumentObject* obj, bool messageIfNot)
+{
+    if(!obj)
+        return nullptr;
+    
+    PartDesign::Body * activeBody = Gui::Application::Instance->activeView()->getActiveObject<PartDesign::Body*>(PDBODYKEY);
+    if(activeBody && activeBody->hasFeature(obj))
+        return activeBody;
+
+    //try to find the part the object is in
+    for(PartDesign::Body* b : obj->getDocument()->getObjectsOfType<PartDesign::Body>()) {
+        if(b->hasFeature(obj)) {
+            return b;
+        }            
+    }
+        
+    if (messageIfNot){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Feature is not in a body"),
+            QObject::tr("In order to use this feature it needs to belong to a body object in the document."));
+    }
+    
+    return nullptr;
+}
+
+App::Part* getPartFor(App::DocumentObject* obj, bool messageIfNot) {
+
+    if(!obj)
+        return nullptr;
+    
+    PartDesign::Body* body = getBodyFor(obj, false);
+    if(body)
+        obj = body;
+    
+    //get the part every body should belong to
+    for(App::Part* p : obj->getDocument()->getObjectsOfType<App::Part>()) {
+        if(p->hasObject(obj)) {
+            return p;
+        }            
+    }
+    
+    if (messageIfNot){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Feature is not in a part"),
+            QObject::tr("In order to use this feature it needs to belong to a part object in the document."));
+    }
+    
+    return nullptr;
+}
+
 
 }
 
@@ -602,6 +651,10 @@ void Workbench::activated()
         "PartDesign_Pocket",
         "PartDesign_Revolution",
         "PartDesign_Groove",
+        "PartDesign_AdditivePipe",
+        "PartDesign_SubtractivePipe",
+        "PartDesign_AdditiveLoft",
+        "PartDesign_SubtractiveLoft",
         0};
     Watcher.push_back(new Gui::TaskView::TaskWatcherCommands(
         "SELECT Sketcher::SketchObject COUNT 1",
@@ -677,7 +730,8 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     Gui::MenuItem* part = new Gui::MenuItem;
     root->insertItem(item, part);
     part->setCommand("&Part Design");
-    *part << "PartDesign_Body"
+    *part << "PartDesign_Part"
+          << "PartDesign_Body"
           << "PartDesign_NewSketch"
           << "Sketcher_LeaveSketch"
           << "Sketcher_ViewSketch"
@@ -695,6 +749,10 @@ Gui::MenuItem* Workbench::setupMenuBar() const
           << "PartDesign_Pocket"
           << "PartDesign_Revolution"
           << "PartDesign_Groove"
+          << "PartDesign_AdditivePipe"
+          << "PartDesign_SubtractivePipe"
+          << "PartDesign_AdditiveLoft"
+          << "PartDesign_SubtractiveLoft"
           << "PartDesign_Fillet"
           << "PartDesign_Chamfer"
           << "PartDesign_Draft"
@@ -732,7 +790,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
     Gui::ToolBarItem* root = StdWorkbench::setupToolBars();
     Gui::ToolBarItem* part = new Gui::ToolBarItem(root);
     part->setCommand("Part Design");
-    *part << "PartDesign_Body"
+    *part << "PartDesign_Part"
+          << "PartDesign_Body"
           << "PartDesign_NewSketch"
           << "Sketcher_ViewSketch"
           << "Sketcher_MapSketch"
@@ -749,6 +808,10 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
           << "PartDesign_Pocket"
           << "PartDesign_Revolution"
           << "PartDesign_Groove"
+          << "PartDesign_AdditivePipe"
+          << "PartDesign_SubtractivePipe"
+          << "PartDesign_AdditiveLoft"
+          << "PartDesign_SubtractiveLoft"
           << "PartDesign_Fillet"
           << "PartDesign_Chamfer"
           << "PartDesign_Draft"
