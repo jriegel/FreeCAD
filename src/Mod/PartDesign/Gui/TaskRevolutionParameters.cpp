@@ -452,7 +452,11 @@ bool TaskDlgRevolutionParameters::accept()
     App::DocumentObject* support = 0;
     if (revolve->getTypeId().isDerivedFrom(PartDesign::Revolution::getClassTypeId())) {
         sketch = static_cast<PartDesign::Revolution*>(revolve)->Sketch.getValue();
-        support = static_cast<PartDesign::Revolution*>(revolve)->getBaseObject();
+        try{//throws if no base
+            support = static_cast<PartDesign::Revolution*>(revolve)->getBaseObject();
+        } catch (Base::Exception) {
+            support = NULL;
+        }
     }
 
     //Gui::Command::openCommand("Revolution changed");
