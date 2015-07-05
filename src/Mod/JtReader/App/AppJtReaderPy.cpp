@@ -42,6 +42,7 @@
 
 #include "TestJtReader.h"
 #include "JcadLibReader.h"
+#include "App/Part.h"
 
 using std::vector;
 using namespace MeshCore;
@@ -88,6 +89,8 @@ static PyObject * read(PyObject *self, PyObject *args)
 	Py_Return;    
 }
 
+#ifdef USECPPVERSION 
+
 static PyObject *
 open(PyObject *self, PyObject *args)
 {
@@ -114,40 +117,6 @@ open(PyObject *self, PyObject *args)
 		reader.setFile(EncodedName.c_str());
 
 		reader.read();
-
-
-        // create new document and add Import feature
-       // App::Document *pcDoc = App::GetApplication().newDocument("Unnamed");
-       // Mesh::Feature *pcFeature = (Mesh::Feature*)pcDoc->addObject("Mesh::Feature",file.fileNamePure().c_str());
-       //   
-       // std::auto_ptr<MeshCore::MeshKernel> apcKernel(new MeshCore::MeshKernel());
-
-       // readFile(EncodedName.c_str(),0);
-
-       // vector<MeshGeomFacet> facets;
-       // facets.resize(iterSize());
-
-       // const SimpleMeshFacet* It=iterStart();
-       // int i=0;
-       // while(It=iterGetNext())
-       // {
-       //     facets[i]._aclPoints[0].x = It->p1[0];
-       //     facets[i]._aclPoints[0].y = It->p1[1];
-       //     facets[i]._aclPoints[0].z = It->p1[2];
-       //     facets[i]._aclPoints[1].x = It->p2[0];
-       //     facets[i]._aclPoints[1].y = It->p2[1];
-       //     facets[i]._aclPoints[1].z = It->p2[2];
-       //     facets[i]._aclPoints[2].x = It->p3[0];
-       //     facets[i]._aclPoints[2].y = It->p3[1];
-       //     facets[i]._aclPoints[2].z = It->p3[2];
-       //     i++;
-       // }
-       // clearData();
-       // (*apcKernel) = facets; 
-       // pcFeature->Mesh.setValue(*(apcKernel.get()));
-
-       ////pcFeature->FileName.setValue( Name );
-       // pcDoc->recompute();
     }
     else
     {
@@ -160,6 +129,88 @@ open(PyObject *self, PyObject *args)
 	Py_Return;    
 }
 
+#else 
+
+static PyObject *
+open(PyObject *self, PyObject *args)
+{
+    char* Name;
+    if (!PyArg_ParseTuple(args, "et", "utf-8", &Name))
+        return NULL;
+    std::string EncodedName = std::string(Name);
+    PyMem_Free(Name);
+
+    PY_TRY{
+
+        //Base::Console().Log("Open in Mesh with %s",Name);
+        Base::FileInfo file(EncodedName.c_str());
+
+        // extract ending
+        if (file.extension() == "")
+            Py_Error(Base::BaseExceptionFreeCADError, "no file ending");
+
+        if (file.hasExtension("jt"))
+        {
+
+            // create new document
+            App::Document *pcDoc = App::GetApplication().newDocument("Unnamed");
+
+            App::Part *pcPart = static_cast<App::Part*>(pcDoc->addObject("App::Part", "Jt-Part"));
+            pcPart->Label.setValue(EncodedName);
+
+
+
+            JcadLibReader reader;
+
+            reader.read(EncodedName.c_str());
+
+            int faceCount = reader.getFaceCount();
+
+            for (int i = 0; i < faceCount;i++){
+
+                const JcadLibReader::Buffer &buf = reader.getBuffer(i);
+
+
+                MeshPointArray meshPoints;// (buf.Vertexes.size());
+                MeshFacetArray meshFacets;// (buf.Indexes.size() / 3);
+
+                for (auto verts : buf.Vertexes){
+                    meshPoints.push_back(MeshPoint(Base::Vector3f(verts.vec[0], verts.vec[1], verts.vec[2])));
+                }
+                for (std::vector<int32_t>::const_iterator it = buf.Indexes.begin(); it != buf.Indexes.end(); it += 3){
+                    meshFacets.push_back(MeshFacet(*it, *(it + 1), *(it + 2)));
+                }
+
+                MeshKernel tmp;
+                tmp.Adopt(meshPoints, meshFacets, true);
+
+                App::Document *doc = pcPart->getDocument();
+                App::DocumentObject *obj = doc->addObject("Mesh::Feature", reader.getName(i).toStdString().c_str());
+
+                pcPart->addObject(obj);
+
+                Mesh::Feature *meshObj = dynamic_cast<Mesh::Feature*>(obj);
+
+                meshObj->Mesh.setValue(tmp);
+
+            }
+
+
+            Base::Console().Message(reader.getLog().toStdString().c_str());
+
+        }
+        else
+        {
+            Py_Error(Base::BaseExceptionFreeCADError, "unknown file ending");
+        }
+
+
+    } PY_CATCH;
+
+    Py_Return;
+}
+
+#endif
 
 /* module functions */
 static PyObject *
@@ -254,9 +305,11 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
 
         reader.read(Utf8Name.c_str());
 
-        if (reader.getFaceCount() == 1){
+        int faceCount = reader.getFaceCount();
 
-            const JcadLibReader::Buffer &buf = reader.getBuffer(0);
+        for (int i = 0; i < faceCount; i++){
+
+            const JcadLibReader::Buffer &buf = reader.getBuffer(i);
 
 
             MeshPointArray meshPoints;// (buf.Vertexes.size());
@@ -273,7 +326,7 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
             tmp.Adopt(meshPoints, meshFacets,true);
 
             App::Document *doc = Part->getDocument();
-            App::DocumentObject *obj = doc->addObject("Mesh::Feature", reader.getName(0).toStdString().c_str());
+            App::DocumentObject *obj = doc->addObject("Mesh::Feature", reader.getName(i).toStdString().c_str());
 
             Part->addObject(obj);
 

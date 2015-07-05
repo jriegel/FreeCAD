@@ -54,6 +54,9 @@ namespace App
 {
 
 /** Graph book keeping class for the document
+  * This class deals with all kind of stuff related to DAGs
+  * Most CAD systems and formats are working with DAGs to descripe
+  * Assemblies and more complicated Designs. 
  */
 class AppExport DocumentGraph
 {

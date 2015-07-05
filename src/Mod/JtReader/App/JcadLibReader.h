@@ -50,7 +50,7 @@ public:
     };
 
     int getFaceCount() const{ return Faces.size(); }
-    const Buffer& getBuffer(int n)const { return Faces[0]; }
+    const Buffer& getBuffer(int n)const { return Faces[n]; }
     const QString& getName(int n)const { return Names[n]; }
 
 protected:
