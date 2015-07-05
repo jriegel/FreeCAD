@@ -109,9 +109,10 @@ SketchObject::~SketchObject()
 App::DocumentObjectExecReturn *SketchObject::execute(void)
 {
     try {
-        App::DocumentObject* support = Support.getValue();
-        if (support)
-            this->positionBySupport();
+        App::DocumentObjectExecReturn* rtn = Part2DObject::execute();//to positionBySupport
+        if(rtn!=App::DocumentObject::StdReturn)
+            //error
+            return rtn;
     }
     catch (const Base::Exception& e) {
         return new App::DocumentObjectExecReturn(e.what());

@@ -99,12 +99,7 @@ App::DocumentObjectExecReturn *Revolution::execute(void)
         base = getBaseShape();
     } catch (const Base::Exception&) {
         // fall back to support (for legacy features)
-        try {
-            base = getSupportShape();
-        } catch (const Base::Exception&) {
-            // ignore, because support isn't mandatory
-            base = TopoDS_Shape();
-        }
+        base = TopoDS_Shape();
     }
 
     // update Axis from ReferenceAxis
@@ -129,7 +124,7 @@ App::DocumentObjectExecReturn *Revolution::execute(void)
             sketchshape.Move(loc);
         }
 
-        this->positionBySketch();
+        this->positionByPrevious();
         TopLoc_Location invObjLoc = this->getLocation().Inverted();
         pnt.Transform(invObjLoc.Transformation());
         dir.Transform(invObjLoc.Transformation());

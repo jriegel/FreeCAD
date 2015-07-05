@@ -56,10 +56,12 @@ public:
 
     short mustExecute() const;
 
-    /** calculates and updates the Placement property based on the Sketch
-     *  or its support if it has one
-      */
-    void positionBySketch(void);
+    /** calculates and updates the Placement property based on the features
+     * this one is made from: either from Base, if there is one, or from sketch,
+     * if there is no base.
+     */
+    void positionByPrevious(void);
+
     /** applies a transform on the Placement of the Sketch or its
      *  support if it has one
       */
@@ -71,13 +73,11 @@ public:
     std::vector<TopoDS_Wire> getSketchWires() const;
     /// Returns the face of the sketch support (if any)
     const TopoDS_Face getSupportFace() const;    
-    /// Returns the sketch support shape (if any)
-    const TopoDS_Shape& getSupportShape() const;
-    /// Check whether the sketch support is a datum plane
-    bool isSupportDatum() const;
 
     /// retrieves the number of axes in the linked sketch (defined as construction lines)
     int getSketchAxisCount(void) const;    
+
+    virtual Part::Feature* getBaseObject() const;
 
 protected:
     void onChanged(const App::Property* prop);

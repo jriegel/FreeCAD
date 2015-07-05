@@ -106,13 +106,7 @@ App::DocumentObjectExecReturn *Pad::execute(void)
     try {
         base = getBaseShape();
     } catch (const Base::Exception&) {
-        try {
-            // fall back to support (for legacy features)
-            base = getSupportShape();
-        } catch (const Base::Exception&) {
-            // ignore, because support isn't mandatory
-            base = TopoDS_Shape();
-        }
+        base = TopoDS_Shape();
     }
 
 /*
@@ -146,7 +140,7 @@ App::DocumentObjectExecReturn *Pad::execute(void)
     SketchOrientation.multVec(SketchVector,SketchVector);
 
     try {
-        this->positionBySketch();
+        this->positionByPrevious();
         TopLoc_Location invObjLoc = this->getLocation().Inverted();
 
         base.Move(invObjLoc);
