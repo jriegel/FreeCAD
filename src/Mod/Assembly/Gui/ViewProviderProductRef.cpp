@@ -46,7 +46,7 @@ PROPERTY_SOURCE(AssemblyGui::ViewProviderProductRef,AssemblyGui::ViewProviderIte
 
 ViewProviderProductRef::ViewProviderProductRef()
 {
-  sPixmap = "Assembly_Assembly_Tree.svg";
+  sPixmap = "Assembly_Reference.svg";
 }
 
 ViewProviderProductRef::~ViewProviderProductRef()

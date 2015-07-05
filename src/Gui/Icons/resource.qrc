@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/icons">
+        <file>Part_icon.svg</file>
         <file>freecadsplash.png</file>
         <file>background.png</file>
         <file>mouse_pointer.svg</file>

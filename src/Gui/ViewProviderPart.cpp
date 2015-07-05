@@ -63,6 +63,8 @@ PROPERTY_SOURCE(Gui::ViewProviderPart, Gui::ViewProviderGeometryObject)
 ViewProviderPart::ViewProviderPart() 
 {
     ADD_PROPERTY(Workbench,("PartDesignWorkbench"));
+    sPixmap = "Part_icon.svg";
+
 }
 
 ViewProviderPart::~ViewProviderPart()
@@ -196,17 +198,26 @@ void ViewProviderPart::Restore(Base::XMLReader &reader)
 }
 
 
+///**
+// * Returns the pixmap for the list item.
+// */
+//QIcon ViewProviderPart::getIcon() const
+//{
+//    QIcon groupIcon;
+//    groupIcon.addPixmap(QApplication::style()->standardPixmap(QStyle::SP_DirClosedIcon),
+//                        QIcon::Normal, QIcon::Off);
+//    groupIcon.addPixmap(QApplication::style()->standardPixmap(QStyle::SP_DirOpenIcon),
+//                        QIcon::Normal, QIcon::On);
+//    return groupIcon;
+//}
+
 /**
  * Returns the pixmap for the list item.
  */
 QIcon ViewProviderPart::getIcon() const
 {
-    QIcon groupIcon;
-    groupIcon.addPixmap(QApplication::style()->standardPixmap(QStyle::SP_DirClosedIcon),
-                        QIcon::Normal, QIcon::Off);
-    groupIcon.addPixmap(QApplication::style()->standardPixmap(QStyle::SP_DirOpenIcon),
-                        QIcon::Normal, QIcon::On);
-    return groupIcon;
+    //return QIcon(Gui::BitmapFactory().pixmap("Part_icon.svg"));
+    return QIcon(QString::fromUtf8(":/icons/Part_icon.svg"));
 }
 
 void ViewProviderPart::setUpPart(const App::Part *part)
