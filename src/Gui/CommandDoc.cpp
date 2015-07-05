@@ -1088,9 +1088,10 @@ void StdCmdDelete::activated(int iMsg)
                     bodyMessageStream << qApp->translate("Std_Delete",
                                                          "The following, referencing objects might break.\n\n"
                                                          "Are you sure you want to continue?\n\n");
-                    for (unsigned int a = 0; a < sizeof(affectedLabels)/sizeof(affectedLabels[0]); a = a + 1)
-                      bodyMessageStream << affectedLabels[a] << '\n';
-                    
+					for (auto i : affectedLabels)
+						bodyMessageStream << i << "\n";
+					
+            
                     int ret = QMessageBox::question(Gui::getMainWindow(),
                         qApp->translate("Std_Delete", "Object dependencies"), bodyMessage,
                         QMessageBox::Yes, QMessageBox::No);
