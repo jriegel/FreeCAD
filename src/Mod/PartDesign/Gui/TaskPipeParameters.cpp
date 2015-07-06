@@ -64,7 +64,7 @@ using namespace Gui;
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView,bool newObj, QWidget *parent)
-    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_Pipe",tr("Pipe parameters"))
+    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_Additive_Pipe",tr("Pipe parameters"))
 {
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
@@ -291,7 +291,7 @@ void TaskPipeParameters::exitSelectionMode() {
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool newObj, QWidget* parent)
-    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_Pipe", tr("Section orientation")) {
+    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_Additive_Pipe", tr("Section orientation")) {
 
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
@@ -534,7 +534,7 @@ void TaskPipeOrientation::updateUI(int idx) {
 // Task Scaling
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 TaskPipeScaling::TaskPipeScaling(ViewProviderPipe* PipeView, bool newObj, QWidget* parent)
-    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_Pipe", tr("Section transformation")) {
+    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_Additive_Pipe", tr("Section transformation")) {
 
             // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
