@@ -111,6 +111,8 @@ void SoBrepPointSet::renderShape(const SoGLCoordinateElement * const coords,
                                  int numindices)
 {
     const SbVec3f * coords3d = coords->getArrayPtr3();
+    if(coords3d == nullptr)
+        return;
 
     int previ;
     const int32_t *end = cindices + numindices;
