@@ -1615,13 +1615,20 @@ void Document::_addObject(DocumentObject* pcObject, const char* pObjectName)
 }
 
 /// Remove an object out of the document
-void Document::remObject(const char* sName)
+void Document::remObject(const char* sName, bool forceIfUndeletable)
 {
     std::map<std::string,DocumentObject*>::iterator pos = d->objectMap.find(sName);
 
     // name not found?
     if (pos == d->objectMap.end())
         return;
+    
+    // undeletable?
+    if (pos->second->testStatus(ObjectStatus::Undeletable) && !forceIfUndeletable) {
+        std::stringstream str;
+        str << "Document object '" << pos->second->getNameInDocument() << "' is undeletable";
+        throw Base::Exception(str.str());
+    }
 
     _checkTransaction(pos->second);
 
@@ -1685,7 +1692,7 @@ void Document::_remObject(DocumentObject* pcObject)
     _checkTransaction(pcObject);
 
     std::map<std::string,DocumentObject*>::iterator pos = d->objectMap.find(pcObject->getNameInDocument());
-
+    
     if (d->activeObject == pcObject)
         d->activeObject = 0;
 
