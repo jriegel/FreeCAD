@@ -1038,6 +1038,19 @@ void StdCmdDelete::activated(int iMsg)
                 for (std::vector<Gui::SelectionObject>::iterator ft = sel.begin(); ft != sel.end(); ++ft) {
                     App::DocumentObject* obj = ft->getObject();
                     Gui::ViewProvider* vp = pGuiDoc->getViewProvider(ft->getObject());
+                    
+                    if (obj->testStatus(App::ObjectStatus::Undeletable)) {
+                        QString bodyMessage;
+                        QTextStream bodyMessageStream(&bodyMessage);
+                        bodyMessageStream << qApp->translate("Std_Delete",
+                                                            "The object is marked as undeletable.");
+                                               
+                        QMessageBox::warning(Gui::getMainWindow(),
+                            qApp->translate("Std_Delete", "Object status"), bodyMessage);
+                        
+                        return;
+                    }
+                    
                     if (vp == vpedit) {
                         if (!ft->getSubNames().empty()) {
                             // handle the view provider
@@ -1061,6 +1074,19 @@ void StdCmdDelete::activated(int iMsg)
                     App::DocumentObject* obj = ft->getObject();
                     Gui::ViewProvider* vp = pGuiDoc->getViewProvider(ft->getObject());
                     std::vector<App::DocumentObject*> links = obj->getInList();
+                    
+                    if (obj->testStatus(App::ObjectStatus::Undeletable)) {
+                        QString bodyMessage;
+                        QTextStream bodyMessageStream(&bodyMessage);
+                        bodyMessageStream << qApp->translate("Std_Delete",
+                                                            "The object is marked as undeletable.");
+                                               
+                        QMessageBox::warning(Gui::getMainWindow(),
+                            qApp->translate("Std_Delete", "Object status"), bodyMessage);
+                        
+                        return;
+                    }
+                    
                     if (!links.empty()) {
                         // check if the referenced objects are groups or are selected too
                         for (std::vector<App::DocumentObject*>::iterator lt = links.begin(); lt != links.end(); ++lt) {
