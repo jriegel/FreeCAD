@@ -7,7 +7,7 @@ if "%1"=="" (
     goto:eof
 )
 rem  set the aprobiated Variables here or outside in the system
-if NOT DEFINED VCDIR set VCDIR=C:\Program Files\Microsoft Visual Studio 9.0
+if NOT DEFINED VCDIR set VCDIR=C:\Program Files (x86)\Microsoft Visual Studio 12.0
 
 rem Register VS Build programms
 call "%VCDIR%\VC\vcvarsall.bat"
@@ -16,6 +16,9 @@ rem "C:\Program Files\TortoiseSVN\bin\TortoiseProc.exe" /command:update /path:"C
 
 
 rem Start the Visuall Studio build process
-"%VCDIR%\VC\vcpackages\vcbuild.exe" FreeCAD_trunk.sln "Debug|Win32" 
-"%VCDIR%\VC\vcpackages\vcbuild.exe" FreeCAD_trunk.sln "Debug|Win32" 
-"%VCDIR%\VC\vcpackages\vcbuild.exe" FreeCAD_trunk.sln "Release|Win32" 
+msbuild.exe build\FreeCAD_trunk.sln /m /p:Configuration="Debug" 
+msbuild.exe build\FreeCAD_trunk.sln /m /p:Configuration="Debug" 
+msbuild.exe build\FreeCAD_trunk.sln /m /p:Configuration="Release" 
+
+PAUSE
+
