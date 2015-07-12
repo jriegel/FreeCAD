@@ -350,8 +350,8 @@ void Workbench::fixSketchSupport (Sketcher::SketchObject* sketch)
     Base::Rotation rot = plm.getRotation();
     Base::Vector3d sketchVector(0,0,1);
     rot.multVec(sketchVector, sketchVector);
-    std::string  side = (sketchVector.x + sketchVector.y + sketchVector.z) < 0.0 ? "back" : "front";
-    if (side == "back") sketchVector *= -1.0;
+    bool reverseSketch = (sketchVector.x + sketchVector.y + sketchVector.z) < 0.0 ;
+    if (reverseSketch) sketchVector *= -1.0;
     int index;
 
     if (sketchVector == Base::Vector3d(0,0,1))
@@ -370,8 +370,10 @@ void Workbench::fixSketchSupport (Sketcher::SketchObject* sketch)
 
     if (fabs(offset) < Precision::Confusion()) {
         // One of the base planes
-        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.Support = (App.activeDocument().%s,['%s'])",
-                sketch->getNameInDocument(), App::Part::BaseplaneTypes[index], side.c_str());
+        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.Support = (App.activeDocument().%s,[''])",
+                sketch->getNameInDocument(), App::Part::BaseplaneTypes[index]);
+        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.MapReversed = %s",
+                sketch->getNameInDocument(), reverseSketch ? "True" : "False");
         Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.MapMode = '%s'",
                 sketch->getNameInDocument(), Attacher::AttachEngine::eMapModeStrings[Attacher::mmFlatFace]);
 
@@ -386,14 +388,16 @@ void Workbench::fixSketchSupport (Sketcher::SketchObject* sketch)
         Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().addObject('PartDesign::Plane','%s')",Datum.c_str());
         QString refStr = QString::fromAscii("[(App.activeDocument().") + QString::fromAscii(App::Part::BaseplaneTypes[index]) +
             QString::fromAscii(",'')]");
-        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.References = %s",Datum.c_str(), refStr.toStdString().c_str());
-        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.Offset = %f",Datum.c_str(), offset);
-        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.Angle = 0.0",Datum.c_str());
+        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.Support = %s",Datum.c_str(), refStr.toStdString().c_str());
+        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.MapMode = '%s'",Datum.c_str(), AttachEngine::eMapModeStrings[Attacher::mmFlatFace]);
+        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.superPlacement.Base.z = %f",Datum.c_str(), offset);
         Gui::Command::doCommand(Gui::Command::Doc,
                 "App.activeDocument().%s.insertFeature(App.activeDocument().%s, App.activeDocument().%s)",
                 body->getNameInDocument(), Datum.c_str(), sketch->getNameInDocument());
-        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.Support = (App.activeDocument().%s,['%s'])",
-                sketch->getNameInDocument(), Datum.c_str(), side.c_str());
+        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.Support = (App.activeDocument().%s,[''])",
+                sketch->getNameInDocument(), Datum.c_str());
+        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.MapReversed = %s",
+                sketch->getNameInDocument(), reverseSketch ? "True" : "False");
         Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.MapMode = '%s'",
                 sketch->getNameInDocument(),Attacher::AttachEngine::eMapModeStrings[Attacher::mmFlatFace]);
         Gui::Command::doCommand(Gui::Command::Gui,"App.activeDocument().recompute()");  // recompute the feature based on its references
@@ -635,6 +639,7 @@ void Workbench::activated()
 
     const char* NoSel[] = {
         "PartDesign_Body",
+        "PartDesign_Part",
         0};
     Watcher.push_back(new Gui::TaskView::TaskWatcherCommandsEmptySelection(
         NoSel,
@@ -775,7 +780,7 @@ Gui::MenuItem* Workbench::setupMenuBar() const
           << "Separator"
           << "PartDesign_Boolean"
           << "Separator"
-          << "PartDesign_Hole"
+          //<< "PartDesign_Hole"
           << "PartDesign_InvoluteGear";
     // For 0.13 a couple of python packages like numpy, matplotlib and others
     // are not deployed with the installer on Windows. Thus, the WizardShaft is

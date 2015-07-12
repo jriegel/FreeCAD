@@ -43,34 +43,36 @@ INSTALL(
         
 )
 
-SET(WizardShaft_SRCS
-        WizardShaft/__init__.py
-        WizardShaft/WizardShaft.svg
-        WizardShaft/WizardShaft.py
-        WizardShaft/WizardShaftTable.py
-        WizardShaft/Shaft.py
-        WizardShaft/ShaftFeature.py
-        WizardShaft/ShaftDiagram.py
-        WizardShaft/SegmentFunction.py
-)
-SOURCE_GROUP("wizardshaft" FILES ${WizardShaft_SRCS})
+if(BUILD_FEM)
+    SET(WizardShaft_SRCS
+            WizardShaft/__init__.py
+            WizardShaft/WizardShaft.svg
+            WizardShaft/WizardShaft.py
+            WizardShaft/WizardShaftTable.py
+            WizardShaft/Shaft.py
+            WizardShaft/ShaftFeature.py
+            WizardShaft/ShaftDiagram.py
+            WizardShaft/SegmentFunction.py
+    )
+    SOURCE_GROUP("wizardshaft" FILES ${WizardShaft_SRCS})
 
-SET(all_wizardshaft_files ${WizardShaft_SRCS})
+    SET(all_wizardshaft_files ${WizardShaft_SRCS})
 
-ADD_CUSTOM_TARGET(WizardShaft ALL
-    SOURCES ${all_wizardshaft_files}
-)
+    ADD_CUSTOM_TARGET(WizardShaft ALL
+        SOURCES ${all_wizardshaft_files}
+    )
 
-SET(all_files ${all_wizardshaft_files})
+    SET(all_files ${all_wizardshaft_files})
 
-fc_copy_sources(WizardShaft "${CMAKE_BINARY_DIR}/Mod/PartDesign" ${all_files})
+    fc_copy_sources(WizardShaft "${CMAKE_BINARY_DIR}/Mod/PartDesign" ${all_files})
 
-INSTALL(
-    FILES
-        ${WizardShaft_SRCS}
-    DESTINATION
-        Mod/PartDesign/WizardShaft
-)
+    INSTALL(
+        FILES
+            ${WizardShaft_SRCS}
+        DESTINATION
+            Mod/PartDesign/WizardShaft
+    )
+endif(BUILD_FEM)
 
 SET(FeatureHole_SRCS
         FeatureHole/__init__.py
@@ -89,17 +91,17 @@ SET(FeatureHole_UI
 
 SET(all_featurehole_files ${FeatureHole_SRCS} ${FeatureHole_UI})
 
-ADD_CUSTOM_TARGET(FeatureHole ALL
-    SOURCES ${all_featurehole_files}
-)
+#ADD_CUSTOM_TARGET(FeatureHole ALL
+#    SOURCES ${all_featurehole_files}
+#)
 
-SET(all_files ${all_featurehole_files})
+#SET(all_files ${all_featurehole_files})
 
 fc_copy_sources(Mod/PartDesign "${CMAKE_BINARY_DIR}/Mod/PartDesign" ${all_files})
 
-INSTALL(
-    FILES
-        ${FeatureHole_SRCS}
-    DESTINATION
-        Mod/PartDesign/FeatureHole
-)
+#INSTALL(
+#    FILES
+#        ${FeatureHole_SRCS}
+#    DESTINATION
+#        Mod/PartDesign/FeatureHole
+#)
