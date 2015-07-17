@@ -132,6 +132,8 @@ SET(PartDesignGuiViewProvider_SRCS CommandPrimitive.cpp
     ViewProviderDatumPlane.h
     ViewProviderDatumCS.cpp
     ViewProviderDatumCS.h
+    ViewProviderDatumShapeBinder.h
+    ViewProviderDatumShapeBinder.cpp
     ViewProviderBoolean.cpp
     ViewProviderBoolean.h
     ViewProviderAddSub.cpp

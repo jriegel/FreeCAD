@@ -57,6 +57,7 @@
 #include "FeatureThickness.h"
 #include "FeaturePipe.h"
 #include "FeatureLoft.h"
+#include "DatumShape.h"
 
 extern struct PyMethodDef PartDesign_methods[];
 
@@ -113,6 +114,8 @@ void PartDesignExport init_PartDesign()
     PartDesign::Loft               ::init();
     PartDesign::AdditiveLoft       ::init();
     PartDesign::SubtractiveLoft    ::init();
+    PartDesign::ShapeBinder        ::init();
+    PartDesign::ShapeBinder2D      ::init();
     PartDesign::Plane              ::init();
     PartDesign::Line               ::init();
     PartDesign::Point              ::init();
