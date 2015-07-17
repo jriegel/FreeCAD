@@ -42,6 +42,11 @@
 #include "TaskFeaturePick.h"
 #include "Workbench.h"
 #include <Mod/PartDesign/App/Body.h>
+#include <Mod/PartDesign/App/DatumShape.h>
+#include <Mod/PartDesign/App/DatumPoint.h>
+#include <Mod/PartDesign/App/DatumLine.h>
+#include <Mod/PartDesign/App/DatumPlane.h>
+#include <Mod/Part/App/DatumFeature.h>
 
 using namespace PartDesignGui;
 
@@ -226,47 +231,87 @@ std::vector<App::DocumentObject*> TaskFeaturePick::buildFeatures() {
 }
 
 App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, bool independent) {
-
-    //we do know that the created instance is a document object, as obj is one. But we do not know which 
-    //exact type
-    auto name =  std::string("Copy") + std::string(obj->getNameInDocument());
-    auto copy = App::GetApplication().getActiveDocument()->addObject(obj->getTypeId().getName(), name.c_str());
+   
+    App::DocumentObject* copy = nullptr;
+    if(independent) {
+        
+        //we do know that the created instance is a document object, as obj is one. But we do not know which 
+        //exact type
+        auto name =  std::string("Copy") + std::string(obj->getNameInDocument());
+        copy = App::GetApplication().getActiveDocument()->addObject(obj->getTypeId().getName(), name.c_str());
     
-    if(copy) {
         //copy over all properties
         std::vector<App::Property*> props;
         std::vector<App::Property*> cprops;
         obj->getPropertyList(props);
         copy->getPropertyList(cprops);        
-        try{
-            auto it = cprops.begin();
-            for( App::Property* prop : props ) {
+
+        auto it = cprops.begin();
+        for( App::Property* prop : props ) {
+        
+            //independent copys dont have links and are not attached
+            if(independent && (
+                prop->getTypeId() == App::PropertyLink::getClassTypeId() ||
+                prop->getTypeId() == App::PropertyLinkList::getClassTypeId() ||
+                prop->getTypeId() == App::PropertyLinkSub::getClassTypeId() ||
+                prop->getTypeId() == App::PropertyLinkSubList::getClassTypeId()||
+                ( prop->getGroup() && strcmp(prop->getGroup(),"Attachment")==0) ))    {
+                
+                ++it;
+                continue;
+            }
             
-                //independent copys dont have links and are not attached
-                if(independent && (
-                   prop->getTypeId() == App::PropertyLink::getClassTypeId() ||
-                   prop->getTypeId() == App::PropertyLinkList::getClassTypeId() ||
-                   prop->getTypeId() == App::PropertyLinkSub::getClassTypeId() ||
-                   prop->getTypeId() == App::PropertyLinkSubList::getClassTypeId()||
-                   ( prop->getGroup() && strcmp(prop->getGroup(),"Attachment")==0) ))    {
-                 
-                    ++it;
-                    continue;
-                }
+            App::Property* cprop = *it++; 
+            
+            if( strcmp(prop->getName(), "Label") == 0 ) {
+                static_cast<App::PropertyString*>(cprop)->setValue(name.c_str());
+                continue;
+            }
                 
-                App::Property* cprop = *it++; 
-                
-                if( strcmp(prop->getName(), "Label") == 0 ) {
-                    static_cast<App::PropertyString*>(cprop)->setValue("wuhahahahah");
-                    continue;
-                }
-                   
-                cprop->Paste(*prop);
-            }   
+            cprop->Paste(*prop);
         }
-        catch(const Base::Exception& e) {
+    }
+    else {
+        
+        auto name =  std::string("Reference") + std::string(obj->getNameInDocument());
+        
+        if(obj->isDerivedFrom(Part::Datum::getClassTypeId())) {
+        
+            //we need to reference the individual datums and make again datums. This is important as
+            //datum adjust their size dependend on the part size, hence simply copying the shape is
+            //not enough
+            if(obj->getTypeId() == PartDesign::Point::getClassTypeId()) {
+                copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Point", name.c_str());
+                static_cast<Part::Datum*>(copy)->Support.setValue(obj, "");
+                static_cast<Part::Datum*>(copy)->MapMode.setValue(mm0Vertex);
+            }
+            else if(obj->getTypeId() == PartDesign::Line::getClassTypeId()) {
+                copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Line", name.c_str());
+                static_cast<Part::Datum*>(copy)->Support.setValue(obj, "");
+                static_cast<Part::Datum*>(copy)->MapMode.setValue(mm1TwoPoints);
+            }
+            else if(obj->getTypeId() == PartDesign::Plane::getClassTypeId()) {
+                copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Plane", name.c_str());
+                static_cast<Part::Datum*>(copy)->Support.setValue(obj, "");
+                static_cast<Part::Datum*>(copy)->MapMode.setValue(mmFlatFace);
+            }
+        }
+        else if(obj->getTypeId() == PartDesign::ShapeBinder::getClassTypeId()) {
+                copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder", name.c_str());
+                static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, "");
+        }
+        else if(obj->getTypeId() == PartDesign::ShapeBinder2D::getClassTypeId()) {
+            copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder2D", name.c_str());
+            static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, "");
+        }
+        else if(obj->isDerivedFrom(Part::Part2DObject::getClassTypeId())) {
+            copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder2D", name.c_str());
+            static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, "");
+        }
+        else if(obj->isDerivedFrom(Part::Feature::getClassTypeId())) {
          
-            Base::Console().Message("Exception: %s\n", e.what());
+            copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder", name.c_str());
+            static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, "");
         }
     }
     
