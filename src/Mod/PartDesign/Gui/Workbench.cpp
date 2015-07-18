@@ -745,7 +745,6 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     Gui::MenuItem* part = new Gui::MenuItem;
     root->insertItem(item, part);
     part->setCommand("&Part Design");
-    SketcherGui::addSketcherWorkbenchSketchActions( *part );
     *part << "PartDesign_Part"
           << "PartDesign_Body"
           << "PartDesign_NewSketch"
@@ -753,6 +752,7 @@ Gui::MenuItem* Workbench::setupMenuBar() const
           << "Sketcher_ViewSketch"
           << "Sketcher_MapSketch"
           << "Sketcher_ReorientSketch"
+          << "Sketcher_ValidateSketch"
           << geom
           << cons
           << "Separator"
@@ -806,7 +806,6 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
     Gui::ToolBarItem* root = StdWorkbench::setupToolBars();
     Gui::ToolBarItem* part = new Gui::ToolBarItem(root);
     part->setCommand("Part Design");
-//    SketcherGui::addSketcherWorkbenchSketchActions( *part );
     *part << "PartDesign_Part"
           << "PartDesign_Body"
           << "PartDesign_NewSketch"
@@ -840,18 +839,6 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
           << "PartDesign_MultiTransform"
           << "Separator"
           << "PartDesign_Boolean";
-
-    Gui::ToolBarItem* geom = new Gui::ToolBarItem(root);
-    geom->setCommand("Sketcher geometries");
-    SketcherGui::addSketcherWorkbenchGeometries( *geom );
-
-    Gui::ToolBarItem* cons = new Gui::ToolBarItem(root);
-    cons->setCommand("Sketcher constraints");
-    SketcherGui::addSketcherWorkbenchConstraints( *cons );
-
-    Gui::ToolBarItem* consaccel = new Gui::ToolBarItem(root);
-    consaccel->setCommand("Sketcher tools");
-    SketcherGui::addSketcherWorkbenchTools( *consaccel );
 
     return root;
 }
