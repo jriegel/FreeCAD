@@ -61,6 +61,8 @@ public:
     std::vector<App::DocumentObject*> buildFeatures();
     void showExternal(bool val);
     
+    static App::DocumentObject* makeCopy(App::DocumentObject* obj, std::string sub, bool independent);
+    
 protected Q_SLOTS:
     void onUpdate(bool);
     void onSelectionChanged(const Gui::SelectionChanges& msg);
@@ -75,8 +77,6 @@ private:
     std::vector<featureStatus> statuses;
 
     void updateList();
-    App::DocumentObject* makeCopy(App::DocumentObject*, bool independent);
-
     const QString getFeatureStatusString(const featureStatus st);
 };
 

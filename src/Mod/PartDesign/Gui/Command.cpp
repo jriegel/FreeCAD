@@ -2338,6 +2338,7 @@ using namespace std;
 #include "ReferenceSelection.h"
 #include "Workbench.h"
 
+#include "ui_DlgReference.h"
 
 //===========================================================================
 // PartDesign_Part
@@ -2782,6 +2783,43 @@ void UnifiedDatumCommand(Gui::Command &cmd, Base::Type type, std::string name)
             if (pcActiveBody == 0)
                 return;
 
+             auto pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
+            
+            //check the prerequisites for the selected objects
+            //the user has to decide which option we should take if external references are used
+            bool ext = false;
+            for(App::DocumentObject* obj : support.getValues()) {
+                if(!pcActiveBody->hasFeature(obj)) 
+                    ext = true;
+            }
+            if(ext) {
+                
+                QDialog* dia = new QDialog;
+                Ui_Dialog dlg;
+                dlg.setupUi(dia);
+                dia->setModal(true);
+                int result = dia->exec();
+                if(result == QDialog::DialogCode::Rejected) 
+                    return;
+                else if(!dlg.radioXRef->isChecked()) {
+                    
+                    std::vector<App::DocumentObject*> objs;
+                    std::vector<std::string> subs = support.getSubValues();
+                    int index = 0;
+                    for(App::DocumentObject* obj : support.getValues()) {
+                        
+                        objs.push_back(PartDesignGui::TaskFeaturePick::makeCopy(obj, subs[index], dlg.radioIndependent->isChecked()));
+                        auto oBody = PartDesignGui::getBodyFor(obj, false);
+                        if(oBody)
+                            pcActiveBody->addFeature(objs.back());
+                        else 
+                            pcActivePart->addObject(objs.back());
+                    
+                    }
+                }
+                
+            };
+
             std::string FeatName = cmd.getUniqueObjectName(name.c_str());
 
             std::string tmp = std::string("Create ")+name;
@@ -2935,6 +2973,43 @@ void CmdPartDesignShape::activated(int iMsg)
             PartDesign::Body *pcActiveBody = PartDesignGui::getBody(/*messageIfNot = */true);
             if (pcActiveBody == 0)
                 return;
+            
+            auto pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
+            
+            //check the prerequisites for the selected objects
+            //the user has to decide which option we should take if external references are used
+            bool ext = false;
+            for(App::DocumentObject* obj : support.getValues()) {
+                if(!pcActiveBody->hasFeature(obj)) 
+                    ext = true;
+            }
+            if(ext) {
+                
+                QDialog* dia = new QDialog;
+                Ui_Dialog dlg;
+                dlg.setupUi(dia);
+                dia->setModal(true);
+                int result = dia->exec();
+                if(result == QDialog::DialogCode::Rejected) 
+                    return;
+                else if(!dlg.radioXRef->isChecked()) {
+                    
+                    std::vector<App::DocumentObject*> objs;
+                    std::vector<std::string> subs = support.getSubValues();
+                    int index = 0;
+                    for(App::DocumentObject* obj : support.getValues()) {
+                        
+                        objs.push_back(PartDesignGui::TaskFeaturePick::makeCopy(obj, subs[index], dlg.radioIndependent->isChecked()));
+                        auto oBody = PartDesignGui::getBodyFor(obj, false);
+                        if(oBody)
+                            pcActiveBody->addFeature(objs.back());
+                        else 
+                            pcActivePart->addObject(objs.back());
+                    
+                    }
+                }
+                
+            };
 
             std::string FeatName = getUniqueObjectName("DatumShape");
             std::string tmp = std::string("Create DatumShape");
@@ -3068,16 +3143,31 @@ void CmdPartDesignNewSketch::activated(int iMsg)
                 }
             }
             if (!isBasePlane) {
-                QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Selection from other body"),
-                    QObject::tr("You have to select a face or plane from the active body!"));
-                return;
+                
+                auto pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
+            
+                //check the prerequisites for the selected objects
+                //the user has to decide which option we should take if external references are used                    
+                QDialog* dia = new QDialog;
+                Ui_Dialog dlg;
+                dlg.setupUi(dia);
+                dia->setModal(true);
+                int result = dia->exec();
+                if(result == QDialog::DialogCode::Rejected) 
+                    return;
+                else if(!dlg.radioXRef->isChecked()) {
+                                  
+                        const std::vector<std::string> &sub = FaceFilter.Result[0][0].getSubNames();
+                        auto copy = PartDesignGui::TaskFeaturePick::makeCopy(obj, sub[0], dlg.radioIndependent->isChecked());
+                        auto oBody = PartDesignGui::getBodyFor(obj, false);
+                        if(oBody)
+                            pcActiveBody->addFeature(copy);
+                        else 
+                            pcActivePart->addObject(copy);                    
+                }
             }
-        } else if (pcActiveBody->getNextSolidFeature() != obj) {
-            QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Selection from inactive feature"),
-                QObject::tr("You can only use the last solid feature as sketch support"));
-            return;
-        }
-
+        } 
+        
         // create Sketch on Face or Plane
         std::string FeatName = getUniqueObjectName("Sketch");
 
@@ -3387,11 +3477,32 @@ void prepareSketchBased(Gui::Command* cmd, const std::string& which,
     //pick task dialog to decide how those are handled
     bool ext = std::find(status.begin(), status.end(), PartDesignGui::TaskFeaturePick::otherBody) != status.end();
     ext |= std::find(status.begin(), status.end(), PartDesignGui::TaskFeaturePick::otherPart) != status.end();
+    if(!bNoSketchWasSelected && ext) {   
+        
+        auto* pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
+                   
+        QDialog* dia = new QDialog;
+        Ui_Dialog dlg;
+        dlg.setupUi(dia);
+        dia->setModal(true);
+        int result = dia->exec();
+        if(result == QDialog::DialogCode::Rejected) 
+            return;
+        else if(!dlg.radioXRef->isChecked()) {
+            
+                auto copy = PartDesignGui::TaskFeaturePick::makeCopy(sketches[0], "", dlg.radioIndependent->isChecked());
+                auto oBody = PartDesignGui::getBodyFor(sketches[0], false);
+                if(oBody)
+                    pcActiveBody->addFeature(copy);
+                else 
+                    pcActivePart->addObject(copy);
+            
+        }   
+    }
 
     // If there is more than one selection/possibility, show dialog and let user pick sketch
     if ((bNoSketchWasSelected && validSketches > 1)  ||
-        (!bNoSketchWasSelected && sketches.size() > 1) ||
-        (!bNoSketchWasSelected && ext)) {
+        (!bNoSketchWasSelected && sketches.size() > 1)) {
         
         Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
         PartDesignGui::TaskDlgFeaturePick *pickDlg = qobject_cast<PartDesignGui::TaskDlgFeaturePick *>(dlg);
