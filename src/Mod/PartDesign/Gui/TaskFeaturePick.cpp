@@ -195,7 +195,7 @@ std::vector<App::DocumentObject*> TaskFeaturePick::buildFeatures() {
             if(*st == otherBody) {
  
                 if(ui->bodyRadioIndependent->isChecked()) {                    
-                    auto copy = makeCopy(obj, true);
+                    auto copy = makeCopy(obj, "", true);
                     activeBody->addFeature(copy);
                     result.push_back(copy);
                 }
@@ -205,7 +205,7 @@ std::vector<App::DocumentObject*> TaskFeaturePick::buildFeatures() {
             else if(*st == otherPart) {
             
                 if(!ui->partRadioXRef->isChecked()) {                    
-                    auto copy = makeCopy(obj, ui->partRadioIndependent->isChecked());
+                    auto copy = makeCopy(obj, "", ui->partRadioIndependent->isChecked());
                     
                     auto oBody = PartDesignGui::getBodyFor(obj, false);
                     if(oBody)
@@ -230,7 +230,7 @@ std::vector<App::DocumentObject*> TaskFeaturePick::buildFeatures() {
     return result;
 }
 
-App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, bool independent) {
+App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::string sub, bool independent) {
    
     App::DocumentObject* copy = nullptr;
     if(independent) {
@@ -269,11 +269,19 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, bool in
             }
                 
             cprop->Paste(*prop);
+            
         }
+        
+        if(!sub.empty() && copy &&
+            copy->isDerivedFrom(Part::Feature::getClassTypeId()) && obj->isDerivedFrom(Part::Feature::getClassTypeId()))
+            static_cast<Part::Feature*>(copy)->Shape.setValue(static_cast<Part::Feature*>(obj)->Shape.getShape().getSubShape(sub.c_str()));
     }
     else {
         
         auto name =  std::string("Reference") + std::string(obj->getNameInDocument());
+        const char* entity = std::string("").c_str();
+        if(!sub.empty())
+            entity = sub.c_str();
         
         if(obj->isDerivedFrom(Part::Datum::getClassTypeId())) {
         
@@ -282,36 +290,36 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, bool in
             //not enough
             if(obj->getTypeId() == PartDesign::Point::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Point", name.c_str());
-                static_cast<Part::Datum*>(copy)->Support.setValue(obj, "");
+                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity);
                 static_cast<Part::Datum*>(copy)->MapMode.setValue(mm0Vertex);
             }
             else if(obj->getTypeId() == PartDesign::Line::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Line", name.c_str());
-                static_cast<Part::Datum*>(copy)->Support.setValue(obj, "");
+                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity);
                 static_cast<Part::Datum*>(copy)->MapMode.setValue(mm1TwoPoints);
             }
             else if(obj->getTypeId() == PartDesign::Plane::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Plane", name.c_str());
-                static_cast<Part::Datum*>(copy)->Support.setValue(obj, "");
+                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity);
                 static_cast<Part::Datum*>(copy)->MapMode.setValue(mmFlatFace);
             }
         }
         else if(obj->getTypeId() == PartDesign::ShapeBinder::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder", name.c_str());
-                static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, "");
+                static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity);
         }
         else if(obj->getTypeId() == PartDesign::ShapeBinder2D::getClassTypeId()) {
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder2D", name.c_str());
-            static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, "");
+            static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity);
         }
         else if(obj->isDerivedFrom(Part::Part2DObject::getClassTypeId())) {
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder2D", name.c_str());
-            static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, "");
+            static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity);
         }
         else if(obj->isDerivedFrom(Part::Feature::getClassTypeId())) {
          
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder", name.c_str());
-            static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, "");
+            static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity);
         }
     }
     
