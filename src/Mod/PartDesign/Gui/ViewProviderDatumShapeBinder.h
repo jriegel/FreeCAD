@@ -38,10 +38,16 @@ public:
     /// Constructor
     ViewProviderDatumShapeBinder();
     virtual ~ViewProviderDatumShapeBinder();
+
+    void highlightReferences(const bool on, bool auxillery);    
     
 protected:
     virtual bool setEdit(int ModNum);
     virtual void unsetEdit(int ModNum);
+    
+private:
+    std::vector<App::Color> originalLineColors;
+    std::vector<App::Color> originalFaceColors;
 
 };
 

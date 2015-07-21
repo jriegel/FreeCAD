@@ -48,6 +48,7 @@ set(PartDesignGui_MOC_HDRS
     TaskScaledParameters.h
     TaskMultiTransformParameters.h
     TaskDatumParameters.h
+    TaskDatumShapeBinder.h
     TaskBooleanParameters.h
     TaskPrimitiveParameters.h
     TaskPipeParameters.h
@@ -77,6 +78,7 @@ set(PartDesignGui_UIC_SRCS
     TaskScaledParameters.ui
     TaskMultiTransformParameters.ui
     TaskDatumParameters.ui
+    TaskDatumShapeBinder.ui
     TaskPrimitiveParameters.ui
     TaskPipeParameters.ui
     TaskPipeOrientation.ui
@@ -207,6 +209,9 @@ SET(PartDesignGuiTaskDlgs_SRCS
     TaskDatumParameters.ui
     TaskDatumParameters.cpp
     TaskDatumParameters.h
+    TaskDatumShapeBinder.ui
+    TaskDatumShapeBinder.cpp
+    TaskDatumShapeBinder.h
     TaskBooleanParameters.ui
     TaskBooleanParameters.cpp
     TaskBooleanParameters.h
