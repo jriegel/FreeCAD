@@ -727,10 +727,10 @@ void CmdPartDesignShape::activated(int iMsg)
 
             openCommand(tmp.c_str());
             
-            if(support.getValue()->isDerivedFrom(PartDesign::ShapeBinder2D::getClassTypeId()) ||
+            if(support.getValue() && support.getValue()->isDerivedFrom(PartDesign::ShapeBinder2D::getClassTypeId()) ||
                support.getValue()->isDerivedFrom(Part::Part2DObject::getClassTypeId()))
                 doCommand(Gui::Command::Doc,"App.activeDocument().addObject('%s','%s')", "PartDesign::ShapeBinder2D",FeatName.c_str());
-            else 
+            else
                 doCommand(Gui::Command::Doc,"App.activeDocument().addObject('%s','%s')", "PartDesign::ShapeBinder",FeatName.c_str());
 
             //test if current selection fits a mode.

@@ -46,7 +46,9 @@
 #include <Mod/PartDesign/App/DatumPoint.h>
 #include <Mod/PartDesign/App/DatumLine.h>
 #include <Mod/PartDesign/App/DatumPlane.h>
+#include <Mod/PartDesign/App/FeaturePrimitive.h>
 #include <Mod/Part/App/DatumFeature.h>
+#include <Mod/Sketcher/App/SketchObject.h>
 
 using namespace PartDesignGui;
 
@@ -233,7 +235,9 @@ std::vector<App::DocumentObject*> TaskFeaturePick::buildFeatures() {
 App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::string sub, bool independent) {
    
     App::DocumentObject* copy = nullptr;
-    if(independent) {
+    if( independent && 
+        (obj->isDerivedFrom(Sketcher::SketchObject::getClassTypeId()) ||
+        obj->isDerivedFrom(PartDesign::FeaturePrimitive::getClassTypeId()))) {
         
         //we do know that the created instance is a document object, as obj is one. But we do not know which 
         //exact type
@@ -270,11 +274,11 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::st
                 
             cprop->Paste(*prop);
             
+            //we are a independent copy, therefore no external geometry was copied. WE therefore can delete all
+            //contraints
+            if(obj->isDerivedFrom(Sketcher::SketchObject::getClassTypeId()))
+                static_cast<Sketcher::SketchObject*>(copy)->delConstraintsToExternal();
         }
-        
-        if(!sub.empty() && copy &&
-            copy->isDerivedFrom(Part::Feature::getClassTypeId()) && obj->isDerivedFrom(Part::Feature::getClassTypeId()))
-            static_cast<Part::Feature*>(copy)->Shape.setValue(static_cast<Part::Feature*>(obj)->Shape.getShape().getSubShape(sub.c_str()));
     }
     else {
         
@@ -283,43 +287,75 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::st
         if(!sub.empty())
             entity = sub.c_str();
         
+        Part::PropertyPartShape* shapeProp = nullptr;
+        
         if(obj->isDerivedFrom(Part::Datum::getClassTypeId())) {
         
             //we need to reference the individual datums and make again datums. This is important as
             //datum adjust their size dependend on the part size, hence simply copying the shape is
             //not enough
+            long int mode = mmDeactivated;
             if(obj->getTypeId() == PartDesign::Point::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Point", name.c_str());
-                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity);
-                static_cast<Part::Datum*>(copy)->MapMode.setValue(mm0Vertex);
+                mode = mm0Vertex;
             }
             else if(obj->getTypeId() == PartDesign::Line::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Line", name.c_str());
-                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity);
-                static_cast<Part::Datum*>(copy)->MapMode.setValue(mm1TwoPoints);
+                mode = mm1TwoPoints;
             }
             else if(obj->getTypeId() == PartDesign::Plane::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::Plane", name.c_str());
-                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity);
-                static_cast<Part::Datum*>(copy)->MapMode.setValue(mmFlatFace);
+                mode = mmFlatFace;
             }
+            else 
+                return copy;
+            
+            if(!independent) {
+                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity);
+                static_cast<Part::Datum*>(copy)->MapMode.setValue(mode);
+            }
+            else if(strcmp(entity,"") != 0)
+                static_cast<Part::Datum*>(copy)->Shape.setValue(static_cast<Part::Datum*>(obj)->Shape.getShape().getSubShape(entity));
+            else
+                static_cast<Part::Datum*>(copy)->Shape.setValue(static_cast<Part::Datum*>(obj)->Shape.getValue());
         }
         else if(obj->getTypeId() == PartDesign::ShapeBinder::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder", name.c_str());
-                static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity);
+                if(!independent)
+                    static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity);
+                else 
+                    shapeProp = &static_cast<PartDesign::ShapeBinder*>(copy)->Shape;
         }
         else if(obj->getTypeId() == PartDesign::ShapeBinder2D::getClassTypeId()) {
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder2D", name.c_str());
-            static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity);
+            
+            if(!independent)
+                static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity);
+            else 
+                shapeProp = &static_cast<PartDesign::ShapeBinder*>(copy)->Shape;
         }
         else if(obj->isDerivedFrom(Part::Part2DObject::getClassTypeId())) {
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder2D", name.c_str());
-            static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity);
+            if(!independent)
+                static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity);
+            else 
+                shapeProp = &static_cast<PartDesign::ShapeBinder*>(copy)->Shape;
         }
         else if(obj->isDerivedFrom(Part::Feature::getClassTypeId())) {
          
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder", name.c_str());
-            static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity);
+            
+            if(!independent)
+                static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity);
+            else 
+                shapeProp = &static_cast<PartDesign::ShapeBinder*>(copy)->Shape;
+        }
+        
+        if(independent && shapeProp) {
+            if(strcmp(entity, "") == 0)
+                shapeProp->setValue(static_cast<Part::Feature*>(obj)->Shape.getValue());
+            else
+                shapeProp->setValue(static_cast<Part::Feature*>(obj)->Shape.getShape().getSubShape(entity));
         }
     }
     
