@@ -2783,43 +2783,8 @@ void UnifiedDatumCommand(Gui::Command &cmd, Base::Type type, std::string name)
             if (pcActiveBody == 0)
                 return;
 
-             auto pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
+            auto pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
             
-            //check the prerequisites for the selected objects
-            //the user has to decide which option we should take if external references are used
-            bool ext = false;
-            for(App::DocumentObject* obj : support.getValues()) {
-                if(!pcActiveBody->hasFeature(obj)) 
-                    ext = true;
-            }
-            if(ext) {
-                
-                QDialog* dia = new QDialog;
-                Ui_Dialog dlg;
-                dlg.setupUi(dia);
-                dia->setModal(true);
-                int result = dia->exec();
-                if(result == QDialog::DialogCode::Rejected) 
-                    return;
-                else if(!dlg.radioXRef->isChecked()) {
-                    
-                    std::vector<App::DocumentObject*> objs;
-                    std::vector<std::string> subs = support.getSubValues();
-                    int index = 0;
-                    for(App::DocumentObject* obj : support.getValues()) {
-                        
-                        objs.push_back(PartDesignGui::TaskFeaturePick::makeCopy(obj, subs[index], dlg.radioIndependent->isChecked()));
-                        auto oBody = PartDesignGui::getBodyFor(obj, false);
-                        if(oBody)
-                            pcActiveBody->addFeature(objs.back());
-                        else 
-                            pcActivePart->addObject(objs.back());
-                    
-                    }
-                }
-                
-            };
-
             std::string FeatName = cmd.getUniqueObjectName(name.c_str());
 
             std::string tmp = std::string("Create ")+name;
