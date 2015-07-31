@@ -2318,6 +2318,7 @@ void CreatePartDesignCommands(void)
 #include <Gui/ViewProviderDocumentObject.h>
 
 #include <Mod/Part/App/Part2DObject.h>
+#include <Mod/Part/Gui/Workbench.h>
 
 #include <Mod/PartDesign/App/Body.h>
 #include <Mod/Sketcher/App/SketchObject.h>
@@ -2400,7 +2401,7 @@ void CmdPartDesignBody::activated(int iMsg)
     std::string FeatName = getUniqueObjectName("Body");
 
     // first check if Part is already created:
-    App::Part *actPart =  getDocument()->Tip.getValue<App::Part *>();
+    App::Part *actPart =  PartGui::getPart(false);
     std::string PartName;
 
     if(!actPart){

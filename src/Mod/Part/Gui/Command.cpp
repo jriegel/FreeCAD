@@ -52,6 +52,7 @@
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
 #include <Gui/WaitCursor.h>
+#include <Gui/ViewProviderPart.h>
 
 #include "../App/PartFeature.h"
 #include "DlgPartImportStepImp.h"
@@ -72,6 +73,44 @@
 
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+//===========================================================================
+// Part_Part
+//===========================================================================
+DEF_STD_CMD_A(CmdPartPart);
+
+CmdPartPart::CmdPartPart()
+  : Command("Part_Part")
+{
+    sAppModule    = "Part";
+    sGroup        = QT_TR_NOOP("Part");
+    sMenuText     = QT_TR_NOOP("Create part");
+    sToolTipText  = QT_TR_NOOP("Create a new part and make it active");
+    sWhatsThis    = sToolTipText;
+    sStatusTip    = sToolTipText;
+    sPixmap       = "Tree_Annotation";
+}
+
+void CmdPartPart::activated(int iMsg)
+{
+    openCommand("Add a part");
+    std::string FeatName = getUniqueObjectName("Part");
+
+    std::string PartName;
+    PartName = getUniqueObjectName("Part");
+    doCommand(Doc,"App.activeDocument().Tip = App.activeDocument().addObject('App::Part','%s')",PartName.c_str());
+    doCommand(Doc,"App.activeDocument().ActiveObject.Label = '%s'", QObject::tr(PartName.c_str()).toStdString().c_str());
+    Gui::ViewProviderPart::setUpPart(dynamic_cast<App::Part *>(getDocument()->getObject(PartName.c_str())));
+    doCommand(Gui::Command::Gui, "Gui.activeView().setActiveObject('%s', App.activeDocument().%s)", PARTKEY, PartName.c_str());
+
+    updateActive();
+}
+
+bool CmdPartPart::isActive(void)
+{
+    return hasActiveDocument();
+}
 
 //===========================================================================
 // Part_PickCurveNet
@@ -1940,6 +1979,7 @@ void CreatePartCommands(void)
 {
     Gui::CommandManager &rcCmdMgr = Gui::Application::Instance->commandManager();
 
+    rcCmdMgr.addCommand(new CmdPartPart());
     rcCmdMgr.addCommand(new CmdPartMakeSolid());
     rcCmdMgr.addCommand(new CmdPartReverseShape());
     rcCmdMgr.addCommand(new CmdPartBoolean());

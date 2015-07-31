@@ -183,7 +183,7 @@ PartDesign::Body *Workbench::setUpPart(const App::Part *part)
 }
 
 void Workbench::_doMigration(const App::Document* doc)
-{
+{/*
     bool groupCreated = false;
 
     if(doc->countObjects() != 0) {
@@ -324,7 +324,7 @@ void Workbench::_doMigration(const App::Document* doc)
 
             prevf = f;
         }
-    }
+    }*/
 
 }
 
@@ -406,7 +406,7 @@ void Workbench::fixSketchSupport (Sketcher::SketchObject* sketch)
 
 
 void Workbench::_switchToDocument(const App::Document* doc)
-{
+{/*
     bool groupCreated = false;
 
 
@@ -457,7 +457,7 @@ void Workbench::_switchToDocument(const App::Document* doc)
             QObject::tr("No body was found in this document, and none could be created. Please report this bug."
                         "We recommend you do not use this document with the PartDesign workbench until the bug has been fixed."
                         ));
-    }
+    }*/
 }
 
 void Workbench::slotActiveDocument(const Gui::Document& Doc)

@@ -118,7 +118,7 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     Gui::MenuItem* part = new Gui::MenuItem;
     root->insertItem(item, part);
     part->setCommand("&Part");
-    *part << "Part_Import" << "Part_Export" << "Separator";
+    *part << "Part_Part" << "Part_Import" << "Part_Export" << "Separator";
     *part << prim << "Part_Primitives" << "Part_Builder" << "Separator"
           << "Part_ShapeFromMesh" << "Part_MakeSolid" << "Part_ReverseShape"
           << "Part_SimpleCopy" << "Part_RefineShape" << "Part_CheckGeometry"
@@ -160,7 +160,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
 
     Gui::ToolBarItem* tool = new Gui::ToolBarItem(root);
     tool->setCommand("Part tools");
-    *tool << "Part_Extrude" << "Part_Revolve" << "Part_Mirror" << "Part_Fillet"
+    *tool << "Part_Part"
+          << "Part_Extrude" << "Part_Revolve" << "Part_Mirror" << "Part_Fillet"
           << "Part_Chamfer" << "Part_RuledSurface" << "Part_Loft" << "Part_Sweep"
           << "Part_Offset" << "Part_Thickness";
 
