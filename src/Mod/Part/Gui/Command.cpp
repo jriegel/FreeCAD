@@ -40,6 +40,7 @@
 #include <App/Document.h>
 #include <App/DocumentObjectGroup.h>
 #include <Gui/Action.h>
+#include <App/Part.h>
 #include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
 #include <Gui/Command.h>
@@ -67,6 +68,7 @@
 #include "TaskSweep.h"
 #include "TaskDimension.h"
 #include "TaskCheckGeometry.h"
+#include "Workbench.h"
 
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -123,7 +125,7 @@ DEF_STD_CMD_A(CmdPartBox2);
 
 CmdPartBox2::CmdPartBox2()
   :Command("Part_Box2")
-{
+{   
     sAppModule    = "Part";
     sGroup        = QT_TR_NOOP("Part");
     sMenuText     = QT_TR_NOOP("Box fix 1");
@@ -136,6 +138,10 @@ CmdPartBox2::CmdPartBox2()
 
 void CmdPartBox2::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     openCommand("Part Box Create");
     doCommand(Doc,"from FreeCAD import Base");
     doCommand(Doc,"import Part");
@@ -144,6 +150,7 @@ void CmdPartBox2::activated(int iMsg)
     doCommand(Doc,"__fb__.Length = 100.0");
     doCommand(Doc,"__fb__.Width = 100.0");
     doCommand(Doc,"__fb__.Height = 100.0");
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.%s)", acPart->getNameInDocument(),"PartBox");
     doCommand(Doc,"del __fb__");
     commitCommand();
     updateActive();
@@ -176,6 +183,10 @@ CmdPartBox3::CmdPartBox3()
 
 void CmdPartBox3::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     openCommand("Part Box Create");
     doCommand(Doc,"from FreeCAD import Base");
     doCommand(Doc,"import Part");
@@ -184,6 +195,7 @@ void CmdPartBox3::activated(int iMsg)
     doCommand(Doc,"__fb__.Length = 100.0");
     doCommand(Doc,"__fb__.Width = 100.0");
     doCommand(Doc,"__fb__.Height = 100.0");
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.%s)", acPart->getNameInDocument(),"PartBox");
     doCommand(Doc,"del __fb__");
     commitCommand();
     updateActive();
@@ -216,6 +228,10 @@ CmdPartPrimitives::CmdPartPrimitives()
 
 void CmdPartPrimitives::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     PartGui::TaskPrimitives* dlg = new PartGui::TaskPrimitives();
     Gui::Control().showDialog(dlg);
 }
@@ -269,6 +285,10 @@ CmdPartCut::CmdPartCut()
 
 void CmdPartCut::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     std::vector<Gui::SelectionObject> Sel = getSelection().getSelectionEx(0, Part::Feature::getClassTypeId());
     if (Sel.size() != 2) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
@@ -298,7 +318,8 @@ void CmdPartCut::activated(int iMsg)
     doCommand(Doc,"App.activeDocument().addObject(\"Part::Cut\",\"%s\")",FeatName.c_str());
     doCommand(Doc,"App.activeDocument().%s.Base = App.activeDocument().%s",FeatName.c_str(),Sel[0].getFeatName());
     doCommand(Doc,"App.activeDocument().%s.Tool = App.activeDocument().%s",FeatName.c_str(),Sel[1].getFeatName());
-
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().%s)", acPart->getNameInDocument(),FeatName.c_str());
+    
     // hide the input objects and remove them from the parent group
     App::DocumentObjectGroup* targetGroup = 0;
     for (std::vector<Gui::SelectionObject>::iterator it = Sel.begin(); it != Sel.end(); ++it) {
@@ -346,6 +367,10 @@ CmdPartCommon::CmdPartCommon()
 
 void CmdPartCommon::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     std::vector<Gui::SelectionObject> Sel = getSelection().getSelectionEx(0, Part::Feature::getClassTypeId());
     if (Sel.size() < 2) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
@@ -380,6 +405,7 @@ void CmdPartCommon::activated(int iMsg)
     openCommand("Common");
     doCommand(Doc,"App.activeDocument().addObject(\"Part::MultiCommon\",\"%s\")",FeatName.c_str());
     runCommand(Doc,str.str().c_str());
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.%s)", acPart->getNameInDocument(),FeatName.c_str());
 
     // hide the input objects and remove them from the parent group
     App::DocumentObjectGroup* targetGroup = 0;
@@ -428,6 +454,10 @@ CmdPartFuse::CmdPartFuse()
 
 void CmdPartFuse::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     std::vector<Gui::SelectionObject> Sel = getSelection().getSelectionEx(0, Part::Feature::getClassTypeId());
     if (Sel.size() < 2) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
@@ -462,6 +492,7 @@ void CmdPartFuse::activated(int iMsg)
     openCommand("Fusion");
     doCommand(Doc,"App.activeDocument().addObject(\"Part::MultiFuse\",\"%s\")",FeatName.c_str());
     runCommand(Doc,str.str().c_str());
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().%s)", acPart->getNameInDocument(),FeatName.c_str());
 
     // hide the input objects and remove them from the parent group
     App::DocumentObjectGroup* targetGroup = 0;
@@ -604,6 +635,10 @@ CmdPartCompound::CmdPartCompound()
 
 void CmdPartCompound::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     unsigned int n = getSelection().countObjectsOfType(Part::Feature::getClassTypeId());
     if (n < 2) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
@@ -626,6 +661,7 @@ void CmdPartCompound::activated(int iMsg)
     openCommand("Compound");
     doCommand(Doc,"App.activeDocument().addObject(\"Part::Compound\",\"%s\")",FeatName.c_str());
     runCommand(Doc,str.str().c_str());
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().%s)", acPart->getNameInDocument(),FeatName.c_str());
     updateActive();
     commitCommand();
 }
@@ -654,6 +690,10 @@ CmdPartSection::CmdPartSection()
 
 void CmdPartSection::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     std::vector<Gui::SelectionObject> Sel = getSelection().getSelectionEx(0, Part::Feature::getClassTypeId());
     if (Sel.size() != 2) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
@@ -672,6 +712,7 @@ void CmdPartSection::activated(int iMsg)
     doCommand(Gui,"Gui.activeDocument().hide('%s')",BaseName.c_str());
     doCommand(Gui,"Gui.activeDocument().hide('%s')",ToolName.c_str());
     doCommand(Gui,"Gui.activeDocument().%s.LineColor = Gui.activeDocument().%s.ShapeColor", FeatName.c_str(),BaseName.c_str());
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().%s)", acPart->getNameInDocument(),FeatName.c_str());
     updateActive();
     commitCommand();
 }
@@ -699,7 +740,7 @@ CmdPartImport::CmdPartImport()
 }
 
 void CmdPartImport::activated(int iMsg)
-{
+{   
     QStringList filter;
     filter << QString::fromAscii("STEP (*.stp *.step)");
     filter << QString::fromAscii("STEP with colors (*.stp *.step)");
@@ -849,6 +890,10 @@ CmdPartMakeSolid::CmdPartMakeSolid()
 
 void CmdPartMakeSolid::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     std::vector<App::DocumentObject*> objs = Gui::Selection().getObjectsOfType
         (Part::Feature::getClassTypeId());
     doCommand(Doc, "import Part");
@@ -891,8 +936,10 @@ void CmdPartMakeSolid::activated(int iMsg)
             }
 
             try {
-                if (!str.isEmpty())
+                if (!str.isEmpty()) {
                     doCommand(Doc, (const char*)str.toAscii());
+                    doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().ActiveObject)", acPart->getNameInDocument());
+                }
             }
             catch (const Base::Exception& e) {
                 Base::Console().Error("Cannot convert %s because %s.\n",
@@ -927,6 +974,10 @@ CmdPartReverseShape::CmdPartReverseShape()
 
 void CmdPartReverseShape::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     std::vector<App::DocumentObject*> objs = Gui::Selection().getObjectsOfType
         (Part::Feature::getClassTypeId());
     doCommand(Doc, "import Part");
@@ -945,8 +996,10 @@ void CmdPartReverseShape::activated(int iMsg)
                 .arg(QLatin1String((*it)->Label.getValue()));
 
             try {
-                if (!str.isEmpty())
+                if (!str.isEmpty()) {
                     doCommand(Doc, (const char*)str.toAscii());
+                    doCommand(Doc,"App.activeDocument().%s.addObject(App.activeDocument().ActiveObject)", acPart->getNameInDocument());
+                }
             }
             catch (const Base::Exception& e) {
                 Base::Console().Error("Cannot convert %s because %s.\n",
@@ -981,6 +1034,10 @@ CmdPartBoolean::CmdPartBoolean()
 
 void CmdPartBoolean::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::TaskView::TaskDialog* dlg = Gui::Control().activeDialog();
     if (!dlg)
         dlg = new PartGui::TaskBooleanOperation();
@@ -1011,6 +1068,10 @@ CmdPartExtrude::CmdPartExtrude()
 
 void CmdPartExtrude::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::Control().showDialog(new PartGui::TaskExtrusion());
 }
 
@@ -1038,6 +1099,10 @@ CmdPartRevolve::CmdPartRevolve()
 
 void CmdPartRevolve::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::Control().showDialog(new PartGui::TaskRevolution());
 }
 
@@ -1065,6 +1130,10 @@ CmdPartFillet::CmdPartFillet()
 
 void CmdPartFillet::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::Control().showDialog(new PartGui::TaskFilletEdges(0));
 }
 
@@ -1092,6 +1161,10 @@ CmdPartChamfer::CmdPartChamfer()
 
 void CmdPartChamfer::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::Control().showDialog(new PartGui::TaskChamferEdges(0));
 }
 
@@ -1119,6 +1192,10 @@ CmdPartMirror::CmdPartMirror()
 
 void CmdPartMirror::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::Control().showDialog(new PartGui::TaskMirroring());
 }
 
@@ -1146,6 +1223,10 @@ CmdPartCrossSections::CmdPartCrossSections()
 
 void CmdPartCrossSections::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::TaskView::TaskDialog* dlg = Gui::Control().activeDialog();
     if (!dlg) {
         std::vector<App::DocumentObject*> obj = Gui::Selection().getObjectsOfType
@@ -1185,6 +1266,10 @@ CmdPartBuilder::CmdPartBuilder()
 
 void CmdPartBuilder::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::Control().showDialog(new PartGui::TaskShapeBuilder());
 }
 
@@ -1213,6 +1298,10 @@ CmdPartLoft::CmdPartLoft()
 
 void CmdPartLoft::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::Control().showDialog(new PartGui::TaskLoft());
 }
 
@@ -1241,6 +1330,10 @@ CmdPartSweep::CmdPartSweep()
 
 void CmdPartSweep::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::Control().showDialog(new PartGui::TaskSweep());
 }
 
@@ -1269,6 +1362,10 @@ CmdPartOffset::CmdPartOffset()
 
 void CmdPartOffset::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     App::DocumentObject* shape = getSelection().getObjectsOfType(Part::Feature::getClassTypeId()).front();
     std::string offset = getUniqueObjectName("Offset");
 
@@ -1276,6 +1373,7 @@ void CmdPartOffset::activated(int iMsg)
     doCommand(Doc,"App.ActiveDocument.addObject(\"Part::Offset\",\"%s\")",offset.c_str());
     doCommand(Doc,"App.ActiveDocument.%s.Source = App.ActiveDocument.%s" ,offset.c_str(), shape->getNameInDocument());
     doCommand(Doc,"App.ActiveDocument.%s.Value = 1.0",offset.c_str());
+    doCommand(Doc, "App.ActiveDocument.%s.addObject(FreeCAD.ActiveDocument.%s)\n", offset.c_str(), acPart->getNameInDocument());
     updateActive();
     //if (isActiveObjectValid())
     //    doCommand(Gui,"Gui.ActiveDocument.hide(\"%s\")",shape->getNameInDocument());
@@ -1316,6 +1414,10 @@ CmdPartThickness::CmdPartThickness()
 
 void CmdPartThickness::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::SelectionFilter faceFilter  ("SELECT Part::Feature SUBELEMENT Face COUNT 1..");
     if (!faceFilter.match()) {
         QMessageBox::warning(Gui::getMainWindow(),
@@ -1350,6 +1452,7 @@ void CmdPartThickness::activated(int iMsg)
     doCommand(Doc,"App.ActiveDocument.addObject(\"Part::Thickness\",\"%s\")",thick.c_str());
     doCommand(Doc,"App.ActiveDocument.%s.Faces = %s" ,thick.c_str(), selection.c_str());
     doCommand(Doc,"App.ActiveDocument.%s.Value = 1.0",thick.c_str());
+    doCommand(Doc,"App.ActiveDocument.%s.addObject(FreeCAD.ActiveDocument.%s)\n", thick.c_str(), acPart->getNameInDocument());
     updateActive();
     if (isActiveObjectValid())
         doCommand(Gui,"Gui.ActiveDocument.hide(\"%s\")",shape->getNameInDocument());
@@ -1489,6 +1592,10 @@ CmdPartRuledSurface::CmdPartRuledSurface()
 
 void CmdPartRuledSurface::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     bool ok = false;
     TopoDS_Shape curve1, curve2;
     std::string link1, link2, obj1, obj2;
@@ -1575,6 +1682,8 @@ void CmdPartRuledSurface::activated(int iMsg)
                  ,obj1.c_str(), link1.c_str());
     doCommand(Doc, "FreeCAD.ActiveDocument.ActiveObject.Curve2=(FreeCAD.ActiveDocument.%s,['%s'])"
                  ,obj2.c_str(), link2.c_str());
+    doCommand(Doc, "App.ActiveDocument.%s.addObject(FreeCAD.ActiveDocument.ActiveObject)\n", acPart->getNameInDocument());
+
     commitCommand();
     updateActive();
 }

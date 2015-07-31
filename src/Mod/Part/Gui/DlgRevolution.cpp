@@ -35,6 +35,7 @@
 
 #include "ui_DlgRevolution.h"
 #include "DlgRevolution.h"
+#include "Workbench.h"
 #include "../App/PartFeature.h"
 #include <App/Application.h>
 #include <App/Document.h>
@@ -177,6 +178,10 @@ void DlgRevolution::accept()
         return;
     }
 
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::WaitCursor wc;
     App::Document* activeDoc = App::GetApplication().getActiveDocument();
     activeDoc->openTransaction("Revolve");
@@ -200,6 +205,7 @@ void DlgRevolution::accept()
             "FreeCAD.ActiveDocument.%2.Base = (%7,%8,%9)\n"
             "FreeCAD.ActiveDocument.%2.Angle = %10\n"
             "FreeCAD.ActiveDocument.%2.Solid = %11\n"
+            "FreeCAD.ActiveDocument.%12.addObject(FreeCAD.ActiveDocument.%2)\n"
             "FreeCADGui.ActiveDocument.%3.Visibility = False\n")
             .arg(type).arg(name).arg(shape)
             .arg(axis.x,0,'f',2)
@@ -210,7 +216,7 @@ void DlgRevolution::accept()
             .arg(ui->zPos->value(),0,'f',2)
             .arg(ui->angle->value(),0,'f',2)
             .arg(solid)
-            ;
+            .arg(QString::fromAscii(acPart->getNameInDocument()));
         Gui::Application::Instance->runPythonCode((const char*)code.toAscii());
         QByteArray to = name.toAscii();
         QByteArray from = shape.toAscii();

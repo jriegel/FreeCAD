@@ -31,6 +31,7 @@
 #endif
 
 #include "DlgBooleanOperation.h"
+#include "Workbench.h"
 #include "ui_DlgBooleanOperation.h"
 #include "../App/PartFeature.h"
 #include <Base/Exception.h>
@@ -440,6 +441,10 @@ void DlgBooleanOperation::accept()
     }
 
     try {
+        App::Part* acPart = PartGui::getPart(true);
+        if(!acPart)
+            return;
+    
         Gui::WaitCursor wc;
         activeDoc->openTransaction("Boolean operation");
         Gui::Command::doCommand(Gui::Command::Doc,
@@ -451,11 +456,14 @@ void DlgBooleanOperation::accept()
         Gui::Command::doCommand(Gui::Command::Doc,
             "App.activeDocument().%s.Tool = App.activeDocument().%s",
             objName.c_str(),shapeTwo.c_str());
+        Gui::Command::doCommand(Gui::Command::Doc,"App.activeDocument().%s.addObject(App.activeDocument().%s)", 
+                                acPart->getNameInDocument(),objName.c_str());
+        
         Gui::Command::doCommand(Gui::Command::Gui,
             "Gui.activeDocument().hide(\"%s\")",shapeOne.c_str());
         Gui::Command::doCommand(Gui::Command::Gui,
             "Gui.activeDocument().hide(\"%s\")",shapeTwo.c_str());
-
+        
         // add/remove fromgroup if needed
         App::DocumentObjectGroup* targetGroup = 0;
 

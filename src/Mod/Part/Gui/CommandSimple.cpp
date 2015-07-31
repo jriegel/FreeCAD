@@ -43,6 +43,7 @@
 #include "../App/PartFeature.h"
 #include "../App/TopoShape.h"
 #include "DlgPartCylinderImp.h"
+#include "Workbench.h"
 
 
 //===========================================================================
@@ -64,6 +65,10 @@ CmdPartSimpleCylinder::CmdPartSimpleCylinder()
 
 void CmdPartSimpleCylinder::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     PartGui::DlgPartCylinderImp dlg(Gui::getMainWindow());
     if (dlg.exec()== QDialog::Accepted) {
         Base::Vector3d dir = dlg.getDirection();
@@ -80,6 +85,7 @@ void CmdPartSimpleCylinder::activated(int iMsg)
                      ,dlg.yPos->value()
                      ,dlg.zPos->value()
                      ,dir.x,dir.y,dir.z);
+        doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.ActiveObject)", acPart->getNameInDocument());
         commitCommand();
         updateActive();
         doCommand(Gui, "Gui.SendMsgToActiveView(\"ViewFit\")");
@@ -114,6 +120,10 @@ CmdPartShapeFromMesh::CmdPartShapeFromMesh()
 
 void CmdPartShapeFromMesh::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     bool ok;
     double tol = QInputDialog::getDouble(Gui::getMainWindow(), QObject::tr("Sewing Tolerance"),
         QObject::tr("Enter tolerance for sewing shape:"), 0.1, 0.01,10.0,2,&ok);
@@ -146,6 +156,8 @@ void CmdPartShapeFromMesh::activated(int iMsg)
         doCommand(Doc,"FreeCAD.getDocument(\"%s\").getObject(\"%s\").purgeTouched()"
                      ,doc->getName()
                      ,name.c_str());
+        
+        doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.ActiveObject)", acPart->getNameInDocument());
         doCommand(Doc,"del __shape__");
     }
 
@@ -176,6 +188,10 @@ CmdPartSimpleCopy::CmdPartSimpleCopy()
 
 void CmdPartSimpleCopy::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Base::Type partid = Base::Type::fromName("Part::Feature");
     std::vector<App::DocumentObject*> objs = Gui::Selection().getObjectsOfType(partid);
     openCommand("Create Copy");
@@ -192,6 +208,7 @@ void CmdPartSimpleCopy::activated(int iMsg)
         copyVisual("ActiveObject", "PointColor", (*it)->getNameInDocument());
         copyVisual("ActiveObject", "DiffuseColor", (*it)->getNameInDocument());
     }
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.ActiveObject)", acPart->getNameInDocument());
     commitCommand();
     updateActive();
 }
@@ -221,6 +238,10 @@ CmdPartRefineShape::CmdPartRefineShape()
 
 void CmdPartRefineShape::activated(int iMsg)
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::WaitCursor wc;
     Base::Type partid = Base::Type::fromName("Part::Feature");
     std::vector<App::DocumentObject*> objs = Gui::Selection().getObjectsOfType(partid);
@@ -244,6 +265,7 @@ void CmdPartRefineShape::activated(int iMsg)
             Base::Console().Warning("%s: %s\n", (*it)->Label.getValue(), e.what());
         }
     }
+    doCommand(Doc,"App.activeDocument().%s.addObject(App.ActiveDocument.ActiveObject)", acPart->getNameInDocument());
     commitCommand();
     updateActive();
 }

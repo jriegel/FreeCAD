@@ -25,9 +25,13 @@
 #define PART_WORKBENCH_H
 
 #include <Gui/Workbench.h>
+#include <App/Part.h>
 
 namespace PartGui {
 
+App::Part *getPart(bool messageIfNot);
+App::Part *getPartFor(App::DocumentObject*, bool messageIfNot);
+    
 /**
  * @author Werner Mayer
  */

@@ -30,6 +30,50 @@
 #include "Workbench.h"
 #include <Gui/MenuManager.h>
 #include <Gui/ToolBarManager.h>
+#include <Gui/MainWindow.h>
+#include <Gui/Application.h>
+#include <Gui/MDIView.h>
+
+namespace PartGui {
+    
+
+App::Part *getPart(bool messageIfNot)
+{
+    App::Part * activePart = Gui::Application::Instance->activeView()->getActiveObject<App::Part*>(PARTKEY);
+
+    if (!activePart && messageIfNot){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("No active Part"),
+            QObject::tr("In order to use Part you need an active Part object in the document. "
+                        "Please make one active (double click) or create one. If you have a legacy document "
+                        "with Part objects without Body, use the transfer function in "
+                        "Part to put them into a Part."
+                        ));
+    }
+    return activePart;
+}
+
+App::Part* getPartFor(App::DocumentObject* obj, bool messageIfNot) {
+
+    if(!obj)
+        return nullptr;
+
+    //get the part the object belongs to
+    for(App::Part* p : obj->getDocument()->getObjectsOfType<App::Part>()) {
+        if(p->hasObject(obj)) {
+            return p;
+        }
+    }
+
+    if (messageIfNot){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Feature is not in a part"),
+            QObject::tr("In order to use this feature it needs to belong to a part object in the document."));
+    }
+
+    return nullptr;
+}
+
+}
+
 
 using namespace PartGui;
 
