@@ -25,6 +25,7 @@
 
 #ifndef _PreComp_
 # include <qobject.h>
+#include <QMessageBox>
 #endif
 
 #include "Workbench.h"

@@ -30,6 +30,7 @@
 
 #include "ViewProviderPipe.h"
 #include "ViewProviderDatumShapeBinder.h"
+#include <QListWidget>
 
 class Ui_TaskDatumShapeBinder;
 class Ui_TaskPipeOrientation;
