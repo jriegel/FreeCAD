@@ -82,6 +82,7 @@ using namespace std;
 
 #include "TaskFeaturePick.h"
 #include "ReferenceSelection.h"
+#include "Workbench.h"
 
 #include "ui_DlgReference.h"
 
@@ -851,9 +852,35 @@ void CmdPartDesignNewSketch::activated(int iMsg)
                 }
             }
             if (!isBasePlane) {
-                QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Selection from other body"),
-                    QObject::tr("You have to select a face or plane from the active body!"));
-                return;
+                auto pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
+            
+                //check the prerequisites for the selected objects
+                //the user has to decide which option we should take if external references are used                    
+                QDialog* dia = new QDialog;
+                Ui_Dialog dlg;
+                dlg.setupUi(dia);
+                dia->setModal(true);
+                int result = dia->exec();
+                if(result == QDialog::DialogCode::Rejected) 
+                    return;
+                else if(!dlg.radioXRef->isChecked()) {
+                          
+                        std::string sub;
+                        if(FaceFilter.match())
+                            sub = FaceFilter.Result[0][0].getSubNames()[0];
+
+                        auto copy = PartDesignGui::TaskFeaturePick::makeCopy(obj, sub, dlg.radioIndependent->isChecked());
+                        auto oBody = PartDesignGui::getBodyFor(obj, false);
+                        if(oBody)
+                            pcActiveBody->addFeature(copy);
+                        else 
+                            pcActivePart->addObject(copy);  
+                        
+                        if(PlaneFilter.match())
+                            supportString = std::string("(App.activeDocument().") + copy->getNameInDocument() + ", '')";
+                        else 
+                            supportString = std::string("(App.activeDocument().") + copy->getNameInDocument() + ", '" + sub +"')";
+                }
             }
         } else if (pcActiveBody->getNextSolidFeature() != obj) {
             QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Selection from inactive feature"),
@@ -1174,10 +1201,33 @@ void prepareSketchBased(Gui::Command* cmd, const std::string& which,
     bool ext = std::find(status.begin(), status.end(), PartDesignGui::TaskFeaturePick::otherBody) != status.end();
     ext |= std::find(status.begin(), status.end(), PartDesignGui::TaskFeaturePick::otherPart) != status.end();
 
+    if(!bNoSketchWasSelected && ext) {   
+        
+        auto* pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
+                   
+        QDialog* dia = new QDialog;
+        Ui_Dialog dlg;
+        dlg.setupUi(dia);
+        dia->setModal(true);
+        int result = dia->exec();
+        if(result == QDialog::DialogCode::Rejected) 
+            return;
+        else if(!dlg.radioXRef->isChecked()) {
+            
+                auto copy = PartDesignGui::TaskFeaturePick::makeCopy(sketches[0], "", dlg.radioIndependent->isChecked());
+                auto oBody = PartDesignGui::getBodyFor(sketches[0], false);
+                if(oBody)
+                    pcActiveBody->addFeature(copy);
+                else 
+                    pcActivePart->addObject(copy);
+            
+                sketches[0] = copy;
+        }   
+    }
+    
     // If there is more than one selection/possibility, show dialog and let user pick sketch
     if ((bNoSketchWasSelected && validSketches > 1)  ||
-        (!bNoSketchWasSelected && sketches.size() > 1) ||
-        (!bNoSketchWasSelected && ext) ) {
+        (!bNoSketchWasSelected && sketches.size() > 1)) {
         
         Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
         PartDesignGui::TaskDlgFeaturePick *pickDlg = qobject_cast<PartDesignGui::TaskDlgFeaturePick *>(dlg);
@@ -1282,7 +1332,7 @@ CmdPartDesignPocket::CmdPartDesignPocket()
     sGroup        = QT_TR_NOOP("PartDesign");
     sMenuText     = QT_TR_NOOP("Pocket");
     sToolTipText  = QT_TR_NOOP("create a pocket with the selected sketch");
-    sWhatsThis    = "PartDesign_Pocket";
+    sWhatsThis    = sToolTipText;
     sStatusTip    = sToolTipText;
     sPixmap       = "PartDesign_Pocket";
 }
@@ -1629,7 +1679,7 @@ CmdPartDesignFillet::CmdPartDesignFillet()
     sGroup        = QT_TR_NOOP("PartDesign");
     sMenuText     = QT_TR_NOOP("Fillet");
     sToolTipText  = QT_TR_NOOP("Make a fillet on an edge, face or body");
-    sWhatsThis    = "PartDesign_Fillet";
+    sWhatsThis    = sToolTipText;
     sStatusTip    = sToolTipText;
     sPixmap       = "PartDesign_Fillet";
 }
@@ -1656,7 +1706,7 @@ CmdPartDesignChamfer::CmdPartDesignChamfer()
     sGroup        = QT_TR_NOOP("PartDesign");
     sMenuText     = QT_TR_NOOP("Chamfer");
     sToolTipText  = QT_TR_NOOP("Chamfer the selected edges of a shape");
-    sWhatsThis    = "PartDesign_Chamfer";
+    sWhatsThis    = sToolTipText;
     sStatusTip    = sToolTipText;
     sPixmap       = "PartDesign_Chamfer";
 }
@@ -1981,7 +2031,7 @@ CmdPartDesignMirrored::CmdPartDesignMirrored()
     sGroup        = QT_TR_NOOP("PartDesign");
     sMenuText     = QT_TR_NOOP("Mirrored");
     sToolTipText  = QT_TR_NOOP("create a mirrored feature");
-    sWhatsThis    = "PartDesign_Mirrored";
+    sWhatsThis    = sToolTipText;
     sStatusTip    = sToolTipText;
     sPixmap       = "PartDesign_Mirrored";
 }

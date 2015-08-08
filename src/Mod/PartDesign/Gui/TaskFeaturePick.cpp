@@ -283,9 +283,9 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::st
     else {
         
         auto name =  std::string("Reference") + std::string(obj->getNameInDocument());
-        const char* entity = std::string("").c_str();
+        std::string entity;
         if(!sub.empty())
-            entity = sub.c_str();
+            entity = sub;
         
         Part::PropertyPartShape* shapeProp = nullptr;
         
@@ -311,18 +311,18 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::st
                 return copy;
             
             if(!independent) {
-                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity);
+                static_cast<Part::Datum*>(copy)->Support.setValue(obj, entity.c_str());
                 static_cast<Part::Datum*>(copy)->MapMode.setValue(mode);
             }
-            else if(strcmp(entity,"") != 0)
-                static_cast<Part::Datum*>(copy)->Shape.setValue(static_cast<Part::Datum*>(obj)->Shape.getShape().getSubShape(entity));
+            else if(!entity.empty())
+                static_cast<Part::Datum*>(copy)->Shape.setValue(static_cast<Part::Datum*>(obj)->Shape.getShape().getSubShape(entity.c_str()));
             else
                 static_cast<Part::Datum*>(copy)->Shape.setValue(static_cast<Part::Datum*>(obj)->Shape.getValue());
         }
         else if(obj->getTypeId() == PartDesign::ShapeBinder::getClassTypeId()) {
                 copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder", name.c_str());
                 if(!independent)
-                    static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity);
+                    static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity.c_str());
                 else 
                     shapeProp = &static_cast<PartDesign::ShapeBinder*>(copy)->Shape;
         }
@@ -330,14 +330,14 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::st
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder2D", name.c_str());
             
             if(!independent)
-                static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity);
+                static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity.c_str());
             else 
                 shapeProp = &static_cast<PartDesign::ShapeBinder*>(copy)->Shape;
         }
         else if(obj->isDerivedFrom(Part::Part2DObject::getClassTypeId())) {
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder2D", name.c_str());
             if(!independent)
-                static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity);
+                static_cast<PartDesign::ShapeBinder2D*>(copy)->Support.setValue(obj, entity.c_str());
             else 
                 shapeProp = &static_cast<PartDesign::ShapeBinder*>(copy)->Shape;
         }
@@ -346,16 +346,16 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::st
             copy = App::GetApplication().getActiveDocument()->addObject("PartDesign::ShapeBinder", name.c_str());
             
             if(!independent)
-                static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity);
+                static_cast<PartDesign::ShapeBinder*>(copy)->Support.setValue(obj, entity.c_str());
             else 
                 shapeProp = &static_cast<PartDesign::ShapeBinder*>(copy)->Shape;
         }
         
         if(independent && shapeProp) {
-            if(strcmp(entity, "") == 0)
+            if(entity.empty())
                 shapeProp->setValue(static_cast<Part::Feature*>(obj)->Shape.getValue());
             else
-                shapeProp->setValue(static_cast<Part::Feature*>(obj)->Shape.getShape().getSubShape(entity));
+                shapeProp->setValue(static_cast<Part::Feature*>(obj)->Shape.getShape().getSubShape(entity.c_str()));
         }
     }
     
