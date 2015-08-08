@@ -44,6 +44,7 @@
 #include <App/Document.h>
 #include <App/DocumentObject.h>
 #include <App/DocumentObjectGroup.h>
+#include <App/GeoFeatureGroup.h>
 
 #include "Tree.h"
 #include "Document.h"
@@ -960,6 +961,7 @@ void DocumentItem::slotChangeObject(const Gui::ViewProviderDocumentObject& view)
     // item (this or a DocumentObjectItem) is the parent of the associated item of 'view'
     App::DocumentObject* obj = view.getObject();
     std::string objectName = obj->getNameInDocument();
+    const char* name = objectName.c_str();
     std::map<std::string, DocumentObjectItem*>::iterator it = ObjectMap.find(objectName);
     if (it != ObjectMap.end()) {
          // use new grouping style
@@ -969,6 +971,7 @@ void DocumentItem::slotChangeObject(const Gui::ViewProviderDocumentObject& view)
             int group_index = 0;
             for (std::vector<App::DocumentObject*>::iterator jt = group.begin(); jt != group.end(); ++jt) {
                 if ((*jt) && view.getObject()->getDocument()->isIn(*jt)){
+                    
                     // Note: It is possible that we receive an invalid pointer from claimChildren(), e.g. if multiple properties
                     // were changed in a transaction and slotChangedObject() is triggered by one property being reset
                     // before the invalid pointer has been removed from another. Currently this happens for PartDesign::Body
@@ -979,8 +982,27 @@ void DocumentItem::slotChangeObject(const Gui::ViewProviderDocumentObject& view)
                         std::map<std::string, DocumentObjectItem*>::iterator kt = ObjectMap.find(internalName);
                         if (kt != ObjectMap.end()) {
                             DocumentObjectItem* child_of_group = kt->second;
+                            
+                            //check of the parent is a geo feature group and if so, search if not anything else 
+                            //should be realy the parent, as such groups have less priority. If the child has any parent
+                            //next to a group it should be shown as child of this. This is needed for handling the App::Part 
+                            //correctly
+                            if(obj->isDerivedFrom(App::GeoFeatureGroup::getClassTypeId())) {
+                            
+                                bool ignore = false;
+                                auto res = getAllParents(child_of_group);
+                                for(DocumentObjectItem* item : res) {
+                                
+                                    if(!item->object()->getObject()->isDerivedFrom(App::GeoFeatureGroup::getClassTypeId()))
+                                        ignore = true;
+                                }
+                                if(ignore)
+                                    continue;
+                            }
+                   
                             children.insert(child_of_group);
                             QTreeWidgetItem* parent_of_child = child_of_group->parent();
+                            
                             if (parent_of_child && parent_of_child != parent_of_group) {
                                 if (parent_of_group != child_of_group) {
                                     // This child's parent must be adjusted
@@ -1003,9 +1025,9 @@ void DocumentItem::slotChangeObject(const Gui::ViewProviderDocumentObject& view)
                         Base::Console().Warning("Gui::DocumentItem::slotChangedObject(): Cannot reparent unknown object.\n");
                     }
                 }
-                else {
-                    Base::Console().Warning("Gui::DocumentItem::slotChangedObject(): Group references unknown object.\n");
-                }
+//                else {
+//                    Base::Console().Warning("Gui::DocumentItem::slotChangedObject(): Group references unknown object.\n");
+//                }
                 
                 group_index++;
             }
