@@ -91,7 +91,6 @@ Pipe::Pipe()
     ADD_PROPERTY_TYPE(Binormal,(Base::Vector3d()),"Sweep",App::Prop_None,"Binormal vector for coresponding orientation mode");
     ADD_PROPERTY_TYPE(Transition,(long(0)),"Sweep",App::Prop_None,"Transition mode");
     ADD_PROPERTY_TYPE(Transformation,(long(0)),"Sweep",App::Prop_None,"Section transformation mode");
-    ADD_PROPERTY_TYPE(ScalingData, (), "Sweep", App::Prop_None, "Data for scaling laws");
     Mode.setEnums(ModeEnums);
     Transition.setEnums(TransitionEnums);
     Transformation.setEnums(TransformEnums);
@@ -149,6 +148,7 @@ App::DocumentObjectExecReturn *Pipe::execute(void)
         TopoDS_Shape path;
         const Part::TopoShape& shape = static_cast<Part::Feature*>(spine)->Shape.getValue();
         buildPipePath(shape, subedge, path);
+        path.Move(invObjLoc);
         
         
         TopoDS_Shape auxpath;
@@ -160,7 +160,8 @@ App::DocumentObjectExecReturn *Pipe::execute(void)
             TopoDS_Shape path;
             const Part::TopoShape& auxshape = static_cast<Part::Feature*>(auxspine)->Shape.getValue();
             buildPipePath(auxshape, auxsubedge, auxpath);
-        }
+            auxpath.Move(invObjLoc);
+        }        
         
         //build up multisections
         auto multisections = Sections.getValues();
@@ -173,9 +174,8 @@ App::DocumentObjectExecReturn *Pipe::execute(void)
         //see if we shall use multiple sections
         if(Transformation.getValue() == 1) {
             
-            //we need to order the sections to prevent occ from crahsing, as makepieshell connects
-            //the sections in the order of adding
-            
+            //TODO: we need to order the sections to prevent occ from crahsing, as makepieshell connects
+            //the sections in the order of adding            
                 
             for(App::DocumentObject* obj : multisections) {
                 if(!obj->isDerivedFrom(Part::Feature::getClassTypeId()))
@@ -195,7 +195,7 @@ App::DocumentObjectExecReturn *Pipe::execute(void)
                 
             }
         }
-        //build the law functions instead
+        /*//build the law functions instead
         else if(Transformation.getValue() == 2) {
             if(ScalingData.getValues().size()<1)
                 return new App::DocumentObjectExecReturn("No valid data given for liinear scaling mode");
@@ -207,13 +207,13 @@ App::DocumentObjectExecReturn *Pipe::execute(void)
         }
         else if(Transformation.getValue() == 3) {
             if(ScalingData.getValues().size()<1)
-                return new App::DocumentObjectExecReturn("No valid data given for liinear scaling mode");
+                return new App::DocumentObjectExecReturn("No valid data given for S-shape scaling mode");
             
             Handle(Law_S) s = new Law_S();
             s->Set(0,1,ScalingData[0].y, 1, ScalingData[0].x, ScalingData[0].z);
             
             scalinglaw = s;
-        }
+        }*/
         
         //build all shells
         std::vector<TopoDS_Shape> shells;
@@ -224,12 +224,16 @@ App::DocumentObjectExecReturn *Pipe::execute(void)
             setupAlgorithm(mkPS, auxpath);
             
             if(!scalinglaw) {
-                for(TopoDS_Wire& wire : wires)  
+                for(TopoDS_Wire& wire : wires) {
+                    wire.Move(invObjLoc);
                     mkPS.Add(wire);
+                }
             }
             else {
-                for(TopoDS_Wire& wire : wires)  
+                for(TopoDS_Wire& wire : wires)  {
+                    wire.Move(invObjLoc);
                     mkPS.SetLaw(wire, scalinglaw);
+                }
             }
 
             if (!mkPS.IsReady())
@@ -269,7 +273,7 @@ App::DocumentObjectExecReturn *Pipe::execute(void)
             result.Reverse();
         }
         
-        result.Move(invObjLoc);
+        //result.Move(invObjLoc);
         AddSubShape.setValue(result);
         
         if(base.IsNull()) {

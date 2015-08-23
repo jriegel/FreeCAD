@@ -3968,14 +3968,29 @@ namespace SketcherGui {
         bool allow(App::Document *pDoc, App::DocumentObject *pObj, const char *sSubName)
         {
             Sketcher::SketchObject *sketch = static_cast<Sketcher::SketchObject*>(object);
-            if (!sketch->isExternalAllowed(pDoc, pObj))
+            sketch->allowOtherBody = (QApplication::keyboardModifiers() == Qt::ControlModifier);
+            
+            Sketcher::SketchObject::eReasonList msg;
+            if (!sketch->isExternalAllowed(pDoc, pObj, &msg)){
+                switch(msg){
+                case Sketcher::SketchObject::rlCircularReference:
+                    this->notAllowedReason = QT_TR_NOOP("Linking this will cause circular dependency.");
+                break;
+                case Sketcher::SketchObject::rlOtherDoc:
+                    this->notAllowedReason = QT_TR_NOOP("This object is in another document.");
+                break;
+                case Sketcher::SketchObject::rlOtherPart:
+                    this->notAllowedReason = QT_TR_NOOP("This object belongs to another part or body, can't link. Hold Ctrl to allow crossreferences.");
+                break;
+                }
                 return false;
+            }
 
             // Note: its better to search the support of the sketch in case the sketch support is a base plane
-            Part::BodyBase* body = Part::BodyBase::findBodyOf(sketch);
-            if ((body != NULL) && (Part::BodyBase::findBodyOf(pObj) == body) && body->isAfterTip(pObj))
+            //Part::BodyBase* body = Part::BodyBase::findBodyOf(sketch);
+            //if ((body != NULL) && (Part::BodyBase::findBodyOf(pObj) == body) && body->isAfterTip(pObj))
                 // Don't allow selection after the Tip feature in the same body
-                return false;
+                //return false;
 
             if (!sSubName || sSubName[0] == '\0')
                 return false;

@@ -1322,8 +1322,11 @@ Document::getDependencyList(const std::vector<App::DocumentObject*>& objs) const
         // this sort gives the execute
         boost::topological_sort(DepList, std::front_inserter(make_order));
     }
-    catch (const std::exception&) {
-        return std::vector<App::DocumentObject*>();
+    catch (const std::exception& e) {
+        std::stringstream ss;
+        ss << "Gathering all dependencies failed, probably due to circular dependencies. Error: ";
+        ss << e.what();
+        throw Base::Exception(ss.str().c_str());
     }
 
     std::set<Vertex> out;
@@ -1615,13 +1618,20 @@ void Document::_addObject(DocumentObject* pcObject, const char* pObjectName)
 }
 
 /// Remove an object out of the document
-void Document::remObject(const char* sName)
+void Document::remObject(const char* sName, bool forceIfUndeletable)
 {
     std::map<std::string,DocumentObject*>::iterator pos = d->objectMap.find(sName);
 
     // name not found?
     if (pos == d->objectMap.end())
         return;
+    
+    // undeletable?
+    if (pos->second->testStatus(ObjectStatus::Undeletable) && !forceIfUndeletable) {
+        std::stringstream str;
+        str << "Document object '" << pos->second->getNameInDocument() << "' is undeletable";
+        throw Base::Exception(str.str());
+    }
 
     _checkTransaction(pos->second);
 
@@ -1685,7 +1695,7 @@ void Document::_remObject(DocumentObject* pcObject)
     _checkTransaction(pcObject);
 
     std::map<std::string,DocumentObject*>::iterator pos = d->objectMap.find(pcObject->getNameInDocument());
-
+    
     if (d->activeObject == pcObject)
         d->activeObject = 0;
 

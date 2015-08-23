@@ -46,6 +46,7 @@ public:
         noWire,
         isUsed,
         otherBody,
+        otherPart,
         basePlane,
         afterTip
     };
@@ -57,14 +58,13 @@ public:
     ~TaskFeaturePick();
 
     std::vector<App::DocumentObject*> getFeatures();
-    bool getReverse();
-
+    std::vector<App::DocumentObject*> buildFeatures();
+    void showExternal(bool val);
+    
+    static App::DocumentObject* makeCopy(App::DocumentObject* obj, std::string sub, bool independent);
+    
 protected Q_SLOTS:
-    void onCheckReverse(bool);
-    void onCheckOtherFeature(bool);
-    void onCheckOtherBody(bool);
     void onUpdate(bool);
-
     void onSelectionChanged(const Gui::SelectionChanges& msg);
     
 private:
@@ -77,7 +77,6 @@ private:
     std::vector<featureStatus> statuses;
 
     void updateList();
-
     const QString getFeatureStatusString(const featureStatus st);
 };
 
@@ -106,6 +105,8 @@ public:
     /// is called by the framework if the user presses the help button 
     virtual bool isAllowedAlterDocument(void) const
     { return false; }
+    
+    void showExternal(bool val);
 
     /// returns for Close and Help button 
     virtual QDialogButtonBox::StandardButtons getStandardButtons(void) const

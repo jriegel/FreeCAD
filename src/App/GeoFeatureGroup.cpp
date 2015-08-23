@@ -98,7 +98,7 @@ void GeoFeatureGroup::removeObjectFromDocument(DocumentObject* obj)
         }
     }
 
-    this->getDocument()->remObject(obj->getNameInDocument());
+    this->getDocument()->remObject(obj->getNameInDocument(), true);
 }
 
 DocumentObject *GeoFeatureGroup::getObject(const char *Name) const
@@ -116,7 +116,7 @@ bool GeoFeatureGroup::hasObject(const DocumentObject* obj, bool recursive) const
         if (*it == obj)
             return true;
         if (recursive && (*it)->getTypeId().isDerivedFrom(GeoFeatureGroup::getClassTypeId())) {
-            if (this->hasObject(static_cast<GeoFeatureGroup*>(*it), recursive))
+            if (static_cast<GeoFeatureGroup*>(*it)->hasObject(obj, recursive))
                 return true;
         }
     }

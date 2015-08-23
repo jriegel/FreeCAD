@@ -21,18 +21,17 @@
  ***************************************************************************/
 
 
-#ifndef GUI_TASKVIEW_TaskPipeParameters_H
-#define GUI_TASKVIEW_TaskPipeParameters_H
+#ifndef GUI_TASKVIEW_TaskDatumShapeBinder_H
+#define GUI_TASKVIEW_TaskDatumShapeBinder_H
 
 #include <Gui/TaskView/TaskView.h>
 #include <Gui/Selection.h>
 #include <Gui/TaskView/TaskDialog.h>
 
-#include "TaskSketchBasedParameters.h"
 #include "ViewProviderPipe.h"
-#include "TaskDressUpParameters.h"
+#include "ViewProviderDatumShapeBinder.h"
 
-class Ui_TaskPipeParameters;
+class Ui_TaskDatumShapeBinder;
 class Ui_TaskPipeOrientation;
 class Ui_TaskPipeScaling;
 
@@ -49,18 +48,16 @@ namespace PartDesignGui {
 
 
 
-class TaskPipeParameters : public TaskSketchBasedParameters
+class TaskDatumShapeBinder : public Gui::TaskView::TaskBox, Gui::SelectionObserver
 {
     Q_OBJECT
 
 public:
-    TaskPipeParameters(ViewProviderPipe *PipeView,bool newObj=false,QWidget *parent = 0);
-    ~TaskPipeParameters();
+    TaskDatumShapeBinder(ViewProviderDatumShapeBinder *PipeView,bool newObj=false,QWidget *parent = 0);
+    ~TaskDatumShapeBinder();
 
  
 private Q_SLOTS:
-    void onTangentChanged(bool checked);
-    void onTransitionChanged(int);
     void onButtonRefAdd(bool checked);
     void onButtonRefRemove(bool checked);
     void onBaseButton(bool checked);
@@ -79,109 +76,33 @@ private:
     void clearButtons();
     void exitSelectionMode();
 
-    bool spineShow = false;
+    bool supportShow = false;
     
 private:
     QWidget* proxy;
-    Ui_TaskPipeParameters* ui;
-};
-
-class TaskPipeOrientation : public TaskSketchBasedParameters
-{
-    Q_OBJECT
-
-public:
-    TaskPipeOrientation(ViewProviderPipe *PipeView,bool newObj=false,QWidget *parent = 0);
-    virtual ~TaskPipeOrientation();
-
- 
-private Q_SLOTS:
-    void onOrientationChanged(int);
-    void onButtonRefAdd(bool checked);
-    void onButtonRefRemove(bool checked);
-    void updateUI(int idx);
-    void onBaseButton(bool checked);
-    void onTangentChanged(bool checked);
-    void onCurvelinearChanged(bool checked);
-    void onBinormalChanged(double);
-  
-protected:
-    enum selectionModes { none, refAdd, refRemove, refObjAdd };
-    void changeEvent(QEvent *e);
-    selectionModes selectionMode = none;
-    
-    void removeFromListWidget(QListWidget*w, QString name);
-    bool referenceSelected(const Gui::SelectionChanges& msg) const;
-
-private:
-    void onSelectionChanged(const Gui::SelectionChanges& msg);
-    void clearButtons();
-    void exitSelectionMode();
-    
-    bool auxSpineShow = false;
-
-private:
-    QWidget* proxy;
-    Ui_TaskPipeOrientation* ui;
-};
-
-
-class TaskPipeScaling : public TaskSketchBasedParameters
-{
-    Q_OBJECT
-
-public:
-    TaskPipeScaling(ViewProviderPipe *PipeView,bool newObj=false,QWidget *parent = 0);
-    virtual ~TaskPipeScaling();
-
- 
-private Q_SLOTS:
-    void onScalingChanged(int);
-    void onButtonRefAdd(bool checked);
-    void onButtonRefRemove(bool checked);
-    void updateUI(int idx);
-  
-protected:
-    enum selectionModes { none, refAdd, refRemove };
-    void changeEvent(QEvent *e);
-    selectionModes selectionMode = none;
-    
-    void removeFromListWidget(QListWidget*w, QString name);
-    bool referenceSelected(const Gui::SelectionChanges& msg) const;
-
-private:
-    void onSelectionChanged(const Gui::SelectionChanges& msg);
-    void clearButtons();
-    void exitSelectionMode();
-
-private:
-    QWidget* proxy;
-    Ui_TaskPipeScaling* ui;
+    Ui_TaskDatumShapeBinder* ui;
+    ViewProviderDatumShapeBinder* vp;
 };
 
 
 /// simulation dialog for the TaskView
-class TaskDlgPipeParameters : public TaskDlgSketchBasedParameters
+class TaskDlgDatumShapeBinder : public Gui::TaskView::TaskDialog
 {
     Q_OBJECT
 
 public:
-    TaskDlgPipeParameters(ViewProviderPipe *PipeView,bool newObj=false);
-    ~TaskDlgPipeParameters();
-
-    ViewProviderPipe* getPipeView() const
-    { return static_cast<ViewProviderPipe*>(vp); }
-
+    TaskDlgDatumShapeBinder(ViewProviderDatumShapeBinder *view,bool newObj=false);
+    ~TaskDlgDatumShapeBinder();
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
     virtual bool accept();
     /// is called by the framework if the dialog is rejected (Cancel)
+    //virtual bool reject();
 
 protected:
-    TaskPipeParameters  *parameter;
-    TaskPipeOrientation *orientation;
-    TaskPipeScaling     *scaling;
+    TaskDatumShapeBinder  *parameter;
+    ViewProviderDatumShapeBinder* vp;
 };
 
 } //namespace PartDesignGui

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Stefan Tröger          (stefantroeger@gmx.net) 2015     *
+ *   Copyright (c) 2015 Thomas Anderson <blobfish[at]gmx.com>              *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -20,50 +20,59 @@
  *                                                                         *
  ***************************************************************************/
 
-
-
-
-#ifndef _AppLine_h_
-#define _AppLine_h_
-
-
-#include "GeoFeature.h"
-#include "PropertyGeo.h"
-
-
-
-namespace App
-{
-
-
-/** Line Object
- *  Used to define linear support for all kind of operations in the document space
- */
-class AppExport Line: public App::GeoFeature
-{
-    PROPERTY_HEADER(App::Line);
-
-public:
-
-  /// Constructor
-  Line(void);
-  virtual ~Line();
-  /// additional information about the plane usage (e.g. "BaseLine-xy" in a Part)
-  PropertyString LineType;
-
-
-  /// returns the type name of the ViewProvider
-  virtual const char* getViewProviderName(void) const {
-      return "Gui::ViewProviderLine";
-  }
-
-  /// Return the bounding box of the plane (this is always a fixed size)
-  static Base::BoundBox3d getBoundBox();
-};
-
-
-} //namespace App
-
-
-
+#include "PreCompiled.h"
+#ifndef _PreComp_
+#include <QPainter>
+#include <QApplication>
 #endif
+
+#include <QStyleOptionViewItem>
+
+#include "DAGRectItem.h"
+
+using namespace Gui;
+using namespace DAG;
+
+RectItem::RectItem(QGraphicsItem* parent) : QGraphicsRectItem(parent)
+{
+  selected = false;
+  preSelected = false;
+  editing = false;
+}
+
+void RectItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget)
+{
+  painter->save();
+  
+  QStyleOptionViewItemV4 styleOption;
+  
+  styleOption.backgroundBrush = backgroundBrush;
+  if (editing)
+    styleOption.backgroundBrush = editBrush;
+  else
+  {
+    styleOption.state |= QStyle::State_Enabled;
+    if (selected)
+      styleOption.state |= QStyle::State_Selected;
+    if (preSelected)
+    {
+      if (!selected)
+      {
+        styleOption.state |= QStyle::State_Selected;
+        QPalette palette = styleOption.palette;
+        QColor tempColor = palette.color(QPalette::Active, QPalette::Highlight);
+        tempColor.setAlphaF(0.15);
+        palette.setColor(QPalette::Inactive, QPalette::Highlight, tempColor);
+        styleOption.palette = palette;
+      }
+      styleOption.state |= QStyle::State_MouseOver;
+    }
+  }
+  styleOption.rect = this->rect().toRect();
+  
+  QApplication::style()->drawControl(QStyle::CE_ItemViewItem, &styleOption, painter);
+  
+  painter->restore();
+}
+
+#include <moc_DAGRectItem.cpp>

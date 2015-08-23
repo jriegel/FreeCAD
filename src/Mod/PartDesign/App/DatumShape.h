@@ -21,71 +21,64 @@
  ***************************************************************************/
 
 
-#ifndef PARTDESIGN_Pipe_H
-#define PARTDESIGN_Pipe_H
+#ifndef PARTDESIGN_DATUMSHAPE_H
+#define PARTDESIGN_DATUMSHAPE_H
 
-#include <App/PropertyStandard.h>
-#include "FeatureSketchBased.h"
-#include <BRepOffsetAPI_MakePipeShell.hxx>
+#include <QString>
+#include <App/PropertyLinks.h>
+#include <Mod/Part/App/DatumFeature.h>
+#include <Mod/Part/App/Part2DObject.h>
 
 namespace PartDesign
 {
 
-class PartDesignExport Pipe : public SketchBased
+/*Those two feature are not realy a classical datum. They are fully defined shapes and not 
+ *infinit geometries like planes and lines. Also they are not calculated by references and hence
+ *are not "attaced" to anything. Furthermore real shapes must be visualized. This makes it hard
+ *to reuse the existing datum infrastructure and a special handling foor those two types is 
+ *created. 
+ */
+
+
+class PartDesignExport ShapeBinder : public Part::Feature
 {
-    PROPERTY_HEADER(PartDesign::Pad);
+    PROPERTY_HEADER(PartDesign::ShapeBinder);
 
 public:
-    Pipe();
+    ShapeBinder();
+    virtual ~ShapeBinder();
+     
+    App::PropertyLinkSubList    Support;
 
+    static void getFilterdReferences(App::PropertyLinkSubList* prop, Part::Feature*& object, std::vector< std::string >& subobjects);
+    static TopoShape buildShapeFromReferences(Feature* obj, std::vector< std::string > subs);
     
-    App::PropertyLinkSub     Spine;
-    App::PropertyBool        SpineTangent;
-    App::PropertyLinkSub     AuxillerySpine;
-    App::PropertyBool        AuxillerySpineTangent;
-    App::PropertyBool        AuxilleryCurvelinear;
-    App::PropertyEnumeration Mode;
-    App::PropertyVector      Binormal;
-    App::PropertyEnumeration Transition;
-    App::PropertyEnumeration Transformation;
-    App::PropertyLinkList    Sections;
-
-    App::DocumentObjectExecReturn *execute(void);
-    short mustExecute() const;
-    /// returns the type name of the view provider
     const char* getViewProviderName(void) const {
-        return "PartDesignGui::ViewProviderPipe";
+        return "PartDesignGui::ViewProviderDatumShapeBinder";
     }
-    //@}
-    
+
 protected:
-    ///get the given edges and all their tangent ones
-    void getContiniusEdges(Part::TopoShape TopShape, std::vector< std::string >& SubNames);
-    void buildPipePath(const Part::TopoShape& input, const  std::vector<std::string>& edges, TopoDS_Shape& result);
-    void setupAlgorithm(BRepOffsetAPI_MakePipeShell& mkPipeShell, TopoDS_Shape& auxshape);
-
-private:
-    static const char* TypeEnums[];
-    static const char* TransitionEnums[];
-    static const char* ModeEnums[];
-    static const char* TransformEnums[];
+    virtual void onChanged(const App::Property* prop);
 };
 
-class PartDesignExport AdditivePipe : public Pipe {
-    
-    PROPERTY_HEADER(PartDesign::AdditivePipe);
-public:
-    AdditivePipe();
-};
+//this class is needed as long as sketch-based features can only work with Part2DObjects
+class PartDesignExport ShapeBinder2D : public Part::Part2DObject
+{
+    PROPERTY_HEADER(PartDesign::ShapeBinder2D);
 
-class PartDesignExport SubtractivePipe : public Pipe {
-    
-    PROPERTY_HEADER(PartDesign::SubtractivePipe);
 public:
-    SubtractivePipe();
+    ShapeBinder2D();
+    virtual ~ShapeBinder2D();
+
+    const char* getViewProviderName(void) const {
+        return "PartDesignGui::ViewProviderDatumShapeBinder";
+    }
+
+protected:
+    virtual void onChanged(const App::Property* prop);
 };
 
 } //namespace PartDesign
 
 
-#endif // PART_Pad_H
+#endif // PARTDESIGN_DATUMSHAPE_H

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Stefan Tröger          (stefantroeger@gmx.net) 2015     *
+ *   Copyright (c) 2015 Thomas Anderson <blobfish[at]gmx.com>              *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -20,46 +20,67 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
 #endif
 
-
-#include "Line.h"
-
-using namespace App;
+#include <Base/Type.h>
+#include <Gui/ViewProviderDocumentObject.h>
 
 
-PROPERTY_SOURCE(App::Line, App::GeoFeature)
+#include "DAGFilter.h"
 
+using namespace Gui;
+using namespace DAG;
 
-//===========================================================================
-// Feature
-//===========================================================================
-
-Line::Line(void)
+FilterBase::FilterBase() : name(QString::fromAscii("empty name")), enabled(true), type(Type::Exclusion)
 {
-    ADD_PROPERTY(LineType,(""));
-    //placement can't be changed
-    Placement.StatusBits.set(3, true);
-    //line can not be deleted by user
-    StatusBits.set(ObjectStatus::Undeletable, true);   
 
 }
 
-Line::~Line(void)
+FilterOrigin::FilterOrigin() : FilterBase()
 {
+  name = QObject::tr("Origin");
 }
 
-Base::BoundBox3d Line::getBoundBox()
+bool FilterOrigin::goFilter(const Vertex &vertexIn, const Graph &graphIn, const GraphLinkContainer &linkIn) const
 {
-    return Base::BoundBox3d(-10, -10, -10, 10, 10, 10);
+  Base::Type originType = Base::Type::fromName("App::Origin");
+  assert (originType != Base::Type::badType());
+  //if child of origin hide.
+  InEdgeIterator it, itEnd;
+  for (boost::tie(it, itEnd) = boost::in_edges(vertexIn, graphIn); it != itEnd; ++it)
+  {
+    Vertex source = boost::source(*it, graphIn);
+    const GraphLinkRecord &sourceRecord = findRecord(source, linkIn);
+    if
+    (
+      (sourceRecord.DObject->getTypeId() == originType) &&
+      (boost::in_degree(vertexIn, graphIn) == 1)
+    )
+      return true;
+  }
+  return false;
 }
 
+FilterTyped::FilterTyped(const std::string &typeIn) : FilterBase(), type(typeIn)
+{
+  name = QString::fromStdString(typeIn);
+}
 
-
-
+bool FilterTyped::goFilter(const Gui::DAG::Vertex& vertexIn, const Graph& graphIn, const GraphLinkContainer& linkIn) const
+{
+  if (type.empty())
+    return false;
+  Base::Type theType = Base::Type::fromName(type.c_str());
+  if (theType == Base::Type::badType())
+    return false;
+  
+  const GraphLinkRecord &sourceRecord = findRecord(vertexIn, linkIn);
+  if (sourceRecord.DObject->getTypeId() == theType)
+    return true;
+  
+  return false;
+}
 
 

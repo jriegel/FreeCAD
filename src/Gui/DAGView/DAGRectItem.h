@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Stefan Tröger          (stefantroeger@gmx.net) 2015     *
+ *   Copyright (c) 2015 Thomas Anderson <blobfish[at]gmx.com>              *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -20,50 +20,45 @@
  *                                                                         *
  ***************************************************************************/
 
+#ifndef DAGRECTITEM_H
+#define DAGRECTITEM_H
 
+#include <QGraphicsRectItem>
+#include <QBrush>
 
-
-#ifndef _AppLine_h_
-#define _AppLine_h_
-
-
-#include "GeoFeature.h"
-#include "PropertyGeo.h"
-
-
-
-namespace App
+namespace Gui
 {
-
-
-/** Line Object
- *  Used to define linear support for all kind of operations in the document space
- */
-class AppExport Line: public App::GeoFeature
-{
-    PROPERTY_HEADER(App::Line);
-
-public:
-
-  /// Constructor
-  Line(void);
-  virtual ~Line();
-  /// additional information about the plane usage (e.g. "BaseLine-xy" in a Part)
-  PropertyString LineType;
-
-
-  /// returns the type name of the ViewProvider
-  virtual const char* getViewProviderName(void) const {
-      return "Gui::ViewProviderLine";
+  namespace DAG
+  {
+    /*all right I give up! the parenting combined with the zvalues is fubar!
+     * you can't control any kind of layering between children of separate parents
+     */
+    class RectItem : public QGraphicsRectItem
+    {
+    public:
+      RectItem(QGraphicsItem* parent = 0);
+      void setBackgroundBrush(const QBrush &brushIn){backgroundBrush = brushIn;}
+      void setEditingBrush(const QBrush &brushIn){editBrush = brushIn;}
+      void preHighlightOn(){preSelected = true;}
+      void preHighlightOff(){preSelected = false;}
+      void selectionOn(){selected = true;}
+      void selectionOff(){selected = false;}
+      bool isSelected(){return selected;}
+      bool isPreSelected(){return preSelected;}
+      void editingStart(){editing = true;}
+      void editingFinished(){editing = false;}
+      bool isEditing(){return editing;}
+    protected:
+      virtual void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget = 0);
+    private:
+      QBrush backgroundBrush; //!< brush used for background. not used yet.
+      QBrush editBrush; //!< brush used when object is in edit mode.
+      //start with booleans, may expand to state.
+      bool selected;
+      bool preSelected;
+      bool editing;
+    };
   }
+}
 
-  /// Return the bounding box of the plane (this is always a fixed size)
-  static Base::BoundBox3d getBoundBox();
-};
-
-
-} //namespace App
-
-
-
-#endif
+#endif // DAGRECTITEM_H

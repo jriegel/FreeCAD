@@ -48,6 +48,7 @@ set(PartDesignGui_MOC_HDRS
     TaskScaledParameters.h
     TaskMultiTransformParameters.h
     TaskDatumParameters.h
+    TaskDatumShapeBinder.h
     TaskBooleanParameters.h
     TaskPrimitiveParameters.h
     TaskPipeParameters.h
@@ -77,11 +78,13 @@ set(PartDesignGui_UIC_SRCS
     TaskScaledParameters.ui
     TaskMultiTransformParameters.ui
     TaskDatumParameters.ui
+    TaskDatumShapeBinder.ui
     TaskPrimitiveParameters.ui
     TaskPipeParameters.ui
     TaskPipeOrientation.ui
     TaskPipeScaling.ui
     TaskLoftParameters.ui
+    DlgReference.ui
 )
 qt4_wrap_ui(PartDesignGui_UIC_HDRS ${PartDesignGui_UIC_SRCS})
 
@@ -132,6 +135,8 @@ SET(PartDesignGuiViewProvider_SRCS CommandPrimitive.cpp
     ViewProviderDatumPlane.h
     ViewProviderDatumCS.cpp
     ViewProviderDatumCS.h
+    ViewProviderDatumShapeBinder.h
+    ViewProviderDatumShapeBinder.cpp
     ViewProviderBoolean.cpp
     ViewProviderBoolean.h
     ViewProviderAddSub.cpp
@@ -205,6 +210,9 @@ SET(PartDesignGuiTaskDlgs_SRCS
     TaskDatumParameters.ui
     TaskDatumParameters.cpp
     TaskDatumParameters.h
+    TaskDatumShapeBinder.ui
+    TaskDatumShapeBinder.cpp
+    TaskDatumShapeBinder.h
     TaskBooleanParameters.ui
     TaskBooleanParameters.cpp
     TaskBooleanParameters.h

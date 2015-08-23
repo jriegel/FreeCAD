@@ -1420,11 +1420,30 @@ int SketchObject::trim(int GeoId, const Base::Vector3d& point)
     return -1;
 }
 
-bool SketchObject::isExternalAllowed(App::Document *pDoc, App::DocumentObject *pObj) const
+bool SketchObject::isExternalAllowed(App::Document *pDoc, App::DocumentObject *pObj, eReasonList* rsn) const
 {
+    if (rsn)
+        *rsn = rlAllowed;
+
     // Externals outside of the Document are NOT allowed
-    if (this->getDocument() != pDoc)
+    if (this->getDocument() != pDoc){
+        if (rsn)
+            *rsn = rlOtherDoc;
         return false;    
+    }
+
+    //circular reference prevention
+    try {
+        if (!(this->testIfLinkDAGCompatible(pObj))){
+            if (rsn)
+                *rsn = rlCircularReference;
+            return false;
+        }
+    } catch (Base::Exception &e) {
+        Base::Console().Warning("Probably, there is a circular reference in the document. Error: %s\n", e.what());
+        return true; //prohibiting this reference won't remove the problem anyway...
+    }
+    
 
     // Note: Checking for the body of the support doesn't work when the support are the three base planes
     App::DocumentObject *support = this->Support.getValue();
@@ -1432,8 +1451,11 @@ bool SketchObject::isExternalAllowed(App::Document *pDoc, App::DocumentObject *p
     if (body != NULL) {
         if (Part::BodyBase::findBodyOf(pObj) != body) {
             // Selection outside of body not allowed if flag is not set
-            if (!this->allowOtherBody)
+            if (!this->allowOtherBody){
+                if (rsn)
+                    *rsn = rlOtherPart;
                 return false;
+            }
         }
 
         // Datum features are always allowed

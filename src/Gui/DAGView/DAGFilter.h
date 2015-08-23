@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Stefan Tröger          (stefantroeger@gmx.net) 2015     *
+ *   Copyright (c) 2015 Thomas Anderson <blobfish[at]gmx.com>              *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -20,50 +20,54 @@
  *                                                                         *
  ***************************************************************************/
 
+#ifndef DAGFILTER_H
+#define DAGFILTER_H
 
+#include <QString>
 
+#include "DAGModelGraph.h"
 
-#ifndef _AppLine_h_
-#define _AppLine_h_
-
-
-#include "GeoFeature.h"
-#include "PropertyGeo.h"
-
-
-
-namespace App
+namespace Gui
 {
-
-
-/** Line Object
- *  Used to define linear support for all kind of operations in the document space
- */
-class AppExport Line: public App::GeoFeature
-{
-    PROPERTY_HEADER(App::Line);
-
-public:
-
-  /// Constructor
-  Line(void);
-  virtual ~Line();
-  /// additional information about the plane usage (e.g. "BaseLine-xy" in a Part)
-  PropertyString LineType;
-
-
-  /// returns the type name of the ViewProvider
-  virtual const char* getViewProviderName(void) const {
-      return "Gui::ViewProviderLine";
+  class ViewProviderDocumentObject;
+  namespace DAG
+  {
+    class FilterBase
+    {
+    public:
+      enum class Type
+      {
+        None = 0, //!< no type designation. shouldn't be used.
+        Inclusion,
+        Exclusion
+      };
+      FilterBase();
+      //! @return is whether we have a match or not.
+      virtual bool goFilter(const Vertex &vertexIn, const Graph &graphIn, const GraphLinkContainer &linkIn) const = 0;
+      QString name;
+      bool enabled;
+      Type type;
+    };
+    
+    /*! Hide all children of app::origin that are not
+     * used by subsequent features
+     */
+    class FilterOrigin : public FilterBase
+    {
+    public:
+      FilterOrigin();
+      virtual bool goFilter(const Vertex &vertexIn, const Graph &graphIn, const GraphLinkContainer &linkIn) const override;
+    };
+    
+    /*! Hide nodes of type*/
+    class FilterTyped : public FilterBase
+    {
+    public:
+      explicit FilterTyped(const std::string &typeIn);
+      std::string type;
+      virtual bool goFilter(const Vertex &vertexIn, const Graph &graphIn, const GraphLinkContainer &linkIn) const override;
+    };
   }
+}
 
-  /// Return the bounding box of the plane (this is always a fixed size)
-  static Base::BoundBox3d getBoundBox();
-};
-
-
-} //namespace App
-
-
-
-#endif
+#endif // DAGFILTER_H

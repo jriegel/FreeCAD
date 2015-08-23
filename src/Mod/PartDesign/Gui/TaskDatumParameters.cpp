@@ -32,6 +32,7 @@
 #endif
 
 #include "ui_TaskDatumParameters.h"
+#include <ui_DlgReference.h>
 #include "TaskDatumParameters.h"
 #include <App/Application.h>
 #include <App/Document.h>
@@ -52,6 +53,7 @@
 #include <Mod/PartDesign/App/Body.h>
 #include "ReferenceSelection.h"
 #include "Workbench.h"
+#include "TaskFeaturePick.h"
 
 using namespace PartDesignGui;
 using namespace Gui;
@@ -863,6 +865,13 @@ void TaskDlgDatumParameters::clicked(int)
 
 bool TaskDlgDatumParameters::accept()
 {
+    std::string name = DatumView->getObject()->getNameInDocument();
+    Datum* pcDatum = static_cast<Datum*>(DatumView->getObject());
+    auto pcActiveBody = PartDesignGui::getBody(false);
+    auto pcActivePart = PartDesignGui::getPartFor(pcActiveBody, false);
+    std::vector<App::DocumentObject*> copies;
+    
+    //see if we are able to assign a mode
     bool bIgnoreError = false;
     if (parameter->getActiveMapMode() == mmDeactivated) {
         QMessageBox msg;
@@ -879,10 +888,46 @@ bool TaskDlgDatumParameters::accept()
         if (msg.clickedButton() == btNo)
             return false;
     }
-
-    std::string name = DatumView->getObject()->getNameInDocument();
-    Datum* pcDatum = static_cast<Datum*>(DatumView->getObject());
-
+    
+    //see what to do with external references
+    //check the prerequisites for the selected objects
+    //the user has to decide which option we should take if external references are used
+    bool ext = false;
+    for(App::DocumentObject* obj : pcDatum->Support.getValues()) {
+        if(!pcActiveBody->hasFeature(obj)) 
+            ext = true;
+    }
+    if(ext) {
+        
+        QDialog* dia = new QDialog;
+        Ui_Dialog dlg;
+        dlg.setupUi(dia);
+        dia->setModal(true);
+        int result = dia->exec();
+        if(result == QDialog::DialogCode::Rejected) 
+            return false;
+        else if(!dlg.radioXRef->isChecked()) {
+            
+            std::vector<App::DocumentObject*> objs;
+            std::vector<std::string> subs = pcDatum->Support.getSubValues();
+            int index = 0;
+            for(App::DocumentObject* obj : pcDatum->Support.getValues()) {
+                
+                if(!pcActiveBody->hasFeature(obj)) {
+                    objs.push_back(PartDesignGui::TaskFeaturePick::makeCopy(obj, subs[index], dlg.radioIndependent->isChecked()));
+                    copies.push_back(objs.back());                  
+                    subs[index] = "";
+                }  
+                else 
+                    objs.push_back(obj);
+                
+                index++;
+            }
+            
+            pcDatum->Support.setValues(objs, subs);
+        }          
+    }
+    
     try {
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.superPlacement.Base.z = %f",name.c_str(),parameter->getOffset());
         Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.%s.superPlacement.Base.y = %f",name.c_str(),parameter->getOffset2());
@@ -900,6 +945,15 @@ bool TaskDlgDatumParameters::accept()
             throw Base::Exception(DatumView->getObject()->getStatusString());
         Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
         Gui::Command::commitCommand();
+        
+        //we need to add the copied features to the body after the command action, as otherwise freecad crashs unexplainable
+        for(auto obj : copies) {
+            auto oBody = PartDesignGui::getBodyFor(obj, false);
+            if(oBody)
+                pcActiveBody->addFeature(obj);
+            else
+                pcActivePart->addObject(obj);
+        }
     }
     catch (const Base::Exception& e) {
         QMessageBox::warning(parameter, tr("Datum dialog: Input error"), QString::fromAscii(e.what()));
