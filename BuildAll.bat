@@ -16,7 +16,7 @@ rem "C:\Program Files\TortoiseSVN\bin\TortoiseProc.exe" /command:update /path:"C
 
 
 rem Start the Visuall Studio build process
-msbuild.exe build\FreeCAD_trunk.sln /m /p:Configuration="Debug" 
+msbuild.exe build\FreeCAD_trunk.sln /t:ZERO_CHECK
 msbuild.exe build\FreeCAD_trunk.sln /m /p:Configuration="Debug" 
 msbuild.exe build\FreeCAD_trunk.sln /m /p:Configuration="Release" 
 
