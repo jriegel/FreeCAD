@@ -5,6 +5,7 @@
         <file>icons/Fem_Analysis.svg</file>
         <file>icons/Fem_ConstraintForce.svg</file>
         <file>icons/Fem_ConstraintFixed.svg</file>
+        <file>icons/Fem_ConstraintPressure.svg</file>
         <file>icons/Fem_ConstraintBearing.svg</file>
         <file>icons/Fem_ConstraintGear.svg</file>
         <file>icons/Fem_ConstraintPulley.svg</file>
@@ -14,6 +15,8 @@
         <file>icons/Fem_Inp_Editor.svg</file>
         <file>icons/Fem_Material.svg</file>
         <file>icons/Fem_NewAnalysis.svg</file>
+        <file>icons/Fem_Purge_Results.svg</file>
+        <file>icons/Fem_Quick_Analysis.svg</file>
         <file>icons/Fem_Result.svg</file>
         <file>icons/Fem_ResultDisplacement.svg</file>
         <file>icons/Fem_ResultStress.svg</file>

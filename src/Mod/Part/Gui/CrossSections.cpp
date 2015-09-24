@@ -46,6 +46,7 @@
 
 #include "ui_CrossSections.h"
 #include "CrossSections.h"
+#include "Workbench.h"
 #include <Mod/Part/App/PartFeature.h>
 #include <Mod/Part/App/CrossSection.h>
 #include <Gui/BitmapFactory.h>
@@ -182,6 +183,10 @@ void CrossSections::accept()
 
 void CrossSections::apply()
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     std::vector<App::DocumentObject*> obj = Gui::Selection().
         getObjectsOfType(Part::Feature::getClassTypeId());
 
@@ -259,9 +264,11 @@ void CrossSections::apply()
             "slice=FreeCAD.getDocument(\"%1\").addObject(\"Part::Feature\",\"%2\")\n"
             "slice.Shape=comp\n"
             "slice.purgeTouched()\n"
+            "FreeCAD.ActiveDocument.%3.addObject(FreeCAD.ActiveDocument.%2)\n"
             "del slice,comp,wires,shape")
             .arg(QLatin1String(doc->getName()))
-            .arg(QLatin1String(s.c_str())).toAscii());
+            .arg(QLatin1String(s.c_str()))
+            .arg(QString::fromAscii(acPart->getNameInDocument())).toAscii());
 
         seq.next();
     }

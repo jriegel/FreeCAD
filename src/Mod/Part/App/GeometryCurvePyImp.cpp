@@ -53,6 +53,8 @@
 # include <GeomAPI_ExtremaCurveCurve.hxx>
 # include <Standard_NullValue.hxx>
 # include <ShapeConstruct_Curve.hxx>
+# include <GeomAPI_IntCS.hxx>
+# include <GeomAPI_ExtremaCurveCurve.hxx>
 #endif
 
 #include <Base/GeometryPyCXX.h>

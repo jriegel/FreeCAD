@@ -313,6 +313,15 @@ CmdSketcherLeaveSketch::CmdSketcherLeaveSketch()
 
 void CmdSketcherLeaveSketch::activated(int iMsg)
 {
+    Gui::Document *doc = getActiveGuiDocument();
+    
+    if (doc) {
+        // checks if a Sketch Viewprovider is in Edit and is in no special mode
+        SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+        if (vp && vp->getSketchMode() != ViewProviderSketch::STATUS_NONE)
+            vp->purgeHandler();
+    }
+    
     openCommand("Sketch changed");
     doCommand(Gui,"Gui.activeDocument().resetEdit()");
     doCommand(Doc,"App.ActiveDocument.recompute()");
@@ -326,7 +335,7 @@ bool CmdSketcherLeaveSketch::isActive(void)
     if (doc) {
         // checks if a Sketch Viewprovider is in Edit and is in no special mode
         SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-        if (vp && vp->getSketchMode() == ViewProviderSketch::STATUS_NONE)
+        if (vp /*&& vp->getSketchMode() == ViewProviderSketch::STATUS_NONE*/)
             return true;
     }
     return false;
@@ -601,7 +610,7 @@ bool CmdSketcherViewSketch::isActive(void)
     if (doc) {
         // checks if a Sketch Viewprovider is in Edit and is in no special mode
         SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-        if (vp && vp->getSketchMode() == ViewProviderSketch::STATUS_NONE)
+        if (vp /*&& vp->getSketchMode() == ViewProviderSketch::STATUS_NONE*/)
             return true;
     }
     return false;

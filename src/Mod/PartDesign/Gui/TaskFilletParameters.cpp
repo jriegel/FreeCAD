@@ -76,7 +76,6 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
     ui->filletRadius->setMinimum(0);
     ui->filletRadius->selectNumber();
     QMetaObject::invokeMethod(ui->filletRadius, "setFocus", Qt::QueuedConnection);
-
     std::vector<std::string> strings = pcFillet->Base.getSubValues();
     for (std::vector<std::string>::const_iterator i = strings.begin(); i != strings.end(); i++)
     {
@@ -180,12 +179,6 @@ TaskDlgFilletParameters::~TaskDlgFilletParameters()
 //        Gui::Command::openCommand((const char*)msg.toUtf8());
 //    }
 //}
-//
-//void TaskDlgFilletParameters::clicked(int)
-//{
-//
-//}
-
 bool TaskDlgFilletParameters::accept()
 {
     parameter->showObject();

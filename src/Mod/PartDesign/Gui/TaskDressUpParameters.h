@@ -30,6 +30,8 @@
 
 #include "ViewProviderDressUp.h"
 
+class QListWidget;
+
 namespace PartDesignGui {
 
 class TaskDressUpParameters : public Gui::TaskView::TaskBox, public Gui::SelectionObserver

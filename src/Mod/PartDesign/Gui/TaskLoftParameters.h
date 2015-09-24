@@ -32,6 +32,7 @@
 #include "ViewProviderLoft.h"
 
 class Ui_TaskLoftParameters;
+class QListWidget;
 
 namespace App {
 class Property;

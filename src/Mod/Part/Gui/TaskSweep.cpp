@@ -40,6 +40,7 @@
 
 #include "ui_TaskSweep.h"
 #include "TaskSweep.h"
+#include "Workbench.h"
 
 #include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
@@ -253,6 +254,10 @@ bool SweepWidget::isPathValid(const Gui::SelectionObject& sel) const
 
 bool SweepWidget::accept()
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return false;
+    
     if (d->loop.isRunning())
         return false;
     Gui::SelectionFilter edgeFilter  ("SELECT Part::Feature SUBELEMENT Edge COUNT 1..");
@@ -311,12 +316,14 @@ bool SweepWidget::accept()
             "App.getDocument('%5').ActiveObject.Spine=%2\n"
             "App.getDocument('%5').ActiveObject.Solid=%3\n"
             "App.getDocument('%5').ActiveObject.Frenet=%4\n"
+            "App.ActiveDocument.%6.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
             )
             .arg(list)
             .arg(QLatin1String(selection.c_str()))
             .arg(solid)
             .arg(frenet)
-            .arg(QString::fromAscii(d->document.c_str()));
+            .arg(QString::fromAscii(d->document.c_str()))
+            .arg(QString::fromAscii(acPart->getNameInDocument()));
 
         Gui::Document* doc = Gui::Application::Instance->getDocument(d->document.c_str());
         if (!doc) throw Base::Exception("Document doesn't exist anymore");

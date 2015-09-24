@@ -54,6 +54,7 @@
 #include "SoBrepFaceSet.h"
 #include "SoBrepEdgeSet.h"
 #include "SoBrepPointSet.h"
+#include "Workbench.h"
 
 
 #include "../App/PartFeature.h"
@@ -813,6 +814,11 @@ bool DlgFilletEdges::accept()
                "Please select a valid shape in the drop-down box first."));
         return false;
     }
+       
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return false;
+    
     App::Document* activeDoc = App::GetApplication().getActiveDocument();
     QAbstractItemModel* model = ui->treeView->model();
     bool end_radius = !ui->treeView->isColumnHidden(2);
@@ -868,8 +874,9 @@ bool DlgFilletEdges::accept()
     code += QString::fromAscii(
         "FreeCAD.ActiveDocument.%1.Edges = __fillets__\n"
         "del __fillets__\n"
-        "FreeCADGui.ActiveDocument.%2.Visibility = False\n")
-        .arg(name).arg(shape);
+        "FreeCAD.ActiveDocument.%3.addObject(FreeCAD.ActiveDocument.%1)\n"
+        "FreeCADGui.ActiveDocument.%2.Visibility = False")
+        .arg(name).arg(shape).arg(QString::fromAscii(acPart->getNameInDocument()));
     Gui::Application::Instance->runPythonCode((const char*)code.toAscii());
     activeDoc->commitTransaction();
     activeDoc->recompute();

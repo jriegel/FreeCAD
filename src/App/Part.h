@@ -33,11 +33,7 @@ namespace App
 {
 
 
-/** Container for Part like objects (Group)
-* This is a generic container/group of geometric objects
-* which can be seen as a Part in some kind. This class is the 
-* interface of objects which represents geometry and the actions
-* which move and position geometry, like Assembly.
+/** Base class of all geometric document objects.
  */
 class AppExport Part : public App::GeoFeatureGroup
 {

@@ -1,7 +1,7 @@
 #add_subdirectory(Icons)
 
 if(WIN32)
-add_definitions(-DFCGui -DQIIS_MAKEDLL -DOVR_OS_WIN32 -DQUARTER_INTERNAL -DQUARTER_MAKE_DLL -DCOIN_DLL)
+add_definitions(-DFCGui -DQIIS_MAKEDLL -DQSINT_MAKEDLL -DOVR_OS_WIN32 -DQUARTER_INTERNAL -DQUARTER_MAKE_DLL -DCOIN_DLL)
 endif(WIN32)
 
 IF(CMAKE_BUILD_TYPE)
@@ -203,6 +203,7 @@ set(Gui_MOC_HDRS
     EditorView.h
     FileDialog.h
     Flag.h
+    GraphicsViewZoom.h
     GraphvizView.h
     GuiApplicationNativeEventAware.h
     HelpView.h
@@ -228,7 +229,6 @@ set(Gui_MOC_HDRS
     SelectionView.h
     SpinBox.h
     Splashscreen.h
-    TaskPanelView.h
     TextEdit.h
     TextureMapping.h
     ToolBox.h
@@ -257,6 +257,12 @@ set(Gui_MOC_HDRS
 #qt4_wrap_cpp(Gui_MOC_SRCS ${Gui_MOC_HDRS})
 fc_wrap_cpp(Gui_MOC_SRCS ${Gui_MOC_HDRS})
 #SOURCE_GROUP("Moc" FILES ${Gui_MOC_SRCS})
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp
+    COMMAND ${QT_MOC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.cpp
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.cpp)
+
+set_property(SOURCE GraphvizView.cpp APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp)
 
 SET(Gui_UIC_SRCS
     AboutApplication.ui
@@ -314,6 +320,7 @@ SET(Gui_RES_SRCS
     Icons/resource.qrc
     Language/translation.qrc
     iisTaskPanel/src/iisTaskPanel.qrc
+    QSint/actionpanel/schemes.qrc
 )
 QT4_ADD_RESOURCES(Gui_QRC_SRCS ${Gui_RES_SRCS})
 
@@ -390,6 +397,7 @@ SET(Dialog_HPP_SRCS
     DlgProjectUtility.h
     DlgCheckableMessageBox.h
     DlgPropertyLink.h
+    DlgCheckableMessageBox.h
     DlgTipOfTheDayImp.h
     TaskDlgRelocation.h
     DlgUndoRedo.h
@@ -529,7 +537,6 @@ SET(Dock_Windows_CPP_SRCS
     PropertyView.cpp
     ReportView.cpp
     SelectionView.cpp
-    TaskPanelView.cpp
     ToolBox.cpp
     Tree.cpp
     TreeView.cpp
@@ -547,7 +554,6 @@ SET(Dock_Windows_HPP_SRCS
     PropertyView.h
     ReportView.h
     SelectionView.h
-    TaskPanelView.h
     ToolBox.h
     Tree.h
     TreeView.h
@@ -679,6 +685,42 @@ set(iis_MOC_HDRS
 qt4_wrap_cpp(iis_MOC_SRCS ${iis_MOC_HDRS})
 SOURCE_GROUP("Widget\\iisTaskPanel\\Mocs" FILES ${iis_MOC_SRCS})
 
+SET(qsintActionPanel_SRCS
+    QSint/actionpanel/actionbox.cpp
+    QSint/actionpanel/actionbox.h
+    QSint/actionpanel/actionlabel.cpp
+    QSint/actionpanel/actionlabel.h
+    QSint/actionpanel/actiongroup.cpp
+    QSint/actionpanel/actiongroup.h
+    QSint/actionpanel/actionpanel.cpp
+    QSint/actionpanel/actionpanel.h
+    QSint/actionpanel/actionpanelscheme.cpp
+    QSint/actionpanel/actionpanelscheme.h
+    QSint/actionpanel/androidpanelscheme.cpp
+    QSint/actionpanel/androidpanelscheme.h
+    QSint/actionpanel/macpanelscheme.cpp
+    QSint/actionpanel/macpanelscheme.h
+    QSint/actionpanel/taskgroup_p.cpp
+    QSint/actionpanel/taskgroup_p.h
+    QSint/actionpanel/taskheader_p.cpp
+    QSint/actionpanel/taskheader_p.h
+    QSint/actionpanel/winvistapanelscheme.cpp
+    QSint/actionpanel/winvistapanelscheme.h
+    QSint/actionpanel/winxppanelscheme.cpp
+    QSint/actionpanel/winxppanelscheme.h
+    QSint/actionpanel/freecadscheme.cpp
+    QSint/actionpanel/freecadscheme.h
+)
+SOURCE_GROUP("Widget\\QSintActionPanel" FILES ${qsintActionPanel_SRCS})
+set(qsint_MOC_HDRS
+    QSint/actionpanel/actionbox.h
+    QSint/actionpanel/actionlabel.h
+    QSint/actionpanel/actiongroup.h
+    QSint/actionpanel/actionpanel.h
+    QSint/actionpanel/taskheader_p.h
+)
+qt4_wrap_cpp(qsint_MOC_SRCS ${qsint_MOC_HDRS})
+SOURCE_GROUP("Widget\\QSintActionPanel\\Mocs" FILES ${qsint_MOC_SRCS})
 
 #SET(Resource_RCS
 #   Icons/resource.qrc
@@ -950,6 +992,7 @@ SET(FreeCADGui_CPP_SRCS
     Document.cpp
     DocumentModel.cpp
     DocumentPyImp.cpp
+    GraphicsViewZoom.cpp
     GuiApplicationNativeEventAware.cpp
     GuiConsole.cpp
     Macro.cpp
@@ -969,6 +1012,7 @@ SET(FreeCADGui_SRCS
     Document.h
     DocumentModel.h
     FreeCADGuiInit.py
+    GraphicsViewZoom.h
     GuiApplicationNativeEventAware.h
     GuiConsole.h
     InventorAll.h
@@ -991,6 +1035,7 @@ SET(FreeCADGui_SRCS
     ${FreeCADGui_CPP_SRCS}
     ${FreeCADGui_XML_SRCS}
     ${iis_MOC_SRCS}
+    ${qsint_MOC_SRCS}
     ${Gui_QRC_SRCS}
     ${Gui_UIC_HDRS}
     ${Command_SRCS}
@@ -1005,6 +1050,7 @@ SET(FreeCADGui_SRCS
     ${Propertyeditor_SRCS}
     ${Task_View_SRCS}
     ${iisTaskPanel_SRCS}
+    ${qsintActionPanel_SRCS}
     ${Resource_SRCS}
     ${Quarter_SRCS}
     ${View3D_SRCS}

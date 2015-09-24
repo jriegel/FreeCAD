@@ -73,13 +73,14 @@ public:
 
     // Display properties
     App::PropertyFloatConstraint Deviation;
+    App::PropertyBool ControlPoints;
     App::PropertyAngle AngularDeflection;
-    App::PropertyColor PointColor;
-    App::PropertyMaterial PointMaterial;
     App::PropertyEnumeration Lighting;
     App::PropertyEnumeration DrawStyle;
     // Points
     App::PropertyFloatConstraint PointSize;
+    App::PropertyColor PointColor;
+    App::PropertyMaterial PointMaterial;
     App::PropertyColorList PointColorArray;
     // Lines
     App::PropertyFloatConstraint LineWidth;

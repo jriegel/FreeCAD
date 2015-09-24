@@ -86,11 +86,8 @@ ViewProviderGeometryObject::ViewProviderGeometryObject() : pcBoundSwitch(0)
     ADD_PROPERTY(BoundingBox,(false));
     ADD_PROPERTY(Selectable,(true));
 
-    // Create the selection node
-    pcHighlight = createFromSettings();
-    pcHighlight->ref();
-    if (pcHighlight->selectionMode.getValue() == Gui::SoFCSelection::SEL_OFF)
-        Selectable.setValue(false);
+    bool enableSel = hGrp->GetBool("EnableSelection", true);
+    Selectable.setValue(enableSel);
 
     pcShapeMaterial = new SoMaterial;
     pcShapeMaterial->ref();
@@ -105,7 +102,6 @@ ViewProviderGeometryObject::ViewProviderGeometryObject() : pcBoundSwitch(0)
 ViewProviderGeometryObject::~ViewProviderGeometryObject()
 {
     pcShapeMaterial->unref();
-    pcHighlight->unref();
     pcBoundingBox->unref();
 }
 
@@ -158,9 +154,6 @@ void ViewProviderGeometryObject::onChanged(const App::Property* prop)
 void ViewProviderGeometryObject::attach(App::DocumentObject *pcObj)
 {
     ViewProviderDocumentObject::attach(pcObj);
-    pcHighlight->objectName = pcObj->getNameInDocument();
-    pcHighlight->documentName = pcObj->getDocument()->getName();
-    pcHighlight->subElementName = "Main";
 }
 
 void ViewProviderGeometryObject::updateData(const App::Property* prop)
@@ -517,7 +510,7 @@ SoPickedPointList ViewProviderGeometryObject::getPickedPoints(const SbVec2s& pos
     root->ref();
     root->addChild(viewer.getHeadlight());
     root->addChild(viewer.getSoRenderManager()->getCamera());
-    root->addChild(this->pcHighlight);
+    root->addChild(const_cast<ViewProviderGeometryObject*>(this)->getRoot());
 
     SoRayPickAction rp(viewer.getSoRenderManager()->getViewportRegion());
     rp.setPickAll(pickAll);
@@ -535,7 +528,7 @@ SoPickedPoint* ViewProviderGeometryObject::getPickedPoint(const SbVec2s& pos, co
     root->ref();
     root->addChild(viewer.getHeadlight());
     root->addChild(viewer.getSoRenderManager()->getCamera());
-    root->addChild(this->pcHighlight);
+    root->addChild(const_cast<ViewProviderGeometryObject*>(this)->getRoot());
 
     SoRayPickAction rp(viewer.getSoRenderManager()->getViewportRegion());
     rp.setPoint(pos);
@@ -577,40 +570,6 @@ void ViewProviderGeometryObject::showBoundingBox(bool show)
     if (pcBoundSwitch) {
         pcBoundSwitch->whichChild = (show ? 0 : -1);
     }
-}
-
-SoFCSelection* ViewProviderGeometryObject::createFromSettings() const
-{
-    SoFCSelection* sel = new SoFCSelection();
-
-    float transparency;
-    ParameterGrp::handle hGrp = Gui::WindowParameter::getDefaultParameter()->GetGroup("View");
-    bool enablePre = hGrp->GetBool("EnablePreselection", true);
-    bool enableSel = hGrp->GetBool("EnableSelection", true);
-    if (!enablePre) {
-        sel->highlightMode = Gui::SoFCSelection::OFF;
-    }
-    else {
-        // Search for a user defined value with the current color as default
-        SbColor highlightColor = sel->colorHighlight.getValue();
-        unsigned long highlight = (unsigned long)(highlightColor.getPackedValue());
-        highlight = hGrp->GetUnsigned("HighlightColor", highlight);
-        highlightColor.setPackedValue((uint32_t)highlight, transparency);
-        sel->colorHighlight.setValue(highlightColor);
-    }
-    if (!enableSel || !Selectable.getValue()) {
-        sel->selectionMode = Gui::SoFCSelection::SEL_OFF;
-    }
-    else {
-        // Do the same with the selection color
-        SbColor selectionColor = sel->colorSelection.getValue();
-        unsigned long selection = (unsigned long)(selectionColor.getPackedValue());
-        selection = hGrp->GetUnsigned("SelectionColor", selection);
-        selectionColor.setPackedValue((uint32_t)selection, transparency);
-        sel->colorSelection.setValue(selectionColor);
-    }
-
-    return sel;
 }
 
 void ViewProviderGeometryObject::setSelectable(bool selectable)

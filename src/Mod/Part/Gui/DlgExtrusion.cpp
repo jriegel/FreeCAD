@@ -35,6 +35,7 @@
 
 #include "ui_DlgExtrusion.h"
 #include "DlgExtrusion.h"
+#include "Workbench.h"
 #include "../App/PartFeature.h"
 #include <Base/Console.h>
 #include <Base/UnitsApi.h>
@@ -209,6 +210,10 @@ void DlgExtrusion::apply()
                 }
             }
         }
+        
+        App::Part* acPart = PartGui::getPart(true);
+        if(!acPart)
+            return;
 
         QString code = QString::fromAscii(
             "FreeCAD.getDocument(\"%1\").addObject(\"%2\",\"%3\")\n"
@@ -217,7 +222,8 @@ void DlgExtrusion::apply()
             "FreeCAD.getDocument(\"%1\").%3.Solid = (%8)\n"
             "FreeCAD.getDocument(\"%1\").%3.TaperAngle = (%9)\n"
             "FreeCADGui.getDocument(\"%1\").%4.Visibility = False\n"
-            "FreeCAD.getDocument(\"%1\").%3.Label = '%10'\n")
+            "FreeCAD.getDocument(\"%1\").%3.Label = '%10'\n"
+            "FreeCAD.getDocument(\"%1\").%11..addObject(App.activeDocument().%3)")        
             .arg(QString::fromAscii(this->document.c_str()))
             .arg(type).arg(name).arg(shape)
             .arg(dirX*len)
@@ -225,7 +231,8 @@ void DlgExtrusion::apply()
             .arg(dirZ*len)
             .arg(makeSolid ? QLatin1String("True") : QLatin1String("False"))
             .arg(angle)
-            .arg(label);
+            .arg(label)
+            .arg(QString::fromAscii(acPart->getNameInDocument()));
         Gui::Application::Instance->runPythonCode((const char*)code.toAscii());
         QByteArray to = name.toAscii();
         QByteArray from = shape.toAscii();

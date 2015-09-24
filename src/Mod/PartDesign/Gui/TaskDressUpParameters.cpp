@@ -24,6 +24,8 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <QListWidgetItem>
+# include <QMessageBox>
 #endif
 
 #include "TaskDressUpParameters.h"

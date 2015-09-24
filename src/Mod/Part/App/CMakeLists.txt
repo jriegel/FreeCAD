@@ -42,6 +42,7 @@ generate_from_xml(ArcPy)
 generate_from_xml(ArcOfCirclePy)
 generate_from_xml(BodyBasePy)
 generate_from_xml(ArcOfParabolaPy)
+generate_from_xml(BodyBasePy)
 generate_from_xml(CirclePy)
 generate_from_xml(ArcOfEllipsePy)
 generate_from_xml(EllipsePy)
@@ -161,6 +162,8 @@ SET(Python_SRCS
 	BodyBasePyImp.cpp
     ArcOfParabolaPy.xml
     ArcOfParabolaPyImp.cpp
+    BodyBasePy.xml
+    BodyBasePyImp.cpp
     CirclePy.xml
     CirclePyImp.cpp
     ArcOfEllipsePy.xml
@@ -277,6 +280,7 @@ SET(Part_Scripts
     Init.py
     TestPartApp.py
     MakeBottle.py
+    JoinFeatures.py
 )
 
 add_library(Part SHARED ${Part_SRCS})

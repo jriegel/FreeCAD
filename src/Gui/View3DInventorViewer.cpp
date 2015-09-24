@@ -514,16 +514,16 @@ void View3DInventorViewer::init()
     } catch (...) {
         Base::Console().Warning("Failed to set up gestures. Unknown error.\n");
     }
-    
+
     //create the cursors
     QBitmap cursor = QBitmap::fromData(QSize(ROTATE_WIDTH, ROTATE_HEIGHT), rotate_bitmap);
     QBitmap mask = QBitmap::fromData(QSize(ROTATE_WIDTH, ROTATE_HEIGHT), rotate_mask_bitmap);
     spinCursor = QCursor(cursor, mask, ROTATE_HOT_X, ROTATE_HOT_Y);
-    
+
     cursor = QBitmap::fromData(QSize(ZOOM_WIDTH, ZOOM_HEIGHT), zoom_bitmap);
     mask = QBitmap::fromData(QSize(ZOOM_WIDTH, ZOOM_HEIGHT), zoom_mask_bitmap);
     zoomCursor = QCursor(cursor, mask, ZOOM_HOT_X, ZOOM_HOT_Y);
-    
+
     cursor = QBitmap::fromData(QSize(PAN_WIDTH, PAN_HEIGHT), pan_bitmap);
     mask = QBitmap::fromData(QSize(PAN_WIDTH, PAN_HEIGHT), pan_mask_bitmap);
     panCursor = QCursor(cursor, mask, PAN_HOT_X, PAN_HOT_Y);
@@ -629,7 +629,7 @@ void View3DInventorViewer::removeViewProvider(ViewProvider* pcProvider)
 
     SoSeparator* root = pcProvider->getRoot();
 
-    if(root && (pcViewProviderRoot->findChild(root) != -1)) {
+    if (root && (pcViewProviderRoot->findChild(root) != -1)) {
         pcViewProviderRoot->removeChild(root);
         _ViewProviderMap.erase(root);
     }
@@ -646,6 +646,7 @@ void View3DInventorViewer::removeViewProvider(ViewProvider* pcProvider)
 
     _ViewProviderSet.erase(pcProvider);
 }
+
 
 SbBool View3DInventorViewer::setEditingViewProvider(Gui::ViewProvider* p, int ModNum)
 {
@@ -855,7 +856,7 @@ void View3DInventorViewer::setSceneGraph(SoNode* root)
 
     SoSearchAction sa;
     sa.setNode(this->backlight);
-    //we want the rendered scene with all lights and cameras, viewer->getSceneGraph would return 
+    //we want the rendered scene with all lights and cameras, viewer->getSceneGraph would return
     //the geometry scene only
     SoNode* scene = this->getSoRenderManager()->getSceneGraph();
     if (scene && scene->getTypeId().isDerivedFrom(SoSeparator::getClassTypeId())) {
@@ -871,6 +872,9 @@ void View3DInventorViewer::savePicture(int w, int h, const QColor& bg, QImage& i
     // SoQtOffscreenRenderer won't work. In this case we try to use
     // Coin's implementation of the off-screen rendering.
     bool useCoinOffscreenRenderer = !QGLPixelBuffer::hasOpenGLPbuffers();
+    useCoinOffscreenRenderer = App::GetApplication().GetParameterGroupByPath
+        ("User parameter:BaseApp/Preferences/Document")->
+        GetBool("CoinOffscreenRenderer", useCoinOffscreenRenderer);
 
     // if no valid color use the current background
     bool useBackground = false;
@@ -1510,7 +1514,7 @@ void View3DInventorViewer::renderScene(void)
 
     for (std::list<GLGraphicsItem*>::iterator it = this->graphicsItems.begin(); it != this->graphicsItems.end(); ++it)
         (*it)->paintGL();
-    
+
     //fps rendering
     if (fpsEnabled) {
         std::stringstream stream;
@@ -2001,17 +2005,17 @@ extern View3DInventorRiftViewer* oculusStart(void);
 extern bool oculusUp   (void);
 extern void oculusStop (void);
 void oculusSetTestScene(View3DInventorRiftViewer *window);
-#endif 
+#endif
 
 void View3DInventorViewer::viewVR(void)
 {
 #if BUILD_VR
-	if(oculusUp())
-		oculusStop();
-	else{
-		View3DInventorRiftViewer* riftWin = oculusStart();
-		riftWin->setSceneGraph(pcViewProviderRoot);
-	}
+    if(oculusUp())
+        oculusStop();
+    else{
+        View3DInventorRiftViewer* riftWin = oculusStart();
+        riftWin->setSceneGraph(pcViewProviderRoot);
+    }
 #endif
 }
 
@@ -2051,7 +2055,6 @@ void View3DInventorViewer::viewAll()
     // make sure everything is visible
     if (cam)
         cam->viewAll(getSoRenderManager()->getSceneGraph(), this->getSoRenderManager()->getViewportRegion());
-    
 
     for(int i = 0; i < pathlist.getLength(); i++) {
         SoPath* path = pathlist[i];

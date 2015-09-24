@@ -166,10 +166,6 @@ TaskPipeParameters::~TaskPipeParameters()
     delete ui;
 }
 
-void TaskPipeParameters::changeEvent(QEvent *e)
-{
-}
-
 void TaskPipeParameters::onTransitionChanged(int idx) {
     
     static_cast<PartDesign::Pipe*>(vp->getObject())->Transition.setValue(idx);
@@ -366,10 +362,6 @@ void TaskPipeOrientation::onOrientationChanged(int idx) {
     recomputeFeature();
 }
 
-void TaskPipeOrientation::changeEvent(QEvent* e) {
-    QFrame::changeEvent(e);
-}
-
 void TaskPipeOrientation::clearButtons() {
 
     ui->buttonRefAdd->setChecked(false);
@@ -561,11 +553,6 @@ TaskPipeScaling::TaskPipeScaling(ViewProviderPipe* PipeView, bool newObj, QWidge
 
 TaskPipeScaling::~TaskPipeScaling() {
 
-}
-
-
-void TaskPipeScaling::changeEvent(QEvent* e) {
-    QFrame::changeEvent(e);
 }
 
 void TaskPipeScaling::clearButtons() {

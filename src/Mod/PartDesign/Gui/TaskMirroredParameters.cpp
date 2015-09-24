@@ -333,7 +333,6 @@ void TaskMirroredParameters::onPlaneChanged(int num) {
     else if (num == maxcount)
         exitSelectionMode();
 
-    updateUI();
     recomputeFeature();
 }
 

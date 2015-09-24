@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2004 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 2004 Juergen Riegel <juergen.riegel@web.de>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -153,6 +153,7 @@ View3DInventor::View3DInventor(Gui::Document* pcDocument, QWidget* parent,
         _viewer->getSoRenderManager()->getGLRenderAction()->setSmoothing(true);
 
     // create the inventor widget and set the defaults
+    _viewer->setDocument(this->_pcDocument);
     _viewer->setDocument(this->_pcDocument);
     stack->addWidget(_viewer->getWidget());
     // http://forum.freecadweb.org/viewtopic.php?f=3&t=6055&sid=150ed90cbefba50f1e2ad4b4e6684eba

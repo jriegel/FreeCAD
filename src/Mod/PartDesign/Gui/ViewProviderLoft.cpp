@@ -24,6 +24,7 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <QMessageBox>
 #endif
 
 #include "ViewProviderLoft.h"
@@ -139,9 +140,9 @@ bool ViewProviderLoft::onDelete(const std::vector<std::string> &s)
     // if abort command deleted the object the sketch is visible again
     if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
         Gui::Application::Instance->getViewProvider(pcSketch)->show();
-*/
-    return ViewProvider::onDelete(s);
 
+    return ViewProvider::onDelete(s);*/
+    return true;
 }
 
 

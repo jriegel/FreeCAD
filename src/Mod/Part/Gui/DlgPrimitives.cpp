@@ -42,6 +42,7 @@
 #include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include <App/Part.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/Command.h>
@@ -52,6 +53,7 @@
 #include <Mod/Part/App/Tools.h>
 
 #include "DlgPrimitives.h"
+#include "Workbench.h"
 
 using namespace PartGui;
 
@@ -641,11 +643,18 @@ void DlgPrimitives::createPrimitive(const QString& placement)
                 .arg(placement)
                 .arg(tr("Regular polygon"));
         }
+        
+        
+        App::Part* acPart = PartGui::getPart(true);
+        if(!acPart)
+            return;
 
         // Execute the Python block
         QString prim = tr("Create %1").arg(ui.comboBox1->currentText());
         Gui::Application::Instance->activeDocument()->openCommand(prim.toUtf8());
         Gui::Command::doCommand(Gui::Command::Doc, (const char*)cmd.toUtf8());
+        Gui::Command::doCommand(Gui::Command::Doc, "App.activeDocument().%s.addObject(App.ActiveDocument.%s)", 
+                                acPart->getNameInDocument(), name.toStdString().c_str());
         Gui::Application::Instance->activeDocument()->commitCommand();
         Gui::Command::doCommand(Gui::Command::Doc, "App.ActiveDocument.recompute()");
         Gui::Command::doCommand(Gui::Command::Gui, "Gui.SendMsgToActiveView(\"ViewFit\")");

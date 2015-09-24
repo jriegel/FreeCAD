@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2005 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 2005 Juergen Riegel <juergen.riegel@web.de>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -55,7 +55,7 @@ class Document;
  *  gradually remove all the low level selection nodes in the view
  *  provider. The handling of the highlighting and the selection will
  *  be unified here. 
- *  \author Jürgen Riegel
+ *  \author Jï¿½rgen Riegel
  */
 class GuiExport SoFCUnifiedSelection : public SoSeparator {
     typedef SoSeparator inherited;
@@ -198,4 +198,4 @@ private:
 
 } // namespace Gui
 
-#endif // !GUI_SOFCSELECTION_H
+#endif // !GUI_SOFCUNIFIEDSELECTION_H

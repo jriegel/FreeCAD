@@ -24,6 +24,9 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <QMessageBox>
+# include <QAction>
+# include <QMenu>
 #endif
 
 #include "ViewProviderBoolean.h"

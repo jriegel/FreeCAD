@@ -53,8 +53,6 @@
 
 #include "ViewProviderPythonFeature.h"
 #include "ViewProviderPythonFeaturePy.h"
-#include "SoFCSelection.h"
-#include "SoFCBoundingBox.h"
 #include "Tree.h"
 #include "Window.h"
 #include "Application.h"
@@ -670,6 +668,46 @@ void ViewProviderPythonFeatureImp::finishRestoring()
             static_cast<App::PropertyPythonObject*>(proxy)->setValue(Py::Int(1));
         }
     }
+}
+
+bool ViewProviderPythonFeatureImp::onDelete(const std::vector<std::string> & sub)
+{
+    Base::PyGILStateLocker lock;
+    try {
+        App::Property* proxy = object->getPropertyByName("Proxy");
+        if (proxy && proxy->getTypeId() == App::PropertyPythonObject::getClassTypeId()) {
+            Py::Object vp = static_cast<App::PropertyPythonObject*>(proxy)->getValue();
+            if (vp.hasAttr(std::string("onDelete"))) {
+                Py::Tuple seq(sub.size());
+                int index=0;
+                for (std::vector<std::string>::const_iterator it = sub.begin(); it != sub.end(); ++it) {
+                    seq.setItem(index++, Py::String(*it));
+                }
+
+                if (vp.hasAttr("__object__")) {
+                    Py::Callable method(vp.getAttr(std::string("onDelete")));
+                    Py::Tuple args(1);
+                    args.setItem(0, seq);
+                    Py::Boolean ok(method.apply(args));
+                    return (bool)ok;
+                }
+                else {
+                    Py::Callable method(vp.getAttr(std::string("onDelete")));
+                    Py::Tuple args(2);
+                    args.setItem(0, Py::Object(object->getPyObject(), true));
+                    args.setItem(1, seq);
+                    Py::Boolean ok(method.apply(args));
+                    return (bool)ok;
+                }
+            }
+        }
+    }
+    catch (Py::Exception&) {
+        Base::PyException e; // extract the Python error text
+        e.ReportException();
+    }
+
+    return true;
 }
 
 const char* ViewProviderPythonFeatureImp::getDefaultDisplayMode() const

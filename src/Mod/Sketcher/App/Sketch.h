@@ -87,10 +87,11 @@ public:
     /// retrieves a point
     Base::Vector3d getPoint(int geoId, PointPos pos);
 
-    bool hasConflicts(void) const { return (Conflicting.size() > 0); }
-    const std::vector<int> &getConflicting(void) const { return Conflicting; }
-    bool hasRedundancies(void) const { return (Redundant.size() > 0); }
-    const std::vector<int> &getRedundant(void) const { return Redundant; }
+    // Inline methods
+    inline bool hasConflicts(void) const { return !Conflicting.empty(); }
+    inline const std::vector<int> &getConflicting(void) const { return Conflicting; }
+    inline bool hasRedundancies(void) const { return !Redundant.empty(); }
+    inline const std::vector<int> &getRedundant(void) const { return Redundant; }
 
     /** set the datum of a distance or angle constraint to a certain value and solve
       * This can cause the solving to fail!
@@ -134,28 +135,87 @@ public:
     int addConstraints(const std::vector<Constraint *> &ConstraintList);
     /// add one constraint to the sketch
     int addConstraint(const Constraint *constraint);
-    /// add a fixed coordinate constraint to a point
-    int addCoordinateXConstraint(int geoId, PointPos pos, double value);
-    int addCoordinateYConstraint(int geoId, PointPos pos, double value);
-    /// add a horizontal distance constraint to two points or line ends
-    int addDistanceXConstraint(int geoId, double value);
-    int addDistanceXConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, double value);
-    /// add a vertical distance constraint to two points or line ends
-    int addDistanceYConstraint(int geoId, double value);
-    int addDistanceYConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, double value);
+
+    /** 
+    *   add a fixed X coordinate constraint to a point
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */
+    int addCoordinateXConstraint(int geoId, PointPos pos, double * value);
+    /** 
+    *   add a fixed Y coordinate constraint to a point
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addCoordinateYConstraint(int geoId, PointPos pos, double *  value);
+    /** 
+    *   add a horizontal distance constraint to two points or line ends
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */
+    int addDistanceXConstraint(int geoId, double * value);
+    /** 
+    *   add a horizontal distance constraint to two points or line ends
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addDistanceXConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, double * value);
+    /** 
+    *   add a vertical distance constraint to two points or line ends
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */
+    int addDistanceYConstraint(int geoId, double *  value);
+    /** 
+    *   add a vertical distance constraint to two points or line ends
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addDistanceYConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, double *  value);
     /// add a horizontal constraint to a geometry
     int addHorizontalConstraint(int geoId);
     int addHorizontalConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2);
     /// add a vertical constraint to a geometry
-    int addVerticalConstraint(int geoId);
+    int addVerticalConstraint(int geoId);   
     int addVerticalConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2);
     /// add a coincident constraint to two points of two geometries
     int addPointCoincidentConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2);
-    /// add a length or distance constraint
-    int addDistanceConstraint(int geoId1, double value);
-    int addDistanceConstraint(int geoId1, int geoId2, double value);
-    int addDistanceConstraint(int geoId1, PointPos pos1, int geoId2, double value);
-    int addDistanceConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, double value);
+    /** 
+    *   add a length or distance constraint
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addDistanceConstraint(int geoId1, double *  value);
+    /** 
+    *   add a length or distance constraint
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addDistanceConstraint(int geoId1, PointPos pos1, int geoId2, double *  value);
+    /** 
+    *   add a length or distance constraint
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addDistanceConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, double *  value);
     /// add a parallel constraint between two lines
     int addParallelConstraint(int geoId1, int geoId2);
     /// add a perpendicular constraint between two lines
@@ -166,29 +226,72 @@ public:
             int geoId1, PointPos pos1,
             int geoId2, PointPos pos2,
             int geoId3, PointPos pos3,
-            double value,
+            double *  value,
             ConstraintType cTyp);
-    /// add a radius constraint on a circle or an arc
-    int addRadiusConstraint(int geoId, double value);
-    /// add an angle constraint on a line or between two lines
-    int addAngleConstraint(int geoId, double value);
-    int addAngleConstraint(int geoId1, int geoId2, double value);
-    int addAngleConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, double value);
-    /// add angle-via-point constraint between any two curves
+    /** 
+    *   add a radius constraint on a circle or an arc
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addRadiusConstraint(int geoId, double *  value);
+    /** 
+    *   add an angle constraint on a line or between two lines
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */     
+    int addAngleConstraint(int geoId, double *  value);
+    /** 
+    *   add an angle constraint on a line or between two lines
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addAngleConstraint(int geoId1, int geoId2, double *  value);
+    /** 
+    *   add an angle constraint on a line or between two lines
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
+    int addAngleConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, double *  value);
+    /** 
+    *   add angle-via-point constraint between any two curves
+    * 
+    *   double * value is a pointer to double allocated in the heap, containing the
+    *   constraint value and already inserted into either the FixParameters or 
+    *   Parameters array, as the case may be.
+    */    
     int addAngleViaPointConstraint(int geoId1, int geoId2, int geoId3, PointPos pos3, double value);
     /// add an equal length or radius constraints between two lines or between circles and arcs
-    int addEqualConstraint(int geoId1, int geoId2);
+    int addEqualConstraint(int geoId1, int geoId2);   
     /// add a point on line constraint
     int addPointOnObjectConstraint(int geoId1, PointPos pos1, int geoId2);
     /// add a symmetric constraint between two points with respect to a line
     int addSymmetricConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, int geoId3);
     /// add a symmetric constraint between three points, the last point is in the middle of the first two
     int addSymmetricConstraint(int geoId1, PointPos pos1, int geoId2, PointPos pos2, int geoId3, PointPos pos3);
-    /// add a snell's law constraint
+    /** 
+    *   add a snell's law constraint
+    * 
+    *   double * value and double * second are each a pointer to double 
+    *   allocated in the heap and already inserted into either the 
+    *   FixParameters or Parameters array, as the case may be.
+    *   
+    *   value must contain the constraint value (the ratio of n2/n1)
+    *   second may be initialized to any value, however the solver will
+    *   provide n1 in value and n2 in second.
+    */    
     int addSnellsLawConstraint(int geoIdRay1, PointPos posRay1,
                                int geoIdRay2, PointPos posRay2,
                                int geoIdBnd,
-                               double n2divn1);
+                               double *  value,
+                               double *  second);
     //@}
     
     /// Internal Alignment constraints
@@ -199,7 +302,7 @@ public:
     int addInternalAlignmentEllipseFocus1(int geoId1, int geoId2);
     int addInternalAlignmentEllipseFocus2(int geoId1, int geoId2);
     //@}
-
+public:
     //This func is to be used during angle-via-point constraint creation. It calculates
     //the angle between geoId1,geoId2 at point px,py. The point should be on both curves,
     //otherwise the result will be systematically off (but smoothly approach the correct
@@ -213,6 +316,9 @@ public:
     //see more info in respective function in GCS.
     double calculateConstraintError(int icstr) { return GCSsys.calculateConstraintErrorByTag(icstr);}
     
+    /// Returns the size of the Geometry
+    int getGeometrySize(void) const {return Geoms.size();}
+
     enum GeoType {
         None    = 0,
         Point   = 1, // 1 Point(start), 2 Parameters(x,y)
@@ -238,8 +344,17 @@ protected:
         int               midPointId;      // index in Points of the start point of this geometry
         int               endPointId;      // index in Points of the end point of this geometry
     };
+    /// container element to store and work with the constraints of this sketch
+    struct ConstrDef {
+        ConstrDef() : driving(true) {}
+        Constraint *    constr;             // pointer to the constraint
+        bool            driving;
+        double *        value;
+        double *        secondvalue;        // this is needed for SnellsLaw
+    };
 
     std::vector<GeoDef> Geoms;
+    std::vector<ConstrDef> Constrs;
     GCS::System GCSsys;
     int ConstraintsCounter;
     std::vector<int> Conflicting;
@@ -259,11 +374,40 @@ protected:
     bool isInitMove;
     bool isFine;
 
+public:
+    GCS::Algorithm defaultSolver;
+    GCS::Algorithm defaultSolverRedundant;
+    inline void setDebugMode(GCS::DebugMode mode) {debugMode=mode;GCSsys.debugMode=mode;}
+    inline GCS::DebugMode getDebugMode(void) {return debugMode;}
+    inline void setMaxIter(int maxiter){GCSsys.maxIter=maxiter;}
+    inline void setMaxIterRedundant(int maxiter){GCSsys.maxIterRedundant=maxiter;}
+    inline void setSketchSizeMultiplier(bool mult){GCSsys.sketchSizeMultiplier=mult;}
+    inline void setSketchSizeMultiplierRedundant(bool mult){GCSsys.sketchSizeMultiplierRedundant=mult;}
+    inline void setConvergence(double conv){GCSsys.convergence=conv;}
+    inline void setConvergenceRedundant(double conv){GCSsys.convergenceRedundant=conv;}
+    inline void setQRAlgorithm(GCS::QRAlgorithm alg){GCSsys.qrAlgorithm=alg;}
+    inline void setQRPivotThreshold(double val){GCSsys.qrpivotThreshold=val;}
+    inline void setLM_eps(double val){GCSsys.LM_eps=val;}
+    inline void setLM_eps1(double val){GCSsys.LM_eps1=val;}
+    inline void setLM_tau(double val){GCSsys.LM_tau=val;}
+    inline void setDL_tolg(double val){GCSsys.DL_tolg=val;}
+    inline void setDL_tolx(double val){GCSsys.DL_tolx=val;}
+    inline void setDL_tolf(double val){GCSsys.DL_tolf=val;}
+    inline void setLM_epsRedundant(double val){GCSsys.LM_epsRedundant=val;}
+    inline void setLM_eps1Redundant(double val){GCSsys.LM_eps1Redundant=val;}
+    inline void setLM_tauRedundant(double val){GCSsys.LM_tauRedundant=val;}
+    inline void setDL_tolgRedundant(double val){GCSsys.DL_tolgRedundant=val;}
+    inline void setDL_tolxRedundant(double val){GCSsys.DL_tolxRedundant=val;}
+    inline void setDL_tolfRedundant(double val){GCSsys.DL_tolfRedundant=val;}
+    
+protected:
+    GCS::DebugMode debugMode;
 
 
 private:
 
     bool updateGeometry(void);
+    bool updateNonDrivingConstraints(void);
 
     /// checks if the index bounds and converts negative indices to positive
     int checkGeoId(int geoId);

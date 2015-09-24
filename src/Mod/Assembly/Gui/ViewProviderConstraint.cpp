@@ -30,7 +30,6 @@
 #include <Base/Console.h>
 #include <App/Application.h>
 #include <Gui/Control.h>
-#include <Gui/SoObjectSeparator.h>
 #include <BRep_Builder.hxx>
 #include <Inventor/nodes/SoPolygonOffset.h>
 #include <Inventor/nodes/SoGroup.h>

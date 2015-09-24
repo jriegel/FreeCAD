@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2004 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 2004 Juergen Riegel <juergen.riegel@web.de>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -31,23 +31,6 @@
 #include <Gui/ViewProviderBuilder.h>
 #include <Mod/Part/Gui/ViewProviderExt.h>
 
-class TopoDS_Shape;
-class TopoDS_Edge;
-class TopoDS_Wire;
-class TopoDS_Face;
-class SoSeparator;
-class SoGroup;
-class SoSwitch;
-class SoVertexShape;
-class SoPickedPoint;
-class SoShapeHints;
-class SoEventCallback;
-class SbVec3f;
-class SoSphere;
-class SoScale;
-
-// Set this to use the fast rendering of shapes
-#define FC_USE_FAST_SHAPE_RENDERING
 class SoSeparator;
 
 namespace Part { struct ShapeHistory; }
@@ -74,14 +57,12 @@ public:
     virtual ~ViewProviderPart();
     virtual bool doubleClicked(void);
 
-
     virtual bool onDelete(const std::vector<std::string> &);
 
 protected:
     void applyColor(const Part::ShapeHistory& hist,
                     const std::vector<App::Color>& colBase,
                     std::vector<App::Color>& colBool);
-
 };
 
 } // namespace PartGui

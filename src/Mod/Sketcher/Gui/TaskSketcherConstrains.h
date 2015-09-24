@@ -27,6 +27,7 @@
 #include <Gui/TaskView/TaskView.h>
 #include <Gui/Selection.h>
 #include <boost/signals.hpp>
+#include <QListWidget>
 
 namespace App {
 class Property;
@@ -48,11 +49,15 @@ public:
 protected:
     void contextMenuEvent (QContextMenuEvent* event);
 
+Q_SIGNALS:
+    void onUpdateDrivingStatus(QListWidgetItem *item, bool status);
+
 protected Q_SLOTS:
     void modifyCurrentItem();
     void renameCurrentItem();
     void deleteSelectedItems();
     void doSelectConstraints();
+    void updateDrivingStatus();
 };
 
 class TaskSketcherConstrains : public Gui::TaskView::TaskBox, public Gui::SelectionObserver
@@ -74,6 +79,7 @@ public Q_SLOTS:
     void on_listWidgetConstraints_itemSelectionChanged(void); 
     void on_listWidgetConstraints_itemActivated(QListWidgetItem *item);
     void on_listWidgetConstraints_itemChanged(QListWidgetItem * item);
+    void on_listWidgetConstraints_updateDrivingStatus(QListWidgetItem *item, bool status);
 
 protected:
     void changeEvent(QEvent *e);

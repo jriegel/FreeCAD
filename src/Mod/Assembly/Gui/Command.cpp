@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2008 Jürgen Riegel (juergen.riegel@web.de)              *
+ *   Copyright (c) 2008 Juergen Riegel (juergen.riegel@web.de)             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -52,7 +52,7 @@ CmdAssemblyAddNewPart::CmdAssemblyAddNewPart()
     sGroup          = QT_TR_NOOP("Assembly");
     sMenuText       = QT_TR_NOOP("Add new Part");
     sToolTipText    = QT_TR_NOOP("Add a new Part into the active Assembly");
-    sWhatsThis      = sToolTipText;
+    sWhatsThis      = "Assembly_ConstraintAxle";
     sStatusTip      = sToolTipText;
     sPixmap         = "Assembly_Add_New_Part.svg";
 }

@@ -70,6 +70,7 @@ Pad::Pad()
     ADD_PROPERTY_TYPE(Length2,(100.0),"Pad",App::Prop_None,"P");
     ADD_PROPERTY(Offset,(0.0));
     ADD_PROPERTY_TYPE(UpToFace,(0),"Pad",App::Prop_None,"Face where pad will end");
+    ADD_PROPERTY(Offset,(0.0));
 }
 
 short Pad::mustExecute() const

@@ -31,6 +31,7 @@
 
 #include "ui_TaskLoft.h"
 #include "TaskLoft.h"
+#include "Workbench.h"
 
 #include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
@@ -133,6 +134,10 @@ void LoftWidget::findShapes()
 
 bool LoftWidget::accept()
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return false;
+    
     QString list, solid, ruled, closed;
     if (d->ui.checkSolid->isChecked())
         solid = QString::fromAscii("True");
@@ -170,7 +175,9 @@ bool LoftWidget::accept()
             "App.getDocument('%5').ActiveObject.Solid=%2\n"
             "App.getDocument('%5').ActiveObject.Ruled=%3\n"
             "App.getDocument('%5').ActiveObject.Closed=%4\n"
-            ).arg(list).arg(solid).arg(ruled).arg(closed).arg(QString::fromAscii(d->document.c_str()));
+            "App.ActiveDocument.%6.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
+            ).arg(list).arg(solid).arg(ruled).arg(closed)
+            .arg(QString::fromAscii(d->document.c_str())).arg(QString::fromAscii(acPart->getNameInDocument()));
 
         Gui::Document* doc = Gui::Application::Instance->getDocument(d->document.c_str());
         if (!doc) throw Base::Exception("Document doesn't exist anymore");

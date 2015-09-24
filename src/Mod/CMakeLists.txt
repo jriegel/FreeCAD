@@ -95,7 +95,7 @@ if(BUILD_ASSEMBLY)
 endif(BUILD_ASSEMBLY)
 
 if(BUILD_CAM)
-    add_subdirectory(Cam)
+#    add_subdirectory(Cam)
 endif(BUILD_CAM)
 
 if(BUILD_FEM)
@@ -125,3 +125,7 @@ endif(BUILD_SPREADSHEET)
 if(BUILD_JTREADER)
   add_subdirectory(JtReader)
 endif(BUILD_JTREADER)
+
+if(BUILD_PATH)
+    add_subdirectory(Path)
+endif(BUILD_PATH)

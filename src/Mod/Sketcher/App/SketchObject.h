@@ -32,6 +32,8 @@
 #include <Mod/Part/App/PropertyGeometryList.h>
 #include <Mod/Sketcher/App/PropertyConstraintList.h>
 
+#include "Sketch.h"
+
 namespace Sketcher
 {
 
@@ -49,7 +51,7 @@ public:
     App     ::PropertyLinkSubList    ExternalGeometry;
     /** @name methods overide Feature */
     //@{
-    /// recalculate the Feature
+    /// recalculate the Feature (if no recompute is needed see also solve() and solverNeedsUpdate boolean)
     App::DocumentObjectExecReturn *execute(void);
 
     /// returns the type name of the ViewProvider
@@ -57,11 +59,22 @@ public:
         return "SketcherGui::ViewProviderSketch";
     }
     //@}
+    
+    /** SketchObject can work in two modes: Recompute Mode and noRecomputes Mode
+        - In Recompute Mode, a recompute is necessary after each geometry addition to update the solver DoF (default)
+        - In NoRecomputes Mode, no recompute is necessary after a geometry addition. If a recompute is triggered
+          it is just less efficient.
+          
+        This flag does not regulate whether this object will recompute or not if execute() or a recompute() is actually executed,
+        it just regulates whether the solver is called or not (i.e. whether it relies on 
+        the solve of execute for the calculation)
+    */
+    bool noRecomputes;
 
     /// add unspecified geometry
-    int addGeometry(const Part::Geometry *geo);
+    int addGeometry(const Part::Geometry *geo, bool construction=false);
     /// add unspecified geometry
-    int addGeometry(const std::vector<Part::Geometry *> &geoList);
+    int addGeometry(const std::vector<Part::Geometry *> &geoList, bool construction=false);
     /// delete geometry
     int delGeometry(int GeoId);
     /// add all constraints in the list
@@ -106,12 +119,22 @@ public:
     /// returns non zero if the sketch contains conflicting constraints
     int hasConflicts(void) const;
 
-    /// solves the sketch and updates the Geometry
-    int solve();
+    /** solves the sketch and updates the geometry, but not all the dependent features (does not recompute)
+        When a recompute is necessary, recompute triggers execute() which solves the sketch and updates all dependent features
+        When a solve only is necessary (e.g. DoF changed), solve() solves the sketch and 
+        updates the geometry (if updateGeoAfterSolving==true), but does not trigger any updates
+    */
+    int solve(bool updateGeoAfterSolving=true);   
     /// set the datum of a Distance or Angle constraint and solve
     int setDatum(int ConstrId, double Datum);
+    /// set the driving status of this constraint and solve
+    int setDriving(int ConstrId, bool isdriving);
+    /// get the driving status of this constraint
+    int getDriving(int ConstrId, bool &isdriving);
+    /// toggle the driving status of this constraint
+    int toggleDriving(int ConstrId);
     /// move this point to a new location and solve
-    int movePoint(int GeoId, PointPos PosId, const Base::Vector3d& toPoint, bool relative=false);
+    int movePoint(int GeoId, PointPos PosId, const Base::Vector3d& toPoint, bool relative=false, bool updateGeoBeforeMoving=false);
     /// retrieves the coordinates of a point
     Base::Vector3d getPoint(int GeoId, PointPos PosId) const;
 
@@ -128,8 +151,14 @@ public:
     /// trim a curve
     int trim(int geoId, const Base::Vector3d& point);
     /// Exposes all internal geometry of an object supporting internal geometry
+    /*!
+     * \return -1 on error
+     */
     int ExposeInternalGeometry(int GeoId);
     /// Deletes all unused (not further constrained) internal geometry
+    /*!
+     * \return -1 on error
+     */
     int DeleteUnusedInternalGeometry(int GeoId);
 
     /// retrieves for a Vertex number the corresponding GeoId and PosId
@@ -178,6 +207,36 @@ public:
     bool evaluateConstraints() const;
     /// Remove constraints with invalid indexes
     void validateConstraints();
+    
+    /// gets DoF of last solver execution
+    inline int getLastDoF() const {return lastDoF;}
+    /// gets HasConflicts status of last solver execution
+    inline bool getLastHasConflicts() const {return lastHasConflict;}
+    /// gets HasRedundancies status of last solver execution
+    inline bool getLastHasRedundancies() const {return lastHasRedundancies;}
+    /// gets solver status of last solver execution
+    inline int getLastSolverStatus() const {return lastSolverStatus;}
+    /// gets solver SolveTime of last solver execution
+    inline float getLastSolveTime() const {return lastSolveTime;}
+    /// gets the conflicting constraints of the last solver execution
+    inline const std::vector<int> &getLastConflicting(void) const { return lastConflicting; }
+    /// gets the redundant constraints of last solver execution
+    inline const std::vector<int> &getLastRedundant(void) const { return lastRedundant; }
+    /// gets the solved sketch as a reference
+    inline Sketch &getSolvedSketch(void) {return solvedSketch;}
+
+    /// Flag to allow external geometry from other bodies than the one this sketch belongs to
+    bool allowOtherBody;
+
+    enum eReasonList{
+        rlAllowed,
+        rlOtherDoc,
+        rlCircularReference,
+        rlOtherPart,
+    };
+    /// Return true if this object is allowed as external geometry for the
+    /// sketch. rsn argument recieves the reason for disallowing.
+    bool isExternalAllowed(App::Document *pDoc, App::DocumentObject *pObj, eReasonList* rsn = 0) const;
 
     /// Flag to allow external geometry from other bodies than the one this sketch belongs to
     bool allowOtherBody;
@@ -202,6 +261,22 @@ private:
 
     std::vector<int> VertexId2GeoId;
     std::vector<PointPos> VertexId2PosId;
+    
+    Sketch solvedSketch;
+    
+    /** this internal flag indicate that an operation modifying the geometry, but not the DoF of the sketch took place (e.g. toggle construction), 
+        so if next action is a movement of a point (movePoint), the geometry must be updated first.
+    */
+    bool solverNeedsUpdate;
+    
+    int lastDoF;
+    bool lastHasConflict;
+    bool lastHasRedundancies;
+    int lastSolverStatus;
+    float lastSolveTime;
+
+    std::vector<int> lastConflicting;
+    std::vector<int> lastRedundant;
 
     bool AutoLockTangencyAndPerpty(Constraint* cstr, bool bForce = false, bool bLock = true);
 };

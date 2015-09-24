@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2004 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 2004 Juergen Riegel <juergen.riegel@web.de>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -67,7 +67,6 @@ namespace Gui {
 class View3DInventorViewer;
 class ViewProviderPy;
 class ObjectItem;
-class SoObjectSeparator;
 
 
 
@@ -90,7 +89,7 @@ public:
     virtual ~ViewProvider();
 
     // returns the root node of the Provider (3D)
-    virtual SoSeparator* getRoot(void);
+    virtual SoSeparator* getRoot(void){return pcRoot;}
     // returns the root for the Annotations. 
     SoSeparator* getAnnotation(void);
     // returns the root node of the Provider (3D)
@@ -162,9 +161,10 @@ public:
     //@{
     /** Check whether children can be removed from the view provider by drag and drop */
     virtual bool canDragObjects() const
-    {
-      return false;
-    }
+    { return false; }
+    /** Check whether the object can be removed from the view provider by drag and drop */
+    virtual bool canDragObject(App::DocumentObject*) const
+    { return true; }
     /** Tell the tree view if this object should apear there */
     virtual bool showInTree() const
     {
@@ -173,16 +173,12 @@ public:
     /** Remove a child from the view provider by drag and drop */
     virtual void dragObject(App::DocumentObject*)
     { }
+    /** Check whether objects can be added to the view provider by drag and drop */
+    virtual bool canDropObjects() const
+    { return false; }
     /** Check whether the object can be dropped to the view provider by drag and drop */
     virtual bool canDropObject(App::DocumentObject*) const
-    {
-        return false;
-    }
-    /** Check whether the object can be dropped to the view provider by drag and drop */
-    virtual bool canDropObjects() const
-    {
-        return false;
-    }
+    { return true; }
     /** Add an object to the view provider by drag and drop */
     virtual void dropObject(App::DocumentObject*)
     { }
@@ -336,7 +332,7 @@ protected:
 
 protected:
     /// The root Separator of the ViewProvider
-    SoObjectSeparator *pcRoot;
+    SoSeparator *pcRoot;
     /// this is transformation for the provider
     SoTransform *pcTransform;
     const char* sPixmap;

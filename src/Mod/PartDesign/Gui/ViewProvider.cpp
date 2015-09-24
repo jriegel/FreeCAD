@@ -32,11 +32,9 @@
 #include <Mod/Part/App/PropertyTopoShape.h>
 #include <Gui/Command.h>
 #include <Gui/MDIView.h>
-
 #include <Gui/Control.h>
 #include <Gui/Application.h>
 #include <Base/Exception.h>
-
 
 using namespace PartDesignGui;
 
@@ -67,10 +65,10 @@ bool ViewProvider::doubleClicked(void)
         oldTip = NULL;
     }
 
-    std::string Msg("Edit ");
-    Msg += this->pcObject->Label.getValue();
-    Gui::Command::openCommand(Msg.c_str());
     try {
+        std::string Msg("Edit ");
+        Msg += this->pcObject->Label.getValue();
+        Gui::Command::openCommand(Msg.c_str());
         Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().setEdit('%s',0)",this->pcObject->getNameInDocument());
     }
     catch (const Base::Exception&) {

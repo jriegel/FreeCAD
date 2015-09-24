@@ -63,8 +63,6 @@ PROPERTY_SOURCE(Gui::ViewProviderPart, Gui::ViewProviderGeometryObject)
 ViewProviderPart::ViewProviderPart() 
 {
     ADD_PROPERTY(Workbench,("PartDesignWorkbench"));
-    sPixmap = "Part_icon.svg";
-
 }
 
 ViewProviderPart::~ViewProviderPart()
@@ -103,8 +101,8 @@ void ViewProviderPart::onObjectChanged(const App::DocumentObject& obj, const App
         View3DInventorViewer* viewer = static_cast<View3DInventor*>(this->getActiveView())->getViewer();
         SoGetBoundingBoxAction bboxAction(viewer->getSoRenderManager()->getViewportRegion());
         
-        //calculate for everything but planes
-        SbBox3f bbox(1e-9f, 1e-9f, 1e-9f, 1e-9f, 1e-9f, 1e-9f);
+        //calculate for everything but datums
+        SbBox3f bbox(1e-9, 1e-9, 1e-9, 1e-9, 1e-9, 1e-9);
         for(App::DocumentObject* obj : part->getObjects()) {
             if(obj->getTypeId() != App::Origin::getClassTypeId() &&
                obj->getTypeId() != App::Plane::getClassTypeId() && 
@@ -125,9 +123,9 @@ void ViewProviderPart::onObjectChanged(const App::DocumentObject& obj, const App
         }
         
         //get the bounding box values
-        SbVec3f size = bbox.getSize()*1.3f;
-        SbVec3f max = bbox.getMax()*1.3f;
-        SbVec3f min = bbox.getMin()*1.3f;
+        SbVec3f size = bbox.getSize()*1.3;
+        SbVec3f max = bbox.getMax()*1.3;
+        SbVec3f min = bbox.getMin()*1.3;
        
         auto origins = part->getObjectsOfType(App::Origin::getClassTypeId());
         if (origins.empty())
@@ -198,26 +196,17 @@ void ViewProviderPart::Restore(Base::XMLReader &reader)
 }
 
 
-///**
-// * Returns the pixmap for the list item.
-// */
-//QIcon ViewProviderPart::getIcon() const
-//{
-//    QIcon groupIcon;
-//    groupIcon.addPixmap(QApplication::style()->standardPixmap(QStyle::SP_DirClosedIcon),
-//                        QIcon::Normal, QIcon::Off);
-//    groupIcon.addPixmap(QApplication::style()->standardPixmap(QStyle::SP_DirOpenIcon),
-//                        QIcon::Normal, QIcon::On);
-//    return groupIcon;
-//}
-
 /**
  * Returns the pixmap for the list item.
  */
 QIcon ViewProviderPart::getIcon() const
 {
-    //return QIcon(Gui::BitmapFactory().pixmap("Part_icon.svg"));
-    return QIcon(QString::fromUtf8(":/icons/Part_icon.svg"));
+    QIcon groupIcon;
+    groupIcon.addPixmap(QApplication::style()->standardPixmap(QStyle::SP_DirClosedIcon),
+                        QIcon::Normal, QIcon::Off);
+    groupIcon.addPixmap(QApplication::style()->standardPixmap(QStyle::SP_DirOpenIcon),
+                        QIcon::Normal, QIcon::On);
+    return groupIcon;
 }
 
 void ViewProviderPart::setUpPart(const App::Part *part)

@@ -84,8 +84,6 @@
 #include <App/Document.h>
 #include <Gui/Command.h>
 #include <Gui/Application.h>
-#include <Gui/SoFCSelection.h>
-#include <Gui/SoObjectSeparator.h>
 #include <Gui/Selection.h>
 #include <Gui/View3DInventorViewer.h>
 
@@ -127,7 +125,6 @@ bool ViewProviderPart::doubleClicked(void)
     }
 }
 
-
 bool ViewProviderPart::onDelete(const std::vector<std::string> &)
 {
     // Body feature housekeeping
@@ -148,9 +145,7 @@ bool ViewProviderPart::onDelete(const std::vector<std::string> &)
     // 1. Delete
     // 2. Suppress
     // 3. Re-route
-
     return true;
-
 }
 
 void ViewProviderPart::applyColor(const Part::ShapeHistory& hist,
@@ -165,7 +160,6 @@ void ViewProviderPart::applyColor(const Part::ShapeHistory& hist,
             colBool[*kt] = colBase[jt->first];
         }
     }
-
 }
 
 // ----------------------------------------------------------------------------

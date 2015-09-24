@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2002     *
+ *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2002    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -202,7 +202,7 @@ void Document::writeDependencyGraphViz(std::ostream &out)
     out << "}" << endl;
 }
 
-void Document::exportGraphviz(std::ostream& out)
+void Document::exportGraphviz(std::ostream& out) const
 {
     std::vector<std::string> names;
     names.reserve(d->objectMap.size());
@@ -635,6 +635,10 @@ Document::Document(void)
     ADD_PROPERTY_TYPE(Uid,(id),0,Prop_ReadOnly,"UUID of the document");
 
     // license stuff
+    ADD_PROPERTY_TYPE(License,("CC-BY 3.0"),0,Prop_None,"License string of the Item");
+    ADD_PROPERTY_TYPE(LicenseURL,("http://creativecommons.org/licenses/by/3.0/"),0,Prop_None,"URL to the license text/contract");
+
+    // license stuff
     int licenseId = App::GetApplication().GetParameterGroupByPath
         ("User parameter:BaseApp/Preferences/Document")->GetInt("prefLicenseType",0);
     std::string license;
@@ -1019,6 +1023,11 @@ bool Document::save (void)
     compression = Base::clamp<int>(compression, Z_NO_COMPRESSION, Z_BEST_COMPRESSION);
 
     if (*(FileName.getValue()) != '\0') {
+        // Save the name of the tip object in order to handle in Restore()
+        if(Tip.getValue()) {
+            TipName.setValue(Tip.getValue()->getNameInDocument());
+        }
+
         std::string LastModifiedDateString = Base::TimeInfo::currentDateTimeString();
         LastModifiedDate.setValue(LastModifiedDateString.c_str());
 
@@ -1458,6 +1467,8 @@ void Document::recompute()
             it->second->purgeTouched();
     }
     d->vertexMap.clear();
+
+    signalRecomputed(*this);
 }
 
 const char * Document::getErrorDescription(const App::DocumentObject*Obj) const

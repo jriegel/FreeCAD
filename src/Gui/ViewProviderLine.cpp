@@ -51,6 +51,7 @@
 #include "View3DInventorViewer.h"
 #include "Inventor/SoAutoZoomTranslation.h"
 #include "SoAxisCrossKit.h"
+#include "Window.h"
 //#include <SoDepthBuffer.h>
 
 #include <App/PropertyGeo.h>
@@ -63,11 +64,11 @@ using namespace Gui;
 PROPERTY_SOURCE(Gui::ViewProviderLine, Gui::ViewProviderGeometryObject)
 
 
-ViewProviderLine::ViewProviderLine() 
+ViewProviderLine::ViewProviderLine()
 {
 
     ADD_PROPERTY(Size,(1.0));
- 
+
     pMat = new SoMaterial();
     pMat->ref();
 
@@ -84,8 +85,14 @@ ViewProviderLine::ViewProviderLine()
         0,1,-1
     };
 
+    // Create the selection node
+    pcHighlight = createFromSettings();
+    pcHighlight->ref();
+    if (pcHighlight->selectionMode.getValue() == Gui::SoFCSelection::SEL_OFF)
+        Selectable.setValue(false);
+    
     pMat->diffuseColor.setNum(1);
-    pMat->diffuseColor.set1Value(0, SbColor(50./255.f, 150./255.f, 250./255.f));
+    pMat->diffuseColor.set1Value(0, SbColor(50./255., 150./255., 250./255.));
 
     pCoords = new SoCoordinate3();
     pCoords->ref();
@@ -96,23 +103,24 @@ ViewProviderLine::ViewProviderLine()
     pLines->ref();
     pLines->coordIndex.setNum(3);
     pLines->coordIndex.setValues(0, 3, lines);
-    
+
     pFont = new SoFont();
     pFont->size.setValue(Size.getValue()/10.);
-    
+
     pTranslation = new SoTranslation();
     pTranslation->ref();
     pTranslation->translation.setValue(SbVec3f(-1,0,0));
-    
+
     pText = new SoAsciiText();
     pText->ref();
     pText->width.setValue(-1);
-    
+
     sPixmap = "view-measurement";
 }
 
 ViewProviderLine::~ViewProviderLine()
 {
+    pcHighlight->unref();
     pCoords->unref();
     pLines->unref();
     pMat->unref();
@@ -157,6 +165,10 @@ void ViewProviderLine::attach(App::DocumentObject* pcObject)
 {
     ViewProviderGeometryObject::attach(pcObject);
 
+    pcHighlight->objectName = pcObject->getNameInDocument();
+    pcHighlight->documentName = pcObject->getDocument()->getName();
+    pcHighlight->subElementName = "Main";
+    
     SoSeparator  *sep = new SoSeparator();
     SoAnnotation *lineSep = new SoAnnotation();
 
@@ -165,25 +177,25 @@ void ViewProviderLine::attach(App::DocumentObject* pcObject)
 
     SoMaterialBinding* matBinding = new SoMaterialBinding;
     matBinding->value = SoMaterialBinding::OVERALL;
-    
+
     sep->addChild(matBinding);
     sep->addChild(pMat);
-    sep->addChild(getHighlightNode());
+    sep->addChild(pcHighlight);
     pcHighlight->addChild(style);
     pcHighlight->addChild(pCoords);
     pcHighlight->addChild(pLines);
-   
+
     style = new SoDrawStyle();
     style->lineWidth = 2.0f;
     style->linePattern.setValue(0xF000);
     lineSep->addChild(style);
     lineSep->addChild(pLines);
-    lineSep->addChild(pFont);    
+    lineSep->addChild(pFont);
     pText->string.setValue(SbString(pcObject->Label.getValue()));
     lineSep->addChild(pTranslation);
     lineSep->addChild(pText);
     pcHighlight->addChild(lineSep);
-     
+
     pcHighlight->style = SoFCSelection::EMISSIVE_DIFFUSE;
     addDisplayMaskMode(sep, "Base");
 }
@@ -213,7 +225,7 @@ std::string ViewProviderLine::getElement(const SoDetail* detail) const
 SoDetail* ViewProviderLine::getDetail(const char* subelement) const
 {
     SoLineDetail* detail = 0;
-    std::string subelem(subelement); 
+    std::string subelem(subelement);
     int edge = -1;
 
     if(subelem == "Main") edge = 0;
@@ -226,7 +238,7 @@ SoDetail* ViewProviderLine::getDetail(const char* subelement) const
     return detail;
 }
 
-bool ViewProviderLine::isSelectable(void) const 
+bool ViewProviderLine::isSelectable(void) const
 {
     return true;
 }
@@ -238,7 +250,41 @@ bool ViewProviderLine::setEdit(int ModNum)
 
 void ViewProviderLine::unsetEdit(int ModNum)
 {
-   
+
+}
+
+Gui::SoFCSelection* ViewProviderLine::createFromSettings() const
+{
+    Gui::SoFCSelection* sel = new Gui::SoFCSelection();
+
+    float transparency;
+    ParameterGrp::handle hGrp = Gui::WindowParameter::getDefaultParameter()->GetGroup("View");
+    bool enablePre = hGrp->GetBool("EnablePreselection", true);
+    bool enableSel = hGrp->GetBool("EnableSelection", true);
+    if (!enablePre) {
+        sel->highlightMode = Gui::SoFCSelection::OFF;
+    }
+    else {
+        // Search for a user defined value with the current color as default
+        SbColor highlightColor = sel->colorHighlight.getValue();
+        unsigned long highlight = (unsigned long)(highlightColor.getPackedValue());
+        highlight = hGrp->GetUnsigned("HighlightColor", highlight);
+        highlightColor.setPackedValue((uint32_t)highlight, transparency);
+        sel->colorHighlight.setValue(highlightColor);
+    }
+    if (!enableSel || !Selectable.getValue()) {
+        sel->selectionMode = Gui::SoFCSelection::SEL_OFF;
+    }
+    else {
+        // Do the same with the selection color
+        SbColor selectionColor = sel->colorSelection.getValue();
+        unsigned long selection = (unsigned long)(selectionColor.getPackedValue());
+        selection = hGrp->GetUnsigned("SelectionColor", selection);
+        selectionColor.setPackedValue((uint32_t)selection, transparency);
+        sel->colorSelection.setValue(selectionColor);
+    }
+
+    return sel;
 }
 
 // ----------------------------------------------------------------------------

@@ -23,10 +23,7 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 #include <QPainter>
-#include <QApplication>
 #endif
-
-#include <QStyleOptionViewItem>
 
 #include "DAGRectItem.h"
 
@@ -42,37 +39,25 @@ RectItem::RectItem(QGraphicsItem* parent) : QGraphicsRectItem(parent)
 
 void RectItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget)
 {
-  painter->save();
+  //TODO figure out how to mimic painting of itemviews. QStyle, QStyledItemDelegate.
   
-  QStyleOptionViewItemV4 styleOption;
-  
-  styleOption.backgroundBrush = backgroundBrush;
+  QBrush brush = backgroundBrush;
+  if (selected)
+    brush = selectionBrush;
+  if (preSelected)
+    brush = preSelectionBrush;
+  if (selected && preSelected)
+    brush = bothBrush;
   if (editing)
-    styleOption.backgroundBrush = editBrush;
-  else
-  {
-    styleOption.state |= QStyle::State_Enabled;
-    if (selected)
-      styleOption.state |= QStyle::State_Selected;
-    if (preSelected)
-    {
-      if (!selected)
-      {
-        styleOption.state |= QStyle::State_Selected;
-        QPalette palette = styleOption.palette;
-        QColor tempColor = palette.color(QPalette::Active, QPalette::Highlight);
-        tempColor.setAlphaF(0.15);
-        palette.setColor(QPalette::Inactive, QPalette::Highlight, tempColor);
-        styleOption.palette = palette;
-      }
-      styleOption.state |= QStyle::State_MouseOver;
-    }
-  }
-  styleOption.rect = this->rect().toRect();
+    brush = editBrush;
   
-  QApplication::style()->drawControl(QStyle::CE_ItemViewItem, &styleOption, painter);
+  //heights are negative.
+  float radius = std::min(this->rect().width(), std::fabs(this->rect().height())) * 0.1;
+  painter->setBrush(brush);
+  painter->setPen(this->pen()); //should be Qt::NoPen.
+  painter->drawRoundedRect(this->rect(), radius, radius);
   
-  painter->restore();
+//   QGraphicsRectItem::paint(painter, option, widget);
 }
 
 #include <moc_DAGRectItem.cpp>

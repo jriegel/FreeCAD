@@ -25,11 +25,56 @@
 
 #ifndef _PreComp_
 # include <qobject.h>
+#include <QMessageBox>
 #endif
 
 #include "Workbench.h"
 #include <Gui/MenuManager.h>
 #include <Gui/ToolBarManager.h>
+#include <Gui/MainWindow.h>
+#include <Gui/Application.h>
+#include <Gui/MDIView.h>
+
+namespace PartGui {
+    
+
+App::Part *getPart(bool messageIfNot)
+{
+    App::Part * activePart = Gui::Application::Instance->activeView()->getActiveObject<App::Part*>(PARTKEY);
+
+    if (!activePart && messageIfNot){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("No active Part"),
+            QObject::tr("In order to use Part you need an active Part object in the document. "
+                        "Please make one active (double click) or create one. If you have a legacy document "
+                        "with Part objects without Body, use the transfer function in "
+                        "Part to put them into a Part."
+                        ));
+    }
+    return activePart;
+}
+
+App::Part* getPartFor(App::DocumentObject* obj, bool messageIfNot) {
+
+    if(!obj)
+        return nullptr;
+
+    //get the part the object belongs to
+    for(App::Part* p : obj->getDocument()->getObjectsOfType<App::Part>()) {
+        if(p->hasObject(obj)) {
+            return p;
+        }
+    }
+
+    if (messageIfNot){
+        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Feature is not in a part"),
+            QObject::tr("In order to use this feature it needs to belong to a part object in the document."));
+    }
+
+    return nullptr;
+}
+
+}
+
 
 using namespace PartGui;
 
@@ -66,16 +111,19 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     Gui::MenuItem* bop = new Gui::MenuItem;
     bop->setCommand("Boolean");
     *bop << "Part_Boolean" << "Part_Cut" << "Part_Fuse" << "Part_Common";
-    
+
+    Gui::MenuItem* join = new Gui::MenuItem;
+    join->setCommand("Join");
+    *join << "Part_JoinConnect" << "Part_JoinEmbed" << "Part_JoinCutout";
 
     Gui::MenuItem* part = new Gui::MenuItem;
     root->insertItem(item, part);
     part->setCommand("&Part");
-    *part << "Part_Import" << "Part_Export" << "Separator";
+    *part << "Part_Part" << "Part_Import" << "Part_Export" << "Separator";
     *part << prim << "Part_Primitives" << "Part_Builder" << "Separator"
           << "Part_ShapeFromMesh" << "Part_MakeSolid" << "Part_ReverseShape"
           << "Part_SimpleCopy" << "Part_RefineShape" << "Part_CheckGeometry"
-	      << "Separator" << bop << "Separator"
+          << "Separator" << bop << join << "Separator"
           << "Part_CrossSections" << "Part_Compound" << "Part_Extrude"
           << "Part_Revolve" << "Part_Mirror" << "Part_Fillet" << "Part_Chamfer"
           << "Part_RuledSurface" << "Part_Loft" << "Part_Sweep"
@@ -113,14 +161,16 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
 
     Gui::ToolBarItem* tool = new Gui::ToolBarItem(root);
     tool->setCommand("Part tools");
-    *tool << "Part_Extrude" << "Part_Revolve" << "Part_Mirror" << "Part_Fillet"
+    *tool << "Part_Part"
+          << "Part_Extrude" << "Part_Revolve" << "Part_Mirror" << "Part_Fillet"
           << "Part_Chamfer" << "Part_RuledSurface" << "Part_Loft" << "Part_Sweep"
           << "Part_Offset" << "Part_Thickness";
 
     Gui::ToolBarItem* boolop = new Gui::ToolBarItem(root);
     boolop->setCommand("Boolean");
     *boolop << "Part_Boolean" << "Part_Cut" << "Part_Fuse" << "Part_Common"
-             << "Part_CheckGeometry" << "Part_Section" << "Part_CrossSections";
+            << "Part_CompJoinFeatures" << "Part_CheckGeometry" << "Part_Section"
+            << "Part_CrossSections";
 	     
     Gui::ToolBarItem* measure = new Gui::ToolBarItem(root);
     measure->setCommand("Measure");

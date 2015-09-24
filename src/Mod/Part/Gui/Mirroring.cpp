@@ -33,6 +33,7 @@
 #endif
 
 #include "Mirroring.h"
+#include "Workbench.h"
 #include "ui_Mirroring.h"
 #include "../App/PartFeature.h"
 #include <Base/Exception.h>
@@ -128,6 +129,10 @@ bool Mirroring::accept()
             tr("No such document '%1'.").arg(this->document));
         return false;
     }
+    
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return false;
 
     Gui::WaitCursor wc;
     unsigned int count = activeDoc->countObjectsOfType(Base::Type::fromName("Part::Mirroring"));
@@ -164,10 +169,12 @@ bool Mirroring::accept()
             "__doc__.ActiveObject.Label=\"%3\"\n"
             "__doc__.ActiveObject.Normal=(%4,%5,%6)\n"
             "__doc__.ActiveObject.Base=(%7,%8,%9)\n"
+            "__doc__.%10.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
             "del __doc__")
             .arg(this->document).arg(shape).arg(label)
             .arg(normx).arg(normy).arg(normz)
-            .arg(basex).arg(basey).arg(basez);
+            .arg(basex).arg(basey).arg(basez)
+            .arg(QString::fromAscii(acPart->getNameInDocument()));
         Gui::Application::Instance->runPythonCode((const char*)code.toAscii());
         QByteArray from = shape.toAscii();
         Gui::Command::copyVisual("ActiveObject", "ShapeColor", from);

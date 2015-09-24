@@ -63,11 +63,14 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
          << "Separator"
          << "Fem_ConstraintFixed"
          << "Fem_ConstraintForce"
+         << "Fem_ConstraintPressure"
          << "Fem_ConstraintBearing"
          << "Fem_ConstraintGear"   
          << "Fem_ConstraintPulley"
          << "Separator"
          << "Fem_MechanicalJobControl"
+         << "Fem_Quick_Analysis"
+         << "Fem_PurgeResults"
          << "Fem_ShowResult";
     return root;
 }
@@ -87,11 +90,14 @@ Gui::MenuItem* Workbench::setupMenuBar() const
          << "Separator"
          << "Fem_ConstraintFixed"
          << "Fem_ConstraintForce"
+         << "Fem_ConstraintPressure"
          << "Fem_ConstraintBearing"
          << "Fem_ConstraintGear"   
          << "Fem_ConstraintPulley"
          << "Separator"
          << "Fem_MechanicalJobControl"
+         << "Fem_Quick_Analysis"
+         << "Fem_PurgeResults"
          << "Fem_ShowResult";
 
     return root;

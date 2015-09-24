@@ -71,9 +71,11 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
     PartDesign::Chamfer* pcChamfer = static_cast<PartDesign::Chamfer*>(DressUpView->getObject());
     double r = pcChamfer->Size.getValue();
 
-	ui->chamferDistance->setValue(Base::Quantity(r,Base::Unit::Length));
+    ui->chamferDistance->setUnit(Base::Unit::Length);
+    ui->chamferDistance->setValue(r);
+    ui->chamferDistance->setMinimum(0);
+    ui->chamferDistance->selectNumber();
     QMetaObject::invokeMethod(ui->chamferDistance, "setFocus", Qt::QueuedConnection);
-
     std::vector<std::string> strings = pcChamfer->Base.getSubValues();
     for (std::vector<std::string>::const_iterator i = strings.begin(); i != strings.end(); i++)
     {
@@ -176,12 +178,6 @@ TaskDlgChamferParameters::~TaskDlgChamferParameters()
 //        Gui::Command::openCommand((const char*)msg.toUtf8());
 //    }
 //}
-//
-//void TaskDlgChamferParameters::clicked(int)
-//{
-//
-//}
-
 bool TaskDlgChamferParameters::accept()
 {
     parameter->showObject();

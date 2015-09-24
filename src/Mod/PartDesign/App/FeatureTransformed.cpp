@@ -203,7 +203,9 @@ App::DocumentObjectExecReturn *Transformed::execute(void)
             // Check for intersection with support
             try {
                 if (!Part::checkIntersection(support, mkTrf.Shape(), false, true)) {
-                    Base::Console().Warning("Transformed shape does not intersect support %s: Removed\n", supportFeature->getNameInDocument());
+#ifdef FC_DEBUG // do not write this in release mode because a message appears already in the task view
+                    Base::Console().Warning("Transformed shape does not intersect support %s: Removed\n", (*o)->getNameInDocument());
+#endif
                     nointersect_trsfms[*o].insert(t);
                 } else {
                     v_transformations.push_back(t);
@@ -246,41 +248,41 @@ App::DocumentObjectExecReturn *Transformed::execute(void)
             // lets check if the result is a solid
             if (current.IsNull())
                 return new App::DocumentObjectExecReturn("Resulting shape is not a solid", *o);
-	    std::vector<TopoDS_Shape>::const_iterator individualIt;
-	    for (individualIt = individualTools.begin(); individualIt != individualTools.end(); ++individualIt)
-	    {
-	      BRepAlgoAPI_Fuse mkFuse2(current, *individualIt);
-	      if (!mkFuse2.IsDone())
-		  return new App::DocumentObjectExecReturn("Fusion with support failed", *o);
-	      // we have to get the solids (fuse sometimes creates compounds)
-	      current = this->getSolid(mkFuse2.Shape());
-	      // lets check if the result is a solid
-	      if (current.IsNull())
-		  return new App::DocumentObjectExecReturn("Resulting shape is not a solid", *o);
-	    }
+            std::vector<TopoDS_Shape>::const_iterator individualIt;
+            for (individualIt = individualTools.begin(); individualIt != individualTools.end(); ++individualIt)
+            {
+              BRepAlgoAPI_Fuse mkFuse2(current, *individualIt);
+              if (!mkFuse2.IsDone())
+                  return new App::DocumentObjectExecReturn("Fusion with support failed", *o);
+              // we have to get the solids (fuse sometimes creates compounds)
+              current = this->getSolid(mkFuse2.Shape());
+              // lets check if the result is a solid
+              if (current.IsNull())
+                  return new App::DocumentObjectExecReturn("Resulting shape is not a solid", *o);
+            }
         } else {
             BRepAlgoAPI_Cut mkCut(current, compoundTool);
             if (!mkCut.IsDone())
                 return new App::DocumentObjectExecReturn("Cut out of support failed", *o);
             current = mkCut.Shape();
-	    std::vector<TopoDS_Shape>::const_iterator individualIt;
-	    for (individualIt = individualTools.begin(); individualIt != individualTools.end(); ++individualIt)
-	    {
-	      BRepAlgoAPI_Cut mkCut2(current, *individualIt);
-	      if (!mkCut2.IsDone())
-		  return new App::DocumentObjectExecReturn("Cut out of support failed", *o);
-	      current = this->getSolid(mkCut2.Shape());
-	      if (current.IsNull())
-		  return new App::DocumentObjectExecReturn("Resulting shape is not a solid", *o);
-	    }
+            std::vector<TopoDS_Shape>::const_iterator individualIt;
+            for (individualIt = individualTools.begin(); individualIt != individualTools.end(); ++individualIt)
+            {
+              BRepAlgoAPI_Cut mkCut2(current, *individualIt);
+              if (!mkCut2.IsDone())
+                  return new App::DocumentObjectExecReturn("Cut out of support failed", *o);
+              current = this->getSolid(mkCut2.Shape());
+              if (current.IsNull())
+                  return new App::DocumentObjectExecReturn("Resulting shape is not a solid", *o);
+            }
         }
         support = current; // Use result of this operation for fuse/cut of next original
     }
     support = refineShapeIfActive(support);
 
     for (rej_it_map::const_iterator it = nointersect_trsfms.begin(); it != nointersect_trsfms.end(); it++)
-	for (trsf_it::const_iterator it2 = it->second.begin(); it2 != it->second.end(); it2++)
-	    rejected[it->first].push_back(**it2);
+        for (trsf_it::const_iterator it2 = it->second.begin(); it2 != it->second.end(); it2++)
+            rejected[it->first].push_back(**it2);
 
     this->Shape.setValue(support);
     return App::DocumentObject::StdReturn;
@@ -300,7 +302,7 @@ TopoDS_Shape Transformed::refineShapeIfActive(const TopoDS_Shape& oldShape) cons
 }
 
 void Transformed::divideTools(const std::vector<TopoDS_Shape> &toolsIn, std::vector<TopoDS_Shape> &individualsOut,
-		     TopoDS_Compound &compoundOut) const
+                              TopoDS_Compound &compoundOut) const
 {
   typedef std::pair<TopoDS_Shape, Bnd_Box> ShapeBoundPair;
   typedef std::list<ShapeBoundPair> PairList;

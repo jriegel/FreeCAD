@@ -58,13 +58,13 @@ public:
     bool getMidplane(void) const;
     bool getReversed(void) const;
     int getMode(void) const;
-    const std::string getFaceName(void) const;
+    QByteArray getFaceName(void) const;
 
 private Q_SLOTS:
     void onLengthChanged(double);
     void onOffsetChanged(double);
     void onMidplaneChanged(bool);
-    void onReversed(bool);
+    void onReversedChanged(bool);
     void onModeChanged(int);
     void onButtonFace(const bool pressed = true);
     void onFaceName(const QString& text);

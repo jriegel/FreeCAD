@@ -114,7 +114,7 @@
    </item>
   </layout>
   <zorder>checkReverse</zorder>
-  <zorder>listWidgetFaces</zorder>
+  <zorder>listWidgetReferences</zorder>
  </widget>
  <customwidgets>
   <customwidget>

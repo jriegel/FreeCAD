@@ -67,7 +67,6 @@ private Q_SLOTS:
   
 protected:
     enum selectionModes { none, refAdd, refRemove, refObjAdd };
-    void changeEvent(QEvent *e);
     selectionModes selectionMode = none;
     
     void removeFromListWidget(QListWidget*w, QString name);
@@ -107,7 +106,6 @@ private Q_SLOTS:
   
 protected:
     enum selectionModes { none, refAdd, refRemove, refObjAdd };
-    void changeEvent(QEvent *e);
     selectionModes selectionMode = none;
     
     void removeFromListWidget(QListWidget*w, QString name);
@@ -143,7 +141,6 @@ private Q_SLOTS:
   
 protected:
     enum selectionModes { none, refAdd, refRemove };
-    void changeEvent(QEvent *e);
     selectionModes selectionMode = none;
     
     void removeFromListWidget(QListWidget*w, QString name);

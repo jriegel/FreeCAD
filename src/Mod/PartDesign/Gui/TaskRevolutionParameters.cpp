@@ -91,43 +91,8 @@ TaskRevolutionParameters::TaskRevolutionParameters(ViewProviderRevolution *Revol
     bool reversed = pcRevolution->Reversed.getValue();
 
     ui->revolveAngle->setValue(l);
-
-    int count=pcRevolution->getSketchAxisCount();
-
-    for (int i=ui->axis->count()-1; i >= count+5; i--)
-        ui->axis->removeItem(i);
-    for (int i=ui->axis->count(); i < count+5; i++)
-        ui->axis->addItem(QString::fromAscii("Sketch axis %1").arg(i-2));
-
-    int pos=-1;
-
-    App::DocumentObject *pcReferenceAxis = pcRevolution->ReferenceAxis.getValue();
-    const std::vector<std::string> &subReferenceAxis = pcRevolution->ReferenceAxis.getSubValues();
-    if (pcReferenceAxis && pcReferenceAxis == pcRevolution->Sketch.getValue()) {
-        assert(subReferenceAxis.size()==1);
-        if (subReferenceAxis[0] == "H_Axis")
-            pos = 3;
-        else if (subReferenceAxis[0] == "V_Axis")
-            pos = 4;
-        else if (subReferenceAxis[0].size() > 4 && subReferenceAxis[0].substr(0,4) == "Axis")
-            pos = 5 + std::atoi(subReferenceAxis[0].substr(4,4000).c_str());
-    }
-    else if(pcReferenceAxis && pcReferenceAxis->isDerivedFrom(App::Line::getClassTypeId())) {
-        
-        if( strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[0])==0)
-            pos=0;
-        else if(strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[1])==0)
-            pos=1;
-        else if(strcmp(static_cast<App::Line*>(pcReferenceAxis)->LineType.getValue(), App::Part::BaselineTypes[2])==0)
-            pos=2;
-    }
-
-    if (pos < 0 || pos >= ui->axis->count()) {
-        ui->axis->addItem(tr("Undefined"));
-        pos = ui->axis->count()-1;
-    }
-
-    ui->axis->setCurrentIndex(pos);
+    blockUpdate = false;
+    updateUI();
 
     ui->checkBoxMidplane->setChecked(mirrored);
     ui->checkBoxReversed->setChecked(reversed);
@@ -317,17 +282,8 @@ void TaskRevolutionParameters::onReversed(bool on)
 {
     PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(vp->getObject());
     pcRevolution->Reversed.setValue(on);
-    //if (updateView())
-        pcRevolution->getDocument()->recomputeFeature(pcRevolution);
+    recomputeFeature();
 }
-
-//void TaskRevolutionParameters::onUpdateView(bool on)
-//{
-//    if (on) {
-//        PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(RevolutionView->getObject());
-//        pcRevolution->getDocument()->recomputeFeature(pcRevolution);
-//    }
-//}
 
 double TaskRevolutionParameters::getAngle(void) const
 {
@@ -414,8 +370,8 @@ void TaskRevolutionParameters::changeEvent(QEvent *e)
 TaskDlgRevolutionParameters::TaskDlgRevolutionParameters(ViewProviderRevolution *RevolutionView)
     : TaskDlgSketchBasedParameters(RevolutionView)
 {
-    assert(vp);
-    parameter  = new TaskRevolutionParameters(static_cast<ViewProviderRevolution*>(vp));
+    assert(RevolutionView);
+    parameter  = new TaskRevolutionParameters(RevolutionView);
 
     Content.push_back(parameter);
 }
@@ -427,24 +383,9 @@ TaskDlgRevolutionParameters::~TaskDlgRevolutionParameters()
 
 //==== calls from the TaskView ===============================================================
 
-
-//void TaskDlgRevolutionParameters::open()
-//{
-//    // a transaction is already open at creation time of the revolve
-//    if (!Gui::Command::hasPendingCommand()) {
-//        QString msg = QObject::tr("Edit revolve");
-//        Gui::Command::openCommand((const char*)msg.toUtf8());
-//    }
-//}
-//
-//void TaskDlgRevolutionParameters::clicked(int)
-//{
-//
-//}
-
 bool TaskDlgRevolutionParameters::accept()
 {
-	App::DocumentObject* revolve = vp->getObject();
+    App::DocumentObject* revolve = vp->getObject();
     std::string name = revolve->getNameInDocument();
 
     // retrieve sketch and its support object
@@ -480,36 +421,6 @@ bool TaskDlgRevolutionParameters::accept()
 
     return true;
 }
-
-//bool TaskDlgRevolutionParameters::reject()
-//{
-//    // get the support and Sketch
-//    PartDesign::Revolution* pcRevolution = static_cast<PartDesign::Revolution*>(RevolutionView->getObject());
-//    Sketcher::SketchObject *pcSketch = 0;
-//    App::DocumentObject    *pcSupport = 0;
-//    if (pcRevolution->Sketch.getValue()) {
-//        pcSketch = static_cast<Sketcher::SketchObject*>(pcRevolution->Sketch.getValue());
-//        pcSupport = pcSketch->Support.getValue();
-//    }
-//
-//    // role back the done things
-//    Gui::Command::abortCommand();
-//    Gui::Command::doCommand(Gui::Command::Gui,"Gui.activeDocument().resetEdit()");
-//
-//    // if abort command deleted the object the support is visible again
-//    if (!Gui::Application::Instance->getViewProvider(pcRevolution)) {
-//        if (pcSketch && Gui::Application::Instance->getViewProvider(pcSketch))
-//            Gui::Application::Instance->getViewProvider(pcSketch)->show();
-//        if (pcSupport && Gui::Application::Instance->getViewProvider(pcSupport))
-//            Gui::Application::Instance->getViewProvider(pcSupport)->show();
-//    }
-//
-//    //Gui::Command::doCommand(Gui::Command::Doc,"App.ActiveDocument.recompute()");
-//    //Gui::Command::commitCommand();
-//
-//    return true;
-//}
-
 
 
 #include "moc_TaskRevolutionParameters.cpp"

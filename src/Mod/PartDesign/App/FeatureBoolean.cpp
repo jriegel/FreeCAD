@@ -134,7 +134,10 @@ App::DocumentObjectExecReturn *Boolean::execute(void)
         if(!part->hasObject(body))
             return new App::DocumentObjectExecReturn("Cannot do boolean on bodies of different parts");
         
-        TopoDS_Shape shape = body->getTipShape()._Shape;
+        auto* solidlink = body->getPrevSolidFeature();
+        TopoDS_Shape shape;
+        if(solidlink)
+            shape = static_cast<Part::Feature*>(solidlink)->Shape.getValue();
 
         // Move the shape to the location of the base shape in the other body
         Base::Placement pl = body->Placement.getValue();
@@ -151,7 +154,7 @@ App::DocumentObjectExecReturn *Boolean::execute(void)
 
         TopoDS_Shape boolOp;
 
-        if (type == "Fuse") {
+        if (type == "Fuse") {         
             BRepAlgoAPI_Fuse mkFuse(result, shape);
             if (!mkFuse.IsDone())
                 return new App::DocumentObjectExecReturn("Fusion of bodies failed", *b);

@@ -31,6 +31,8 @@
 #include "TaskTransformedMessages.h"
 #include "ViewProviderTransformed.h"
 
+class QListWidget;
+
 namespace PartDesign {
 class Transformed;
 }
@@ -87,7 +89,8 @@ protected:
     void hideBase();
     void showBase();
 
-    void addReferenceSelectionGate(bool edge, bool face);
+    void addReferenceSelectionGate(bool edge, bool face);    
+
     bool isViewUpdated() const;
     int getUpdateViewTimeout() const;
 

@@ -28,11 +28,14 @@ if(WIN32)
         FreeCADBase
         ${Boost_DEBUG_LIBRARIES}
         ${Boost_LIBRARIES}
+        ${QT_DEBUG_LIBRARIES}
+        ${QT_LIBRARIES}
     )
 else(WIN32)
     set(FreeCADApp_LIBS
         FreeCADBase
         ${Boost_LIBRARIES}
+        ${QT_LIBRARIES}
     )
 endif(WIN32)
 
@@ -168,6 +171,7 @@ SET(FreeCADApp_CPP_SRCS
     ${Properties_CPP_SRCS}
     Application.cpp
     ApplicationPy.cpp
+    Branding.cpp
     ColorModel.cpp
     ComplexGeoData.cpp
     ComplexGeoDataPyImp.cpp
@@ -180,6 +184,7 @@ SET(FreeCADApp_HPP_SRCS
     ${Document_HPP_SRCS}
     ${Properties_HPP_SRCS}
     Application.h
+    Branding.h
     ColorModel.h
     ComplexGeoData.h
     Enumeration.h

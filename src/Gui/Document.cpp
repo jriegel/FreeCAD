@@ -98,6 +98,8 @@ struct DocumentP
     Connection connectFinishLoadDocument;
     Connection connectExportObjects;
     Connection connectImportObjects;
+    Connection connectUndoDocument;
+    Connection connectRedoDocument;
 };
 
 } // namespace Gui
@@ -144,6 +146,11 @@ Document::Document(App::Document* pcDocument,Application * app)
         (boost::bind(&Gui::Document::exportObjects, this, _1, _2));
     d->connectImportObjects = pcDocument->signalImportViewObjects.connect
         (boost::bind(&Gui::Document::importObjects, this, _1, _2, _3));
+        
+    d->connectUndoDocument = pcDocument->signalUndo.connect
+        (boost::bind(&Gui::Document::slotUndoDocument, this, _1));
+    d->connectRedoDocument = pcDocument->signalRedo.connect
+        (boost::bind(&Gui::Document::slotRedoDocument, this, _1));  
 
     // pointer to the python class
     // NOTE: As this Python object doesn't get returned to the interpreter we
@@ -173,6 +180,8 @@ Document::~Document()
     d->connectFinishLoadDocument.disconnect();
     d->connectExportObjects.disconnect();
     d->connectImportObjects.disconnect();
+    d->connectUndoDocument.disconnect();
+    d->connectRedoDocument.disconnect();
 
     // e.g. if document gets closed from within a Python command
     d->_isClosing = true;
@@ -415,6 +424,7 @@ void Document::slotNewObject(const App::DocumentObject& Obj)
             Base::Console().Error("App::Document::_RecomputeFeature(): Unknown exception in Feature \"%s\" thrown\n",Obj.getNameInDocument());
         }
 #endif
+
         std::list<Gui::BaseView*>::iterator vIt;
         // cycling to all views of the document
         for (vIt = d->baseViews.begin();vIt != d->baseViews.end();++vIt) {
@@ -539,6 +549,22 @@ void Document::slotActivatedObject(const App::DocumentObject& Obj)
     if (viewProvider && viewProvider->isDerivedFrom(ViewProviderDocumentObject::getClassTypeId())) {
         signalActivatedObject(*(static_cast<ViewProviderDocumentObject*>(viewProvider)));
     }
+}
+
+void Document::slotUndoDocument(const App::Document& doc)
+{
+    if (d->_pcDocument != &doc)
+        return;
+    
+    signalUndoDocument(*this);  
+}
+
+void Document::slotRedoDocument(const App::Document& doc)
+{
+    if (d->_pcDocument != &doc)
+        return;
+    
+    signalRedoDocument(*this);   
 }
 
 void Document::setModified(bool b)

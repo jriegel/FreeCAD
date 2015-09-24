@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2010     *
+ *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2010    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -506,6 +506,11 @@ Py::String ConstraintPy::getName(void) const
 void  ConstraintPy::setName(Py::String arg)
 {
     this->getConstraintPtr()->Name = arg;
+}
+
+Py::Float ConstraintPy::getValue(void) const
+{
+    return Py::Float(this->getConstraintPtr()->Value);
 }
 
 PyObject *ConstraintPy::getCustomAttributes(const char* /*attr*/) const

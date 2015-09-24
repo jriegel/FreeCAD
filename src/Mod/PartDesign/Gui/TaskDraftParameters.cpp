@@ -24,6 +24,7 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <QMessageBox>
 #endif
 
 #include "ui_TaskDraftParameters.h"
@@ -272,11 +273,6 @@ TaskDlgDraftParameters::~TaskDlgDraftParameters()
 //        QString msg = QObject::tr("Edit draft");
 //        Gui::Command::openCommand((const char*)msg.toUtf8());
 //    }
-//}
-//
-//void TaskDlgDraftParameters::clicked(int)
-//{
-//
 //}
 
 bool TaskDlgDraftParameters::accept()

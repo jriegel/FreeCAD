@@ -41,6 +41,7 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include <QMessageBox>
 #include <Mod/PartDesign/App/DatumShape.h>
 
 using namespace PartDesignGui;

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2010 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 2010 Juergen Riegel <juergen.riegel@web.de>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -29,7 +29,8 @@
 # include <Inventor/nodes/SoText2.h>
 # include <Inventor/nodes/SoFont.h>
 # include <QPainter>
-#endif
+# include <cmath>
+#endif  // #ifndef _PreComp_
 
 /// Here the FreeCAD includes sorted by Base,App,Gui......
 #include <Base/Console.h>
@@ -195,7 +196,7 @@ int DrawSketchHandler::seekAutoConstraint(std::vector<AutoConstraint> &suggested
             
             // the angle between the line and the hitting direction are over around 6 degrees (it is substantially parallel)
             // or if it is an sketch axis (that can not move to accomodate to the shape), then only if it is around 6 degrees with the normal (around 84 degrees)
-            if(abs(cosangle) < 0.995f || ((GeoId==-1 || GeoId==-2) && abs(cosangle) < 0.1))  
+            if (fabs(cosangle) < 0.995f || ((GeoId==-1 || GeoId==-2) && fabs(cosangle) < 0.1))
                 suggestedConstraints.push_back(constr);
             
             
@@ -235,6 +236,7 @@ int DrawSketchHandler::seekAutoConstraint(std::vector<AutoConstraint> &suggested
 
     int tangId = Constraint::GeoUndef;
 
+    float smlTangDist = 1e15f;
     // Do not consider if distance is more than that.
     // Decrease this value when a candidate is found.
     double tangDeviation = 0.1 * sketchgui->getScaleFactor();
@@ -292,7 +294,7 @@ int DrawSketchHandler::seekAutoConstraint(std::vector<AutoConstraint> &suggested
                         
             Base::Vector3d focus1PMirrored = focus1P + 2*distancetoline*norm; // mirror of focus1 with respect to the line
             
-            double error = abs((focus1PMirrored-focus2P).Length() - 2*a);
+            double error = fabs((focus1PMirrored-focus2P).Length() - 2*a);
             
             if ( error< tangDeviation) { 
                     tangId = i;
@@ -347,7 +349,7 @@ int DrawSketchHandler::seekAutoConstraint(std::vector<AutoConstraint> &suggested
                         
             Base::Vector3d focus1PMirrored = focus1P + 2*distancetoline*norm; // mirror of focus1 with respect to the line
             
-            double error = abs((focus1PMirrored-focus2P).Length() - 2*a);
+            double error = fabs((focus1PMirrored-focus2P).Length() - 2*a);
             
             if ( error< tangDeviation ) {
                     tangId = i;
@@ -499,7 +501,7 @@ void DrawSketchHandler::createAutoConstraints(const std::vector<AutoConstraint> 
             }
 
             Gui::Command::commitCommand();
-            Gui::Command::updateActive();
+            //Gui::Command::updateActive(); // There is already an recompute in each command creation, this is redundant.
         }
     }
 }

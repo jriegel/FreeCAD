@@ -41,6 +41,9 @@
 # include <Inventor/nodes/SoSeparator.h>
 # include <Inventor/nodes/SoShapeHints.h>
 # include <Inventor/nodes/SoTransparencyType.h>
+# include <QAction>
+# include <QMenu>
+# include <QMessageBox>
 #endif
 
 #include "Workbench.h"
@@ -48,9 +51,9 @@
 #include "TaskTransformedParameters.h"
 #include <Base/Console.h>
 #include <Gui/Control.h>
+#include <Gui/Command.h>
 #include <Gui/Application.h>
 #include <Gui/Command.h>
-#include <Gui/SoObjectSeparator.h>
 #include <Mod/Part/App/TopoShape.h>
 #include <Mod/PartDesign/App/FeatureTransformed.h>
 #include <Mod/PartDesign/App/FeatureAddSub.h>
@@ -227,6 +230,7 @@ void ViewProviderTransformed::recomputeFeature(void)
             Standard_Real AngDeflectionRads = AngularDeflection.getValue() / 180.0 * M_PI;
 
             // create or use the mesh on the data structure
+            // Note: This DOES have an effect on cShape
 #if OCC_VERSION_HEX >= 0x060600
             BRepMesh_IncrementalMesh(cShape,deflection,Standard_False,
                                         AngDeflectionRads,Standard_True);

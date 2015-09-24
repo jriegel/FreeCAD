@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Jürgen Riegel          (juergen.riegel@web.de) 2010     *
+ *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2010    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -38,7 +38,6 @@
 #include <Base/Tools.h>
 #include <Base/QuantityPy.h>
 #include <App/Document.h>
-
 #include <App/Plane.h>
 #include <CXX/Objects.hxx>
 
@@ -52,7 +51,7 @@ using namespace Sketcher;
 
 // returns a string which represents the object e.g. when printed in python
 std::string SketchObjectPy::representation(void) const
-{
+{        
     return "<Sketcher::SketchObject>";
 }
 
@@ -67,9 +66,19 @@ PyObject* SketchObjectPy::solve(PyObject *args)
 
 PyObject* SketchObjectPy::addGeometry(PyObject *args)
 {
-    PyObject *pcObj;
-    if (!PyArg_ParseTuple(args, "O", &pcObj))
-        return 0;
+    PyObject *pcObj; 
+    PyObject* construction; // this is an optional argument default false
+    bool isConstruction;
+    if (!PyArg_ParseTuple(args, "OO!", &pcObj, &PyBool_Type, &construction)) {
+        PyErr_Clear();
+        if (!PyArg_ParseTuple(args, "O", &pcObj))
+            return 0;
+        else
+            isConstruction=false;
+    }
+    else {
+        isConstruction = PyObject_IsTrue(construction) ? true : false;
+    }
 
     if (PyObject_TypeCheck(pcObj, &(Part::GeometryPy::Type))) {
         Part::Geometry *geo = static_cast<Part::GeometryPy*>(pcObj)->getGeometryPtr();
@@ -83,13 +92,13 @@ PyObject* SketchObjectPy::addGeometry(PyObject *args)
                 // create the definition struct for that geom
                 Part::GeomArcOfCircle aoc;
                 aoc.setHandle(trim);
-                ret = this->getSketchObjectPtr()->addGeometry(&aoc);
+                ret = this->getSketchObjectPtr()->addGeometry(&aoc,isConstruction);
             }
             else if (!ellipse.IsNull()) {
                 // create the definition struct for that geom
                 Part::GeomArcOfEllipse aoe;
                 aoe.setHandle(trim);
-                ret = this->getSketchObjectPtr()->addGeometry(&aoe);
+                ret = this->getSketchObjectPtr()->addGeometry(&aoe,isConstruction);
             }             
             else {
                 std::stringstream str;
@@ -104,7 +113,7 @@ PyObject* SketchObjectPy::addGeometry(PyObject *args)
                  geo->getTypeId() == Part::GeomArcOfCircle::getClassTypeId() ||
                  geo->getTypeId() == Part::GeomArcOfEllipse::getClassTypeId() ||
                  geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
-            ret = this->getSketchObjectPtr()->addGeometry(geo);
+            ret = this->getSketchObjectPtr()->addGeometry(geo,isConstruction);
         }
         else {
             std::stringstream str;
@@ -166,7 +175,7 @@ PyObject* SketchObjectPy::addGeometry(PyObject *args)
             }
         }
 
-        int ret = this->getSketchObjectPtr()->addGeometry(geoList) + 1;
+        int ret = this->getSketchObjectPtr()->addGeometry(geoList,isConstruction) + 1;
         std::size_t numGeo = geoList.size();
         Py::Tuple tuple(numGeo);
         for (std::size_t i=0; i<numGeo; ++i) {
@@ -244,7 +253,20 @@ PyObject* SketchObjectPy::addConstraint(PyObject *args)
             return 0;
         }
         int ret = this->getSketchObjectPtr()->addConstraint(constr);
-        this->getSketchObjectPtr()->solve();
+        // this solve is necessary because:
+        // 1. The addition of constraint is part of a command addition
+        // 2. This solve happens before the command is committed
+        // 3. A constraint, may effect a geometry change (think of coincident,
+        // a line's point moves to meet the other line's point
+        // 4. The transaction is comitted before any other solve, for example
+        // the one of execute() triggered by a recompute (UpdateActive) is generated.
+        // 5. Upon "undo", the constraint is removed (it was before the command was committed)
+        //    however, the geometry changed after the command was committed, so the point that
+        //    moved do not go back to the position where it was.
+        //
+        // N.B.: However, the solve itself may be inhibited in cases where groups of geometry/constraints
+        //      are added together, because in that case undoing will also make the geometry disappear.
+        this->getSketchObjectPtr()->solve(); 
         return Py::new_reference_to(Py::Int(ret));
     }
     else if (PyObject_TypeCheck(pcObj, &(PyList_Type)) ||
@@ -573,6 +595,59 @@ PyObject* SketchObjectPy::getDatum(PyObject *args)
 
     return new Base::QuantityPy(new Base::Quantity(datum));
 }
+
+PyObject* SketchObjectPy::setDriving(PyObject *args)
+{
+    PyObject* driving;
+    int constrid;
+    
+    if (!PyArg_ParseTuple(args, "iO!", &constrid, &PyBool_Type, &driving))
+        return 0;
+
+    if (this->getSketchObjectPtr()->setDriving(constrid, PyObject_IsTrue(driving) ? true : false)) {
+        std::stringstream str;
+        str << "Not able set Driving/reference for constraint with the given index: " << constrid;
+        PyErr_SetString(PyExc_ValueError, str.str().c_str());
+        return 0;
+    }
+
+    Py_Return;
+}
+
+PyObject* SketchObjectPy::getDriving(PyObject *args)
+{
+    int constrid;
+    bool driving;
+    
+    if (!PyArg_ParseTuple(args, "i", &constrid))
+        return 0;
+
+    SketchObject* obj = this->getSketchObjectPtr();
+    if (this->getSketchObjectPtr()->getDriving(constrid, driving)) {
+        PyErr_SetString(PyExc_ValueError, "Invalid constraint id");
+        return 0;
+    }
+
+    return Py::new_reference_to(Py::Boolean(driving));
+}
+
+PyObject* SketchObjectPy::toggleDriving(PyObject *args)
+{
+    int constrid;
+    
+    if (!PyArg_ParseTuple(args, "i", &constrid))
+        return 0;
+
+    if (this->getSketchObjectPtr()->toggleDriving(constrid)) {
+        std::stringstream str;
+        str << "Not able toggle Driving for constraint with the given index: " << constrid;
+        PyErr_SetString(PyExc_ValueError, str.str().c_str());
+        return 0;
+    }
+
+    Py_Return;
+}
+
 
 PyObject* SketchObjectPy::movePoint(PyObject *args)
 {

@@ -665,7 +665,7 @@
 #include <Inventor/SoRenderManager.h>
 #include <Inventor/scxml/ScXMLEvent.h>
 #include <Inventor/scxml/ScXML.h>
-#include <Inventor/scxml/ScXMLInvoke.h>
+//#include <Inventor/scxml/ScXMLInvoke.h>
 #include <Inventor/scxml/ScXMLObject.h>
 #include <Inventor/scxml/ScXMLStateMachine.h>
 #include <Inventor/scxml/ScXMLSubObject.h>

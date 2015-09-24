@@ -32,6 +32,7 @@
 #include "ViewProviderDatum.h"
 
 class Ui_TaskDatumParameters;
+class QLineEdit;
 
 namespace App {
 class Property;

@@ -71,6 +71,7 @@ SET(FemScripts_SRCS
     convert2TetGen.py
     ccxFrdReader.py
     ccxInpWriter.py
+    FemTools.py
     MechanicalAnalysis.ui
     MechanicalAnalysis.py
     MechanicalMaterial.ui
@@ -121,6 +122,8 @@ SET(FemConstraints_SRCS
     FemConstraintFixed.h
     FemConstraintForce.cpp
     FemConstraintForce.h
+    FemConstraintPressure.cpp
+    FemConstraintPressure.h
     FemConstraintGear.cpp
     FemConstraintGear.h
     FemConstraintPulley.cpp
@@ -129,10 +132,6 @@ SET(FemConstraints_SRCS
 SOURCE_GROUP("Constraints" FILES ${FemConstraints_SRCS})
 
 SET(FemResult_SRCS
-    FemResultValue.cpp
-    FemResultValue.h
-    FemResultVector.cpp
-    FemResultVector.h
 	)
 SOURCE_GROUP("ResultObjects" FILES ${FemResult_SRCS})
 

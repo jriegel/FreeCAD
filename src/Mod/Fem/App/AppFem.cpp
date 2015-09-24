@@ -47,12 +47,11 @@
 #include "FemConstraintBearing.h"
 #include "FemConstraintFixed.h"
 #include "FemConstraintForce.h"
+#include "FemConstraintPressure.h"
 #include "FemConstraintGear.h"
 #include "FemConstraintPulley.h"
 
 #include "FemResultObject.h"
-#include "FemResultValue.h"
-#include "FemResultVector.h"
 
 extern struct PyMethodDef Fem_methods[];
 
@@ -135,15 +134,12 @@ void AppFemExport initFem()
     Fem::ConstraintBearing          ::init();
     Fem::ConstraintFixed            ::init();
     Fem::ConstraintForce            ::init();
+    Fem::ConstraintPressure         ::init();
     Fem::ConstraintGear             ::init();
     Fem::ConstraintPulley           ::init();
 
     Fem::FemResultObject            ::init();
-    Fem::FemResultPython            ::init();
-    Fem::FemResultValue             ::init();
-    Fem::FemResultValuePython       ::init();
-    Fem::FemResultVector            ::init();
-    Fem::FemResultVectorPython      ::init();
+    Fem::FemResultObjectPython      ::init();
 }
 
 } // extern "C"

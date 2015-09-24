@@ -24,6 +24,7 @@
 
 #ifndef _PreComp_
 # include <QMessageBox>
+# include <QListWidget>
 # include <TopoDS_Shape.hxx>
 # include <TopoDS_Face.hxx>
 # include <TopoDS.hxx>

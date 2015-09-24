@@ -43,8 +43,6 @@ SOURCE_GROUP("JrJt" FILES ${JRJT_SRCS}  )
 
 SOURCE_GROUP("Module" FILES ${JtReader_SRCS})
 
-
-
 add_library(JtReader SHARED ${JtReader_SRCS} ${JRJT_SRCS} )
 target_link_libraries(JtReader ${JtReader_LIBS})
 

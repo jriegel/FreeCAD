@@ -34,6 +34,7 @@
 #include "ui_TaskShapeBuilder.h"
 #include "TaskShapeBuilder.h"
 #include "ViewProviderExt.h"
+#include "Workbench.h"
 
 #include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
@@ -165,6 +166,10 @@ void ShapeBuilderWidget::on_createButton_clicked()
 
 void ShapeBuilderWidget::createEdgeFromVertex()
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::SelectionFilter vertexFilter  ("SELECT Part::Feature SUBELEMENT Vertex COUNT 2");
     bool matchVertex = vertexFilter.match();
     if (!matchVertex) {
@@ -196,8 +201,9 @@ void ShapeBuilderWidget::createEdgeFromVertex()
         "_=Part.makeLine(%1, %2)\n"
         "if _.isNull(): raise RuntimeError('Failed to create edge')\n"
         "App.ActiveDocument.addObject('Part::Feature','Edge').Shape=_\n"
+        "App.ActiveDocument.%3.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
         "del _\n"
-    ).arg(elements[0]).arg(elements[1]);
+    ).arg(elements[0]).arg(elements[1]).arg(QString::fromAscii(acPart->getNameInDocument()));
 
     try {
         Gui::Application::Instance->activeDocument()->openCommand("Edge");
@@ -212,6 +218,10 @@ void ShapeBuilderWidget::createEdgeFromVertex()
 
 void ShapeBuilderWidget::createFaceFromVertex()
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::SelectionFilter vertexFilter  ("SELECT Part::Feature SUBELEMENT Vertex COUNT 3..");
     bool matchVertex = vertexFilter.match();
     if (!matchVertex) {
@@ -239,16 +249,18 @@ void ShapeBuilderWidget::createFaceFromVertex()
             "_=Part.Face(Part.makePolygon(%1, True))\n"
             "if _.isNull(): raise RuntimeError('Failed to create face')\n"
             "App.ActiveDocument.addObject('Part::Feature','Face').Shape=_\n"
+            "App.ActiveDocument.%2.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
             "del _\n"
-        ).arg(list);
+        ).arg(list).arg(QString::fromAscii(acPart->getNameInDocument()));
     }
     else {
         cmd = QString::fromAscii(
             "_=Part.makeFilledFace([Part.makePolygon(%1, True)])\n"
             "if _.isNull(): raise RuntimeError('Failed to create face')\n"
             "App.ActiveDocument.addObject('Part::Feature','Face').Shape=_\n"
+            "App.ActiveDocument.%2.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
             "del _\n"
-        ).arg(list);
+        ).arg(list).arg(QString::fromAscii(acPart->getNameInDocument()));
     }
 
     try {
@@ -264,6 +276,10 @@ void ShapeBuilderWidget::createFaceFromVertex()
 
 void ShapeBuilderWidget::createFaceFromEdge()
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::SelectionFilter edgeFilter  ("SELECT Part::Feature SUBELEMENT Edge COUNT 1..");
     bool matchEdge = edgeFilter.match();
     if (!matchEdge) {
@@ -291,16 +307,18 @@ void ShapeBuilderWidget::createFaceFromEdge()
             "_=Part.Face(Part.Wire(Part.__sortEdges__(%1)))\n"
             "if _.isNull(): raise RuntimeError('Failed to create face')\n"
             "App.ActiveDocument.addObject('Part::Feature','Face').Shape=_\n"
+            "App.ActiveDocument.%2.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
             "del _\n"
-        ).arg(list);
+        ).arg(list).arg(QString::fromAscii(acPart->getNameInDocument()));
     }
     else {
         cmd = QString::fromAscii(
             "_=Part.makeFilledFace(Part.__sortEdges__(%1))\n"
             "if _.isNull(): raise RuntimeError('Failed to create face')\n"
             "App.ActiveDocument.addObject('Part::Feature','Face').Shape=_\n"
+            "App.ActiveDocument.%2.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
             "del _\n"
-        ).arg(list);
+        ).arg(list).arg(QString::fromAscii(acPart->getNameInDocument()));
     }
 
     try {
@@ -316,6 +334,10 @@ void ShapeBuilderWidget::createFaceFromEdge()
 
 void ShapeBuilderWidget::createShellFromFace()
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::SelectionFilter faceFilter  ("SELECT Part::Feature SUBELEMENT Face COUNT 2..");
     bool matchFace = faceFilter.match();
     if (!matchFace) {
@@ -353,8 +375,9 @@ void ShapeBuilderWidget::createShellFromFace()
         "_=Part.Shell(%1)\n"
         "if _.isNull(): raise RuntimeError('Failed to create shell')\n"
         "App.ActiveDocument.addObject('Part::Feature','Shell').Shape=_.removeSplitter()\n"
+        "App.ActiveDocument.%2.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
         "del _\n"
-    ).arg(list);
+    ).arg(list).arg(QString::fromAscii(acPart->getNameInDocument()));
 
     try {
         Gui::Application::Instance->activeDocument()->openCommand("Shell");
@@ -369,6 +392,10 @@ void ShapeBuilderWidget::createShellFromFace()
 
 void ShapeBuilderWidget::createSolidFromShell()
 {
+    App::Part* acPart = PartGui::getPart(true);
+    if(!acPart)
+        return;
+    
     Gui::SelectionFilter partFilter  ("SELECT Part::Feature COUNT 1");
     bool matchPart = partFilter.match();
     if (!matchPart) {
@@ -393,8 +420,9 @@ void ShapeBuilderWidget::createSolidFromShell()
         "_=Part.Solid(shell)\n"
         "if _.isNull(): raise RuntimeError('Failed to create solid')\n"
         "App.ActiveDocument.addObject('Part::Feature','Solid').Shape=_.removeSplitter()\n"
+        "App.ActiveDocument.%2.addObject(FreeCAD.ActiveDocument.ActiveObject)\n"
         "del _\n"
-    ).arg(line);
+    ).arg(line).arg(QString::fromAscii(acPart->getNameInDocument()));
 
     try {
         Gui::Application::Instance->activeDocument()->openCommand("Solid");
