@@ -92,7 +92,7 @@ ViewProviderLine::ViewProviderLine()
         Selectable.setValue(false);
     
     pMat->diffuseColor.setNum(1);
-    pMat->diffuseColor.set1Value(0, SbColor(50./255., 150./255., 250./255.));
+	pMat->diffuseColor.set1Value(0, SbColor(50.f / 255.f, 150.f / 255.f, 250.f / 255.f));
 
     pCoords = new SoCoordinate3();
     pCoords->ref();

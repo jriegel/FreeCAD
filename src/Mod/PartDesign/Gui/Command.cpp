@@ -2042,7 +2042,6 @@ void CmdPartDesignMirrored::activated(int iMsg)
     Gui::Command* cmd = this;
     auto worker = [cmd](std::string FeatName, std::vector<App::DocumentObject*> features) {
 
->>>>>>> rebase-blobfish
         if (features.empty())
         return;
 

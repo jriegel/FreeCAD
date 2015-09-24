@@ -157,7 +157,7 @@ void ViewProviderDatumCoordinateSystem::updateData(const App::Property* prop)
             pShapeSep->addChild(t);
             pShapeSep->addChild(transZ);
             auto* rot = new SoRotation();
-            rot->rotation = SbRotation(SbVec3f(0,1,0), M_PI/2);
+            rot->rotation = SbRotation(SbVec3f(0,1,0), float(M_PI) /2.f);
             pShapeSep->addChild(rot);
             transZ->translation.setValue(SbVec3f(-y.x + z.x, -y.y + z.y, -y.z + z.z));
             t = new SoAsciiText();

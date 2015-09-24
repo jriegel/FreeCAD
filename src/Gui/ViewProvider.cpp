@@ -97,7 +97,7 @@ ViewProvider::~ViewProvider()
         pcAnnotation->unref();
 }
 
-SoSeparator* ViewProvider::getRoot(void)
+SoSeparator* ViewProvider::getRoot(void) const
 { 
     return static_cast<SoSeparator*>(pcRoot); 
 }

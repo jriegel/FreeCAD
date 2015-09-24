@@ -28,6 +28,7 @@
 #ifndef _PreComp_
 # include <Inventor/nodes/SoPickStyle.h>
 # include <QApplication>
+# include <QMessageBox>
 #endif
 
 #include <Gui/Command.h>

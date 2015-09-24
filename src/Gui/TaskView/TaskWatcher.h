@@ -104,6 +104,7 @@ class GuiExport TaskWatcherCommandsEmptySelection : public TaskWatcherCommands
 
 public:
     TaskWatcherCommandsEmptySelection(const char* commands[], const char* name, const char* pixmap);
+	~TaskWatcherCommandsEmptySelection();
 
 public:
     /// is called wenn the document or the Selection changes. 
