@@ -74,7 +74,6 @@ recompute path. Also enables more complicated dependencies beyond trees.
 #include "DocumentPy.h"
 #include "Application.h"
 #include "DocumentObject.h"
-#include "DocumentGraph.h"
 #include "PropertyLinks.h"
 #include "MergeDocuments.h"
 
@@ -150,7 +149,6 @@ struct DocumentP
     unsigned int UndoMaxStackSize;
     DependencyList DepList;
     std::map<DocumentObject*,Vertex> VertexObjectList;
-    DocumentGraph documentGraph;
 
     DocumentP() {
         activeObject = 0;
@@ -2011,7 +2009,3 @@ PyObject * Document::getPyObject(void)
     return Py::new_reference_to(DocumentPythonObject);
 }
 
-const DocumentGraph &Document::getGraph() const
-{
-    return d->documentGraph;
-}

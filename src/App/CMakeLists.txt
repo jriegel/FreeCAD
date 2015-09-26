@@ -71,7 +71,6 @@ SET(Document_CPP_SRCS
     Annotation.cpp
     Document.cpp
     DocumentObject.cpp
-    DocumentGraph.cpp
     DocumentObjectFileIncluded.cpp
     DocumentObjectGroup.cpp
     DocumentObjectGroupPyImp.cpp
@@ -105,7 +104,6 @@ SET(Document_HPP_SRCS
     Annotation.h
     Document.h
     DocumentObject.h
-    DocumentGraph.h
     DocumentObjectFileIncluded.h
     DocumentObjectGroup.h
     DocumentObserver.h

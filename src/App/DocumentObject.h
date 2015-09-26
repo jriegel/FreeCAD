@@ -121,6 +121,12 @@ public:
     void setStatus(ObjectStatus pos, bool on) {StatusBits.set((size_t)pos, on);}
     //@}
 
+	/** DAG handling
+		This part of the interface deals with viewing the document as
+		an DAG (directed acyclic graph). 
+	*/
+	//@{
+
     /// returns a list of objects this object is pointing to by Links
     std::vector<App::DocumentObject*> getOutList(void) const;
     /// get all objects link to this object
@@ -142,7 +148,7 @@ public:
     bool testIfLinkDAGCompatible(const std::vector<DocumentObject *> &linksTo) const;
     bool testIfLinkDAGCompatible(App::PropertyLinkSubList &linksTo) const;
     bool testIfLinkDAGCompatible(App::PropertyLinkSub &linkTo) const;
-
+	//@}
 
 public:
     /** mustExecute

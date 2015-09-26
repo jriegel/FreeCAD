@@ -47,7 +47,6 @@ namespace Base {
 namespace App
 {
     class DocumentObject;
-    class DocumentGraph;
     class DocumentObjectExecReturn;
     class Document;
     class DocumentPy; // the python document class
@@ -209,8 +208,6 @@ public:
     int countObjects(void) const;
     //@}
 
-    const DocumentGraph &getGraph() const;
-
     /** @name methods for modification and state handling
      */
     //@{
@@ -275,7 +272,7 @@ public:
     bool redo() ;
     //@}
 
-    /** @name dependency stuff */
+    /** @name DAG interface */
     //@{
     /// write GraphViz file
     void writeDependencyGraphViz(std::ostream &out);
