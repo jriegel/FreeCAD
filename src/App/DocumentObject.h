@@ -148,9 +148,13 @@ public:
     bool testIfLinkDAGCompatible(const std::vector<DocumentObject *> &linksTo) const;
     bool testIfLinkDAGCompatible(App::PropertyLinkSubList &linksTo) const;
     bool testIfLinkDAGCompatible(App::PropertyLinkSub &linkTo) const;
+
+	/// internal, used by ProperyLink to maintain DAG back links
+	void _removeBackLink(DocumentObject*);
+	/// internal, used by ProperyLink to maintain DAG back links
+	void _addBackLink(DocumentObject*);
 	//@}
 
-public:
     /** mustExecute
      *  We call this method to check if the object was modified to
      *  be invoked. If the object label or an argument is modified.
@@ -175,6 +179,8 @@ public:
     /// its used to get the python sub objects by name (e.g. by the selection)
     virtual std::vector<PyObject *> getPySubObjects(const std::vector<std::string>&) const;
 
+	// friend declaration of the most important classes, avoid pollution of the interface
+	// with internal stuff of the framework..
     friend class Document;
     friend class Transaction;
     friend class ObjectExecution;
@@ -222,14 +228,18 @@ protected:
     /// get called after setting the document
     virtual void onSettingDocument() {}
 
-     /// python object of this class and all descendend
-protected: // attributes
+    /// python object of this class and all descendend attributes
     Py::Object PythonObject;
     /// pointer to the document this object belongs to
     App::Document* _pDoc;
 
     // pointer to the document name string (for performance)
     const std::string *pcNameInDocument;
+
+private:
+	// Back pointer to all the fathers in a DAG of the document
+	// this is used by the document (via friend) to have a effective DAG handling
+	std::vector<App::DocumentObject*> _dagBackPointer;
 };
 
 } //namespace App

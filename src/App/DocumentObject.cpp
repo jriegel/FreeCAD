@@ -27,6 +27,7 @@
 #endif
 
 #include <Base/Writer.h>
+#include <iostream>
 
 #include "Document.h"
 #include "DocumentObject.h"
@@ -35,9 +36,12 @@
 #include "PropertyLinks.h"
 
 using namespace App;
+using namespace std;
 
 
 PROPERTY_SOURCE(App::DocumentObject, App::PropertyContainer)
+
+
 
 DocumentObjectExecReturn *DocumentObject::StdReturn = 0;
 
@@ -151,13 +155,43 @@ std::vector<DocumentObject*> DocumentObject::getOutList(void) const
     return ret;
 }
 
+// The new DAG handling uses pre-computed vectors for the InList...
+#if USE_OLD_DAG
+ 
 std::vector<App::DocumentObject*> DocumentObject::getInList(void) const
 {
+	std::vector<App::DocumentObject*> ret;
     if (_pDoc)
-        return _pDoc->getInList(this);
-    else
-        return std::vector<App::DocumentObject*>();
+		ret = _pDoc->getInList(this);
+
+	// in case of debug and the old DAG handling we check if the new mimic and the old one delivers exactly the same values!
+	// But not necessary in the same order....
+#	if _DEBUG 
+	{
+		if (ret.size() != _dagBackPointer.size()){
+			cout << "DocumentObject::getInList(): old and new differ in size";
+		}
+		else{
+			std::vector<App::DocumentObject*> oldInList(ret);
+			std::vector<App::DocumentObject*> newInList(_dagBackPointer);
+			std::sort(oldInList.begin(), oldInList.end());
+			std::sort(newInList.begin(), newInList.end());
+			if (oldInList != newInList)
+				cout << "DocumentObject::getInList(): old and new differ in values";
+		}
+    }
+#	endif
+	return ret;
 }
+
+#else // if USE_OLD_DAG
+
+std::vector<App::DocumentObject*> DocumentObject::getInList(void) const
+{
+	return _dagBackPointer;
+}
+
+#endif // if USE_OLD_DAG
 
 DocumentObjectGroup* DocumentObject::getGroup() const
 {
@@ -255,4 +289,14 @@ void DocumentObject::Save (Base::Writer &writer) const
 {
     writer.ObjectName = this->getNameInDocument();
     App::PropertyContainer::Save(writer);
+}
+
+void App::DocumentObject::_removeBackLink(DocumentObject* rmfObj)
+{
+	_dagBackPointer.erase(std::remove(_dagBackPointer.begin(), _dagBackPointer.end(), rmfObj), _dagBackPointer.end());
+}
+
+void App::DocumentObject::_addBackLink(DocumentObject* newObje)
+{
+	_dagBackPointer.push_back(newObje);
 }

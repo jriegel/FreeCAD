@@ -37,8 +37,12 @@
 #include <stack>
 
 #include <boost/signals.hpp>
-#include <boost/graph/adjacency_list.hpp>
 
+#define USE_OLD_DAG 1
+
+#if USE_OLD_DAG
+#  include <boost/graph/adjacency_list.hpp>
+#endif
 
 namespace Base {
     class Writer;
