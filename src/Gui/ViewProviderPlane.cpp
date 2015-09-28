@@ -94,7 +94,7 @@ ViewProviderPlane::ViewProviderPlane()
 
 
     pMat->diffuseColor.setNum(1);
-    pMat->diffuseColor.set1Value(0, SbColor(50./255., 150./255., 250./255.));
+    pMat->diffuseColor.set1Value(0, SbColor(50.f/255.f, 150.f/255.f, 250.f/255.f));
 
     pCoords = new SoCoordinate3();
     pCoords->ref();
@@ -110,7 +110,7 @@ ViewProviderPlane::ViewProviderPlane()
     pFont->size.setValue(Size.getValue()/10.);
 
     pTranslation = new SoTranslation();
-    pTranslation->translation.setValue(SbVec3f(-1,9./10.,0));
+    pTranslation->translation.setValue(SbVec3f(-1.f,9.f/10.f,0.f));
 
     pText = new SoAsciiText();
     pText->width.setValue(-1);
