@@ -205,13 +205,21 @@ PropertyLinkSub::~PropertyLinkSub()
 
 void PropertyLinkSub::setValue(App::DocumentObject * lValue, const vector<string> &SubList)
 {
+	if (lValue == _pcLinkSub)
+		return; // nothing to do
+
     aboutToSetValue();
 
-	// maintain the back link in the DocumentObject class
-	if (lValue == 0)
-		_pcLinkSub->_removeBackLink(static_cast<DocumentObject*>(getContainer()));
-	else
-		lValue->_addBackLink(static_cast<DocumentObject*>(getContainer()));
+	auto myObject = static_cast<DocumentObject*>(getContainer());
+
+	if (myObject){
+		// maintain the back link in the DocumentObject class
+		if (lValue == 0)
+			//if (_pcLinkSub)
+				_pcLinkSub->_removeBackLink(myObject);
+		else
+			lValue->_addBackLink(myObject);
+	}
 
     _pcLinkSub=lValue;
     _cSubList = SubList;
@@ -405,12 +413,16 @@ void PropertyLinkList::setValue(DocumentObject* lValue)
 {
         aboutToSetValue();
 
+		auto myObject = static_cast<DocumentObject*>(getContainer());
+
 		if (lValue){
 			// maintain the back link in the DocumentObject class
-			for (auto linkObj: _lValueList)
-				linkObj->_removeBackLink(static_cast<DocumentObject*>(getContainer()));
+			if (myObject){
+				for (auto linkObj : _lValueList)
+					linkObj->_removeBackLink(myObject);
 
-			lValue->_addBackLink(static_cast<DocumentObject*>(getContainer()));
+				lValue->_addBackLink(myObject);
+			}
 
 			// resize the vector and set the one value
 			_lValueList.resize(1);
@@ -418,8 +430,11 @@ void PropertyLinkList::setValue(DocumentObject* lValue)
 		}
 		else{
 			// maintain the back link in the DocumentObject class
-			for (auto linkObj : _lValueList)
-				linkObj->_removeBackLink(static_cast<DocumentObject*>(getContainer()));
+			if (myObject){
+				for (auto linkObj : _lValueList)
+					linkObj->_removeBackLink(static_cast<DocumentObject*>(getContainer()));
+			}
+
 			_lValueList.resize(0);
 
 		}
@@ -432,13 +447,17 @@ void PropertyLinkList::setValues(const vector<DocumentObject*>& lValue)
 {
     aboutToSetValue();
 
+	auto myObject = static_cast<DocumentObject*>(getContainer());
+
 	// maintain the back link in the DocumentObject class
-	for (auto newLinkObj : lValue)
-		if (find(_lValueList.begin(), _lValueList.end(), newLinkObj) == _lValueList.end())
-			newLinkObj->_addBackLink(static_cast<DocumentObject*>(getContainer()));
-	for (auto oldLinkObj : _lValueList)
-		if (find(lValue.begin(), lValue.end(), oldLinkObj) == lValue.end())
-			oldLinkObj->_removeBackLink(static_cast<DocumentObject*>(getContainer()));
+	if (myObject){
+		for (auto newLinkObj : lValue)
+			if (find(_lValueList.begin(), _lValueList.end(), newLinkObj) == _lValueList.end())
+				newLinkObj->_addBackLink(myObject);
+		for (auto oldLinkObj : _lValueList)
+			if (find(lValue.begin(), lValue.end(), oldLinkObj) == lValue.end())
+				oldLinkObj->_removeBackLink(myObject);
+	}
 
 	_lValueList = lValue;
     hasSetValue();
@@ -588,12 +607,16 @@ void PropertyLinkSubList::setValue(DocumentObject* lValue,const char* SubName)
 {
     aboutToSetValue();
 
+	auto myObject = static_cast<DocumentObject*>(getContainer());
+
     if (lValue){
 		// maintain the back link in the DocumentObject class
-		for (auto linkObj : _lValueList)
-			linkObj->_removeBackLink(static_cast<DocumentObject*>(getContainer()));
+		if (myObject){
+			for (auto linkObj : _lValueList)
+				linkObj->_removeBackLink(myObject);
 
-		lValue->_addBackLink(static_cast<DocumentObject*>(getContainer()));
+			lValue->_addBackLink(myObject);
+		}
 
         _lValueList.resize(1);
         _lValueList[0]=lValue;
@@ -602,8 +625,10 @@ void PropertyLinkSubList::setValue(DocumentObject* lValue,const char* SubName)
 
     } else {
 		// maintain the back link in the DocumentObject class
-		for (auto linkObj : _lValueList)
-			linkObj->_removeBackLink(static_cast<DocumentObject*>(getContainer()));
+		if (myObject){
+			for (auto linkObj : _lValueList)
+				linkObj->_removeBackLink(myObject);
+		}
 
         _lValueList.clear();
         _lSubList.clear();
@@ -619,14 +644,17 @@ void PropertyLinkSubList::setValues(const vector<DocumentObject*>& lValue,const 
 
     aboutToSetValue();
 
-	// maintain the back link in the DocumentObject class
-	for (auto newLinkObj : lValue)
-		if (find(_lValueList.begin(), _lValueList.end(), newLinkObj) == _lValueList.end())
-			newLinkObj->_addBackLink(static_cast<DocumentObject*>(getContainer()));
-	for (auto oldLinkObj : _lValueList)
-		if (find(lValue.begin(), lValue.end(), oldLinkObj) == lValue.end())
-			oldLinkObj->_removeBackLink(static_cast<DocumentObject*>(getContainer()));
+	auto myObject = static_cast<DocumentObject*>(getContainer());
 
+	// maintain the back link in the DocumentObject class
+	if (myObject){
+		for (auto newLinkObj : lValue)
+			if (find(_lValueList.begin(), _lValueList.end(), newLinkObj) == _lValueList.end())
+				newLinkObj->_addBackLink(myObject);
+		for (auto oldLinkObj : _lValueList)
+			if (find(lValue.begin(), lValue.end(), oldLinkObj) == lValue.end())
+				oldLinkObj->_removeBackLink(myObject);
+	}
     _lValueList = lValue;
     _lSubList.resize(lSubNames.size());
     int i = 0;
