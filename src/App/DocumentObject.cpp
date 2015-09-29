@@ -123,22 +123,22 @@ const char *DocumentObject::getNameInDocument(void) const
     return pcNameInDocument->c_str();
 }
 
-std::vector<DocumentObject*> DocumentObject::getOutList(void) const
+vector<DocumentObject*> DocumentObject::getOutList(void) const
 {
-    std::vector<Property*> List;
-    std::vector<DocumentObject*> ret;
+    vector<Property*> List;
+    vector<DocumentObject*> ret;
     getPropertyList(List);
-    for (std::vector<Property*>::const_iterator It = List.begin();It != List.end(); ++It) {
+    for (vector<Property*>::const_iterator It = List.begin();It != List.end(); ++It) {
         if ((*It)->isDerivedFrom(PropertyLinkList::getClassTypeId())) {
-            const std::vector<DocumentObject*> &OutList = static_cast<PropertyLinkList*>(*It)->getValues();
-            for (std::vector<DocumentObject*>::const_iterator It2 = OutList.begin();It2 != OutList.end(); ++It2) {
+            const vector<DocumentObject*> &OutList = static_cast<PropertyLinkList*>(*It)->getValues();
+            for (vector<DocumentObject*>::const_iterator It2 = OutList.begin();It2 != OutList.end(); ++It2) {
                 if (*It2)
                     ret.push_back(*It2);
             }
         }
         else if ((*It)->isDerivedFrom(PropertyLinkSubList::getClassTypeId())) {
-            const std::vector<DocumentObject*> &OutList = static_cast<PropertyLinkSubList*>(*It)->getValues();
-            for (std::vector<DocumentObject*>::const_iterator It2 = OutList.begin();It2 != OutList.end(); ++It2) {
+            const vector<DocumentObject*> &OutList = static_cast<PropertyLinkSubList*>(*It)->getValues();
+            for (vector<DocumentObject*>::const_iterator It2 = OutList.begin();It2 != OutList.end(); ++It2) {
                 if (*It2)
                     ret.push_back(*It2);
             }
@@ -158,9 +158,9 @@ std::vector<DocumentObject*> DocumentObject::getOutList(void) const
 // The new DAG handling uses pre-computed vectors for the InList...
 #if USE_OLD_DAG
  
-std::vector<App::DocumentObject*> DocumentObject::getInList(void) const
+vector<App::DocumentObject*> DocumentObject::getInList(void) const
 {
-	std::vector<App::DocumentObject*> ret;
+	vector<App::DocumentObject*> ret;
     if (_pDoc)
 		ret = _pDoc->getInList(this);
 
@@ -169,15 +169,15 @@ std::vector<App::DocumentObject*> DocumentObject::getInList(void) const
 #	if _DEBUG 
 	{
 		if (ret.size() != _dagBackPointer.size()){
-			cout << "DocumentObject::getInList(): old and new differ in size";
+			cerr << "DocumentObject::getInList(): old and new differ in size";
 		}
 		else{
-			std::vector<App::DocumentObject*> oldInList(ret);
-			std::vector<App::DocumentObject*> newInList(_dagBackPointer);
-			std::sort(oldInList.begin(), oldInList.end());
-			std::sort(newInList.begin(), newInList.end());
+			vector<App::DocumentObject*> oldInList(ret);
+			vector<App::DocumentObject*> newInList(_dagBackPointer);
+			sort(oldInList.begin(), oldInList.end());
+			sort(newInList.begin(), newInList.end());
 			if (oldInList != newInList)
-				cout << "DocumentObject::getInList(): old and new differ in values";
+				cerr << "DocumentObject::getInList(): old and new differ in values";
 		}
     }
 #	endif
@@ -186,7 +186,7 @@ std::vector<App::DocumentObject*> DocumentObject::getInList(void) const
 
 #else // if USE_OLD_DAG
 
-std::vector<App::DocumentObject*> DocumentObject::getInList(void) const
+vector<App::DocumentObject*> DocumentObject::getInList(void) const
 {
 	return _dagBackPointer;
 }
@@ -200,18 +200,18 @@ DocumentObjectGroup* DocumentObject::getGroup() const
 
 bool DocumentObject::testIfLinkDAGCompatible(DocumentObject *linkTo) const
 {
-    std::vector<App::DocumentObject*> linkTo_in_vector;
+    vector<App::DocumentObject*> linkTo_in_vector;
     linkTo_in_vector.push_back(linkTo);
     return this->testIfLinkDAGCompatible(linkTo_in_vector);
 }
 
-bool DocumentObject::testIfLinkDAGCompatible(const std::vector<DocumentObject *> &linksTo) const
+bool DocumentObject::testIfLinkDAGCompatible(const vector<DocumentObject *> &linksTo) const
 {
     Document* doc = this->getDocument();
     if (!doc)
         throw Base::Exception("DocumentObject::testIfLinkIsDAG: object is not in any document.");
-    std::vector<App::DocumentObject*> deplist = doc->getDependencyList(linksTo);
-    if( std::find(deplist.begin(),deplist.end(),this) != deplist.end() )
+    vector<App::DocumentObject*> deplist = doc->getDependencyList(linksTo);
+    if( find(deplist.begin(),deplist.end(),this) != deplist.end() )
         //found this in dependency list
         return false;
     else
@@ -220,13 +220,13 @@ bool DocumentObject::testIfLinkDAGCompatible(const std::vector<DocumentObject *>
 
 bool DocumentObject::testIfLinkDAGCompatible(PropertyLinkSubList &linksTo) const
 {
-    const std::vector<App::DocumentObject*> &linksTo_in_vector = linksTo.getValues();
+    const vector<App::DocumentObject*> &linksTo_in_vector = linksTo.getValues();
     return this->testIfLinkDAGCompatible(linksTo_in_vector);
 }
 
 bool DocumentObject::testIfLinkDAGCompatible(PropertyLinkSub &linkTo) const
 {
-    std::vector<App::DocumentObject*> linkTo_in_vector;
+    vector<App::DocumentObject*> linkTo_in_vector;
     linkTo_in_vector.reserve(1);
     linkTo_in_vector.push_back(linkTo.getValue());
     return this->testIfLinkDAGCompatible(linkTo_in_vector);
@@ -274,10 +274,10 @@ PyObject *DocumentObject::getPyObject(void)
     return Py::new_reference_to(PythonObject); 
 }
 
-std::vector<PyObject *> DocumentObject::getPySubObjects(const std::vector<std::string>&) const
+vector<PyObject *> DocumentObject::getPySubObjects(const vector<string>&) const
 {
     // default implementation returns nothing
-    return std::vector<PyObject *>();
+    return vector<PyObject *>();
 }
 
 void DocumentObject::touch(void)
@@ -293,7 +293,7 @@ void DocumentObject::Save (Base::Writer &writer) const
 
 void App::DocumentObject::_removeBackLink(DocumentObject* rmfObj)
 {
-	_dagBackPointer.erase(std::remove(_dagBackPointer.begin(), _dagBackPointer.end(), rmfObj), _dagBackPointer.end());
+	_dagBackPointer.erase(remove(_dagBackPointer.begin(), _dagBackPointer.end(), rmfObj), _dagBackPointer.end());
 }
 
 void App::DocumentObject::_addBackLink(DocumentObject* newObje)
