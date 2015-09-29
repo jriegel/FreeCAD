@@ -1410,6 +1410,7 @@ std::vector<App::DocumentObject*> Document::getRootObjects() const
 
 std::vector<App::DocumentObject*> Document::topologicalSort() const
 {
+    // topological sort algorithm described here: https://de.wikipedia.org/wiki/Topologische_Sortierung#Algorithmus_f.C3.BCr_das_Topologische_Sortieren
 	vector < App::DocumentObject* > ret;
 	ret.reserve(d->objectArray.size());
 	map < App::DocumentObject*,int > countMap;
