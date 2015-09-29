@@ -156,7 +156,10 @@ struct DocumentP
     unsigned int UndoMemSize;
     unsigned int UndoMaxStackSize;
     DependencyList DepList;
+#if USE_OLD_DAG
     std::map<DocumentObject*,Vertex> VertexObjectList;
+#endif //USE_OLD_DAG
+
 
     DocumentP() {
         activeObject = 0;
@@ -1394,10 +1397,45 @@ void Document::_rebuildDependencyList(void)
     }
 }
 
+std::vector<App::DocumentObject*> Document::getRootObjects() const
+{
+	std::vector < App::DocumentObject* > ret;
+
+	for (auto objectIt : d->objectArray)
+		if (objectIt->getInList().size() == 0)
+			ret.push_back(objectIt);
+
+	return ret;
+}
+
 std::vector<App::DocumentObject*> Document::topologicalSort() const
 {
+	vector < App::DocumentObject* > ret;
+	ret.reserve(d->objectArray.size());
+	map < App::DocumentObject*,int > countMap;
 
-	return std::vector < App::DocumentObject* > ();
+	for (auto objectIt : d->objectArray)
+		countMap[objectIt] = objectIt->getInList().size();
+
+    auto rootObjeIt = find_if(countMap.begin(), countMap.end(), [](pair < App::DocumentObject*, int > count)->bool { return count.second == 0; });
+
+	if (rootObjeIt == countMap.end()){
+		cerr << "Document::topologicalSort: cyclic dependency detected (no root object)" << endl;
+		return ret;
+	}
+
+	while (rootObjeIt != countMap.end()){
+		rootObjeIt->second = rootObjeIt->second - 1;
+		for (auto outListIt : rootObjeIt->first->getOutList()){
+			auto outListMapIt = countMap.find(outListIt);
+			outListMapIt->second = outListMapIt->second - 1;
+		}
+        ret.push_back(rootObjeIt->first);
+
+        rootObjeIt = find_if(countMap.begin(), countMap.end(), [](pair < App::DocumentObject*, int > count)->bool { return count.second == 0; });
+	}
+
+	return ret;
 }
 
 #if USE_OLD_DAG

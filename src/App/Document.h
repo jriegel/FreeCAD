@@ -291,6 +291,8 @@ public:
         (const std::vector<App::DocumentObject*>&) const;
 	/// get a list of topological sorted objects (https://en.wikipedia.org/wiki/Topological_sorting)
 	std::vector<App::DocumentObject*> topologicalSort() const;
+	/// get all root objects (objects no other one reference too)
+	std::vector<App::DocumentObject*> getRootObjects() const;
     //@}
 
     virtual PyObject *getPyObject(void);

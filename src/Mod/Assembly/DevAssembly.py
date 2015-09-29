@@ -3,9 +3,9 @@ import FreeCAD,Assembly,time
 print "Script to test the assembly development"
 
 # sequence to test recompute behaviour
-#       L1---\
-#      /  \   \
-#    L2   L3   \
+#       L1---\    L7
+#      /  \   \    |
+#    L2   L3   \  L8
 #   /  \ /  \  /
 #  L4   L5   L6
 
@@ -16,13 +16,35 @@ L3 = Doc.addObject("App::FeatureTest","Label_3")
 L4 = Doc.addObject("App::FeatureTest","Label_4")
 L5 = Doc.addObject("App::FeatureTest","Label_5")
 L6 = Doc.addObject("App::FeatureTest","Label_6")
+L7 = Doc.addObject("App::FeatureTest","Label_7")
+L8 = Doc.addObject("App::FeatureTest","Label_8")
 L1.LinkList = [L2,L3,L6]
 L2.Link = L4
 L2.LinkList = [L5]
 L3.LinkList = [L5,L6]
+L7.Link = L8 #make second root
+
+L7 in Doc.RootObjects
+L1 in Doc.RootObjects
+
+len(Doc.Objects) == len(Doc.ToplogicalSortedObjects)
+
+seqDic = {}
+i = 0
+for obj in Doc.ToplogicalSortedObjects:
+    seqDic[obj] = i
+    print obj
+    i += 1
+    
+seqDic[L2] > seqDic[L1]
+seqDic[L3] > seqDic[L1]
+seqDic[L5] > seqDic[L2]
+seqDic[L5] > seqDic[L3]
+seqDic[L5] > seqDic[L1]
+
 
 (0, 0, 0, 0, 0, 0)==(L1.ExecCount,L2.ExecCount,L3.ExecCount,L4.ExecCount,L5.ExecCount,L6.ExecCount)
-Doc.recompute()==3
+Doc.recompute()==4
 (1, 1, 1, 0, 0, 0)==(L1.ExecCount,L2.ExecCount,L3.ExecCount,L4.ExecCount,L5.ExecCount,L6.ExecCount)
 L5.touch()
 (1, 1, 1, 0, 0, 0)==(L1.ExecCount,L2.ExecCount,L3.ExecCount,L4.ExecCount,L5.ExecCount,L6.ExecCount)

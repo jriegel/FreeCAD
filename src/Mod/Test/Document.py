@@ -236,9 +236,9 @@ class DocumentSaveRestoreCases(unittest.TestCase):
 class DocumentRecomputeCases(unittest.TestCase):
   def setUp(self):
     # sequence to test recompute behaviour
-    #       L1---\
-    #      /  \   \
-    #    L2   L3   \
+    #       L1---\    L7   L9
+    #      /  \   \    |
+    #    L2   L3   \  L8
     #   /  \ /  \  /
     #  L4   L5   L6
 
@@ -249,16 +249,43 @@ class DocumentRecomputeCases(unittest.TestCase):
     self.L4 = self.Doc.addObject("App::FeatureTest","Label_4")
     self.L5 = self.Doc.addObject("App::FeatureTest","Label_5")
     self.L6 = self.Doc.addObject("App::FeatureTest","Label_6")
+    self.L7 = self.Doc.addObject("App::FeatureTest","Label_7")
+    self.L8 = self.Doc.addObject("App::FeatureTest","Label_8")
+    self.L9 = self.Doc.addObject("App::FeatureTest","Label_9")
+
     self.L1.LinkList = [self.L2,self.L3,self.L6]
     self.L2.Link = self.L4
     self.L2.LinkList = [self.L5]
     self.L3.LinkList = [self.L5,self.L6]
+    self.L7.Link = self.L8 #make second root
+ 
+  def testDag(self):
+    # check root Objects
+    self.failUnless(self.L7 in self.Doc.RootObjects)
+    self.failUnless(self.L1 in self.Doc.RootObjects)
+    self.failUnless(self.L9 in self.Doc.RootObjects)
+
+    # check topological sorting of document
+    self.failUnless(len(self.Doc.Objects) == len(self.Doc.ToplogicalSortedObjects))
+
+    seqDic = {}
+    i = 0
+    for obj in self.Doc.ToplogicalSortedObjects:
+        seqDic[obj] = i
+        print obj
+        i += 1
+    # check if the ordering in the topological vector is correct
+    self.failUnless(seqDic[self.L2] > seqDic[self.L1])
+    self.failUnless(seqDic[self.L3] > seqDic[self.L1])
+    self.failUnless(seqDic[self.L5] > seqDic[self.L2])
+    self.failUnless(seqDic[self.L5] > seqDic[self.L3])
+    self.failUnless(seqDic[self.L5] > seqDic[self.L1])
  
   def testDescent(self):
     # testing the up and downstream stuff
 
     self.failUnless((0, 0, 0, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
-    self.failUnless(self.Doc.recompute()==3)
+    self.failUnless(self.Doc.recompute()==4)
     self.failUnless((1, 1, 1, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
     self.L5.touch()
     self.failUnless((1, 1, 1, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
