@@ -235,16 +235,54 @@ class DocumentSaveRestoreCases(unittest.TestCase):
 
 class DocumentRecomputeCases(unittest.TestCase):
   def setUp(self):
+    # sequence to test recompute behaviour
+    #       L1---\
+    #      /  \   \
+    #    L2   L3   \
+    #   /  \ /  \  /
+    #  L4   L5   L6
+
     self.Doc = FreeCAD.newDocument("RecomputeTests")
     self.L1 = self.Doc.addObject("App::FeatureTest","Label_1")
     self.L2 = self.Doc.addObject("App::FeatureTest","Label_2")
     self.L3 = self.Doc.addObject("App::FeatureTest","Label_3")
-
+    self.L4 = self.Doc.addObject("App::FeatureTest","Label_4")
+    self.L5 = self.Doc.addObject("App::FeatureTest","Label_5")
+    self.L6 = self.Doc.addObject("App::FeatureTest","Label_6")
+    self.L1.LinkList = [self.L2,self.L3,self.L6]
+    self.L2.Link = self.L4
+    self.L2.LinkList = [self.L5]
+    self.L3.LinkList = [self.L5,self.L6]
+ 
   def testDescent(self):
     # testing the up and downstream stuff
-    FreeCAD.Console.PrintLog("def testDescent(self):Testcase not implemented\n")
-    self.L1.Link = self.L2
-    self.L2.Link = self.L3
+
+    self.failUnless((0, 0, 0, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
+    self.failUnless(self.Doc.recompute()==3)
+    self.failUnless((1, 1, 1, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
+    self.L5.touch()
+    self.failUnless((1, 1, 1, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
+    self.failUnless(self.Doc.recompute()==4)
+    self.failUnless((2, 2, 2, 0, 1, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount)) 
+    self.L4.touch()
+    self.failUnless(self.Doc.recompute()==3)
+    self.failUnless((3, 3, 2, 1, 1, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount)) 
+    self.L5.touch()
+    self.failUnless(self.Doc.recompute()==4)
+    self.failUnless((4, 4, 3, 1, 2, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount)) 
+    self.L6.touch()
+    self.failUnless(self.Doc.recompute()==3)
+    self.failUnless((5, 4, 4, 1, 2, 1)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount)) 
+    self.L2.touch()
+    self.failUnless(self.Doc.recompute()==2)
+    self.failUnless((6, 5, 4, 1, 2, 1)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount)) 
+    self.L1.touch()
+    self.failUnless(self.Doc.recompute()==1)
+    self.failUnless((7, 5, 4, 1, 2, 1)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
+    self.L6.Link = self.L1 # create a circular dependency
+    self.failUnless(self.Doc.recompute()==-1)
+    self.L6.Link = None  # resolve the circular dependency
+    self.failUnless(self.Doc.recompute()==3)
 
 
   def tearDown(self):

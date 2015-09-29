@@ -57,14 +57,6 @@ recompute path. Also enables more complicated dependencies beyond trees.
 # include <climits>
 #endif
 
-#include <boost/graph/topological_sort.hpp>
-#include <boost/graph/depth_first_search.hpp>
-#include <boost/graph/dijkstra_shortest_paths.hpp>
-#include <boost/graph/visitors.hpp>
-#include <boost/graph/graphviz.hpp>
-#include <boost/bind.hpp>
-#include <boost/regex.hpp>
-#include <boost/unordered_set.hpp>
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -97,6 +89,18 @@ recompute path. Also enables more complicated dependencies beyond trees.
 #include <zipios++/zipoutputstream.h>
 #include <zipios++/meta-iostreams.h>
 
+
+#if USE_OLD_DAG
+# include <boost/graph/topological_sort.hpp>
+# include <boost/graph/depth_first_search.hpp>
+# include <boost/graph/dijkstra_shortest_paths.hpp>
+# include <boost/graph/visitors.hpp>
+# include <boost/graph/graphviz.hpp>
+# include <boost/bind.hpp>
+# include <boost/regex.hpp>
+# include <boost/unordered_set.hpp>
+#endif //USE_OLD_DAG
+
 #include "Application.h"
 #include "Transactions.h"
 
@@ -112,6 +116,8 @@ using namespace zipios;
 #  define FC_LOGFEATUREUPDATE
 #endif 
 
+
+#if USE_OLD_DAG
 // typedef boost::property<boost::vertex_root_t, DocumentObject* > VertexProperty;
 typedef boost::adjacency_list <
 boost::vecS,           // class OutEdgeListS  : a Sequence or an AssociativeContainer
@@ -125,6 +131,8 @@ boost::listS           // class EdgeListS:
 typedef boost::graph_traits<DependencyList> Traits;
 typedef Traits::vertex_descriptor Vertex;
 typedef Traits::edge_descriptor Edge;
+
+#endif //USE_OLD_DAG
 
 namespace App {
 
@@ -1386,16 +1394,23 @@ void Document::_rebuildDependencyList(void)
     }
 }
 
-
-
-void Document::recompute()
+std::vector<App::DocumentObject*> Document::topologicalSort() const
 {
+
+	return std::vector < App::DocumentObject* > ();
+}
+
+#if USE_OLD_DAG
+
+int Document::recompute()
+{
+	int objectCount = 0;
     // delete recompute log
     for( std::vector<App::DocumentObjectExecReturn*>::iterator it=_RecomputeLog.begin();it!=_RecomputeLog.end();++it)
         delete *it;
     _RecomputeLog.clear();
 
-    // updates the depency graph
+    // updates the depedency graph
     _rebuildDependencyList();
 
     std::list<Vertex> make_order;
@@ -1407,7 +1422,7 @@ void Document::recompute()
     }
     catch (const std::exception& e) {
         std::cerr << "Document::recompute: " << e.what() << std::endl;
-        return;
+        return -1;
     }
 
     // caching vertex to DocObject
@@ -1451,10 +1466,11 @@ void Document::recompute()
 #ifdef FC_LOGFEATUREUPDATE
             std::clog << "Recompute" << std::endl;
 #endif
+			objectCount++;
             if (_recomputeFeature(Cur)) {
-                // if somthing happen break execution of recompute
+                // if something happen break execution of recompute
                 d->vertexMap.clear();
-                return;
+                return -1;
             }
         }
     }
@@ -1467,7 +1483,19 @@ void Document::recompute()
     d->vertexMap.clear();
 
     signalRecomputed(*this);
+	return objectCount;
 }
+
+#else // USE_OLD_DAG
+
+int Document::recompute()
+{
+	int objectCount = 0;
+
+	return objectCount;
+}
+
+#endif // USE_OLD_DAG
 
 const char * Document::getErrorDescription(const App::DocumentObject*Obj) const
 {

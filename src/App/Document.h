@@ -226,7 +226,8 @@ public:
     /// check whether the document can be closed
     bool isClosable() const;
     /// Recompute all touched features
-    void recompute();
+	/// returns the number of recomputed features or -1 on error
+    int recompute();
     /// Recompute only one feature
     void recomputeFeature(DocumentObject* Feat);
     /// get the error log from the recompute run
@@ -288,8 +289,8 @@ public:
     /// also contains the given objects!
     std::vector<App::DocumentObject*> getDependencyList
         (const std::vector<App::DocumentObject*>&) const;
-    // set Changed
-    //void setChanged(DocumentObject* change);
+	/// get a list of topological sorted objects (https://en.wikipedia.org/wiki/Topological_sorting)
+	std::vector<App::DocumentObject*> topologicalSort() const;
     //@}
 
     virtual PyObject *getPyObject(void);
