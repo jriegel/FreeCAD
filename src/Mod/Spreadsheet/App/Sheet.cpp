@@ -30,6 +30,7 @@
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/assign.hpp>
 #include <boost/graph/topological_sort.hpp>
+#include <boost/graph/adjacency_list.hpp>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DynamicProperty.h>

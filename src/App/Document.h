@@ -38,7 +38,7 @@
 
 #include <boost/signals.hpp>
 
-#define USE_OLD_DAG 1
+#define USE_OLD_DAG 0
 
 #if USE_OLD_DAG
 #  include <boost/graph/adjacency_list.hpp>
@@ -151,7 +151,11 @@ public:
     /// Restore the document from the file in Property Path
     void restore (void);
     void exportObjects(const std::vector<App::DocumentObject*>&, std::ostream&);
+
+#if USE_OLD_DAG
     void exportGraphviz(std::ostream&) const;
+#endif //USE_OLD_DAG
+
     std::vector<App::DocumentObject*> importObjects(Base::XMLReader& reader);
     /// Opens the document from its file name
     //void open (void);
@@ -280,16 +284,17 @@ public:
     /** @name DAG interface */
     //@{
     /// write GraphViz file
-    void writeDependencyGraphViz(std::ostream &out);
+    void writeDependencyGraphViz(std::ostream &out) const;
     /// checks if the graph is directed and has no cycles
     bool checkOnCycle(void);
     /// get a list of all objects linking to the given object
     std::vector<App::DocumentObject*> getInList(const DocumentObject* me) const;
     /// Get a complete list of all objects the given objects depend on. The list
     /// also contains the given objects!
+    /// deprecated! Use In- and OutList mimic in the DocumentObject instead!
     std::vector<App::DocumentObject*> getDependencyList
         (const std::vector<App::DocumentObject*>&) const;
-	/// get a list of topological sorted objects (https://en.wikipedia.org/wiki/Topological_sorting)
+    /// get a list of topological sorted objects (https://en.wikipedia.org/wiki/Topological_sorting)
 	std::vector<App::DocumentObject*> topologicalSort() const;
 	/// get all root objects (objects no other one reference too)
 	std::vector<App::DocumentObject*> getRootObjects() const;
@@ -327,7 +332,9 @@ protected:
     bool _recomputeFeature(DocumentObject* Feat);
     void _clearRedos();
     /// refresh the internal dependency graph
+#if USE_OLD_DAG
     void _rebuildDependencyList(void);
+#endif //USE_OLD_DAG
     std::string getTransientDirectoryName(const std::string& uuid, const std::string& filename) const;
 
 

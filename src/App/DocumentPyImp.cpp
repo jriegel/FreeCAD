@@ -160,13 +160,13 @@ PyObject*  DocumentPy::exportGraphviz(PyObject * args)
     if (fn) {
         Base::FileInfo fi(fn);
         Base::ofstream str(fi);
-        getDocumentPtr()->exportGraphviz(str);
+        getDocumentPtr()->writeDependencyGraphViz(str);
         str.close();
         Py_Return;
     }
     else {
         std::stringstream str;
-        getDocumentPtr()->exportGraphviz(str);
+        getDocumentPtr()->writeDependencyGraphViz(str);
         return PyString_FromString(str.str().c_str());
     }
 }
@@ -512,7 +512,8 @@ Py::List DocumentPy::getRedoNames(void) const
 Py::String  DocumentPy::getDependencyGraph(void) const
 {
     std::stringstream out;
-    getDocumentPtr()->exportGraphviz(out);
+    //getDocumentPtr()->exportGraphviz(out);
+    getDocumentPtr()->writeDependencyGraphViz(out);
     return Py::String(out.str());
 }
 

@@ -168,12 +168,12 @@ vector<App::DocumentObject*> DocumentObject::getInList(void) const
 	// But not necessary in the same order....
 #	if _DEBUG 
 	{
-		if (ret.size() != _dagBackPointer.size()){
+		if (ret.size() != _inList.size()){
 			cerr << "DocumentObject::getInList(): old and new differ in size";
 		}
 		else{
 			vector<App::DocumentObject*> oldInList(ret);
-			vector<App::DocumentObject*> newInList(_dagBackPointer);
+			vector<App::DocumentObject*> newInList(_inList);
 			sort(oldInList.begin(), oldInList.end());
 			sort(newInList.begin(), newInList.end());
 			if (oldInList != newInList)
@@ -188,23 +188,76 @@ vector<App::DocumentObject*> DocumentObject::getInList(void) const
 
 vector<App::DocumentObject*> DocumentObject::getInList(void) const
 {
-	return _dagBackPointer;
+    return _inList;
 }
 
+
 #endif // if USE_OLD_DAG
+
+void _getInListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj)
+{
+    for (const auto objIt : obj->getInList()){
+        objSet.insert(objIt);
+        _getInListRecursive(objSet, objIt);
+    }
+}
+
+vector<App::DocumentObject*> DocumentObject::getInListRecursive(void) const
+{
+    // using a set to avoid duplicates (DAG)
+    set<DocumentObject*> objSet;
+    _getInListRecursive(objSet, this);
+    return vector<App::DocumentObject*>(objSet.begin(), objSet.end());
+}
+
+void _getOutListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj)
+{
+    for (const auto objIt : obj->getOutList()){
+        objSet.insert(objIt);
+        _getInListRecursive(objSet, objIt);
+    }
+}
+
+vector<App::DocumentObject*> DocumentObject::getOutListRecursive(void) const
+{
+    // using a set to avoid duplicates (DAG)
+    set<DocumentObject*> objSet;
+    _getOutListRecursive(objSet, this);
+    return vector<App::DocumentObject*>(objSet.begin(), objSet.end());
+}
 
 DocumentObjectGroup* DocumentObject::getGroup() const
 {
     return DocumentObjectGroup::getGroupOfObject(this);
 }
 
-bool DocumentObject::testIfLinkDAGCompatible(DocumentObject *linkTo) const
+bool DocumentObject::_isInInListRecursive(const DocumentObject *act, const DocumentObject* test) const
 {
-    vector<App::DocumentObject*> linkTo_in_vector;
-    linkTo_in_vector.push_back(linkTo);
-    return this->testIfLinkDAGCompatible(linkTo_in_vector);
+    if (find(_inList.begin(), _inList.end(), test) != _inList.end())
+        return true;
+
+    for (auto obj : _inList){
+        if (_isInInListRecursive(obj, test))
+            return true;
+    }
+
+    return false;
 }
 
+bool DocumentObject::isInInListRecursive(DocumentObject *linkTo) const
+{
+    return _isInInListRecursive(this,linkTo);
+}
+
+bool DocumentObject::isInInList(DocumentObject *linkTo) const
+{
+    if (find(_inList.begin(), _inList.end(), linkTo) != _inList.end())
+        return true;
+    else
+        return false;
+}
+
+#if USE_OLD_DAG
 bool DocumentObject::testIfLinkDAGCompatible(const vector<DocumentObject *> &linksTo) const
 {
     Document* doc = this->getDocument();
@@ -231,6 +284,7 @@ bool DocumentObject::testIfLinkDAGCompatible(PropertyLinkSub &linkTo) const
     linkTo_in_vector.push_back(linkTo.getValue());
     return this->testIfLinkDAGCompatible(linkTo_in_vector);
 }
+#endif USE_OLD_DAG
 
 void DocumentObject::onLostLinkToObject(DocumentObject*)
 {
@@ -293,10 +347,10 @@ void DocumentObject::Save (Base::Writer &writer) const
 
 void App::DocumentObject::_removeBackLink(DocumentObject* rmfObj)
 {
-	_dagBackPointer.erase(remove(_dagBackPointer.begin(), _dagBackPointer.end(), rmfObj), _dagBackPointer.end());
+	_inList.erase(remove(_inList.begin(), _inList.end(), rmfObj), _inList.end());
 }
 
 void App::DocumentObject::_addBackLink(DocumentObject* newObje)
 {
-	_dagBackPointer.push_back(newObje);
+	_inList.push_back(newObje);
 }

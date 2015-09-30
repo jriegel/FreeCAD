@@ -129,26 +129,40 @@ public:
 
     /// returns a list of objects this object is pointing to by Links
     std::vector<App::DocumentObject*> getOutList(void) const;
+    /// returns a list of objects this object is pointing to by Links and all further descended 
+    std::vector<App::DocumentObject*> getOutListRecursive(void) const;
     /// get all objects link to this object
     std::vector<App::DocumentObject*> getInList(void) const;
+    /// get all objects link directly or indirectly to this object 
+    std::vector<App::DocumentObject*> getInListRecursive(void) const;
     /// get group if object is part of a group, otherwise 0 is returned
     DocumentObjectGroup* getGroup() const;
 
     /**
-     * @brief testIfLinkIsDAG tests a link that is about to be created for
-     * circular references.
-     * @param objToLinkIn (input). The object this object is to depend on after
+     * @brief search for the object in the inList of this object.
+     *
+     * This can be used to check if the object would cause a circular dependency
+     * if THIS object link to it (would be in the InList and OutList!) 
+     * @param objToTest (input). The object this object is to depend on after
      * the link is going to be created.
      * @return true if link can be created (no cycles will be made). False if
      * the link will cause a circular dependency and break recomputes. Throws an
      * error if the document already has a circular dependency.
      * That is, if the return is true, the link is allowed.
      */
-    bool testIfLinkDAGCompatible(DocumentObject* linkTo) const;
+    bool isInInListRecursive(DocumentObject* objToTest) const;
+    /// test if this object is directly (non recursive) in the InList
+    bool isInInList(DocumentObject* objToTest) const;
+    /// test if the given object is in the OutList and recursive further down
+    bool isInOutListRecursive(DocumentObject* objToTest) const;
+    /// test if this object is directly (non recursive) in the InList
+    bool isInOutList(DocumentObject* objToTest) const;
+#if USE_OLD_DAG
+    bool testIfLinkDAGCompatible(DocumentObject *linksTo) const;
     bool testIfLinkDAGCompatible(const std::vector<DocumentObject *> &linksTo) const;
     bool testIfLinkDAGCompatible(App::PropertyLinkSubList &linksTo) const;
     bool testIfLinkDAGCompatible(App::PropertyLinkSub &linkTo) const;
-
+#endif //USE_OLD_DAG
 	/// internal, used by ProperyLink to maintain DAG back links
 	void _removeBackLink(DocumentObject*);
 	/// internal, used by ProperyLink to maintain DAG back links
@@ -239,7 +253,11 @@ protected:
 private:
 	// Back pointer to all the fathers in a DAG of the document
 	// this is used by the document (via friend) to have a effective DAG handling
-	std::vector<App::DocumentObject*> _dagBackPointer;
+	std::vector<App::DocumentObject*> _inList;
+    // helper for isInInListRecursive()
+    bool _isInInListRecursive(const DocumentObject *act, const DocumentObject* test) const;
+    // helper for isInOutListRecursive()
+    bool _isInOutListRecursive(const DocumentObject *act, const DocumentObject* test) const;
 };
 
 } //namespace App

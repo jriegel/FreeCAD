@@ -148,16 +148,16 @@ struct DocumentP
     int iTransactionMode;
     int iTransactionCount;
     std::map<int,Transaction*> mTransactions;
-    std::map<Vertex,DocumentObject*> vertexMap;
     bool rollback;
     bool closable;
     bool keepTrailingDigits;
     int iUndoMode;
     unsigned int UndoMemSize;
     unsigned int UndoMaxStackSize;
-    DependencyList DepList;
 #if USE_OLD_DAG
+    DependencyList DepList;
     std::map<DocumentObject*,Vertex> VertexObjectList;
+    std::map<Vertex,DocumentObject*> vertexMap;
 #endif //USE_OLD_DAG
 
 
@@ -180,14 +180,9 @@ struct DocumentP
 
 PROPERTY_SOURCE(App::Document, App::PropertyContainer)
 
-void Document::writeDependencyGraphViz(std::ostream &out)
+void Document::writeDependencyGraphViz(std::ostream &out) const
 {
-    //  // caching vertex to DocObject
-    //std::map<Vertex,DocumentObject*> VertexMap;
-    //for(std::map<DocumentObject*,Vertex>::const_iterator It1= _DepConMap.begin();It1 != _DepConMap.end(); ++It1)
-    //  VertexMap[It1->second] = It1->first;
-
-    out << "digraph G {" << endl;
+     out << "digraph G {" << endl;
     out << "\tordering=out;" << endl;
     out << "\tnode [shape = box];" << endl;
 
@@ -199,18 +194,12 @@ void Document::writeDependencyGraphViz(std::ostream &out)
                 out << "\t" << It->first << "->" << (*It2)->getNameInDocument() << ";" <<endl;
     }
 
-    /*
-    graph_traits<DependencyList>::edge_iterator ei, ei_end;
-    for (tie(ei,ei_end) = edges(_DepList); ei != ei_end; ++ei)
-      out << "\t"
-          << VertexMap[source(*ei, _DepList)]->getNameInDocument()
-          << " -> "
-          << VertexMap[target(*ei, _DepList)]->getNameInDocument()
-          << ";" << endl;
-    */
+ 
     out << "}" << endl;
 }
 
+
+#if USE_OLD_DAG
 void Document::exportGraphviz(std::ostream& out) const
 {
     std::vector<std::string> names;
@@ -252,29 +241,12 @@ void Document::exportGraphviz(std::ostream& out) const
     if (!names.empty())
         boost::write_graphviz(out, DepList, boost::make_label_writer(&(names[0])));
 }
+#endif // USE_OLD_DAG
 
-//bool _has_cycle_dfs(const DependencyList & g, vertex_t u, default_color_type * color)
-//{
-//  color[u] = gray_color;
-//  graph_traits < DependencyList >::adjacency_iterator vi, vi_end;
-//  for (tie(vi, vi_end) = adjacent_vertices(u, g); vi != vi_end; ++vi)
-//    if (color[*vi] == white_color)
-//      if (has_cycle_dfs(g, *vi, color))
-//        return true;            // cycle detected, return immediately
-//      else if (color[*vi] == gray_color)        // *vi is an ancestor!
-//        return true;
-//  color[u] = black_color;
-//  return false;
-//}
 
 bool Document::checkOnCycle(void)
-{/*
-  std::vector < default_color_type > color(num_vertices(_DepList), white_color);
-  graph_traits < DependencyList >::vertex_iterator vi, vi_end;
-  for (tie(vi, vi_end) = vertices(_DepList); vi != vi_end; ++vi)
-    if (color[*vi] == white_color)
-      if (_has_cycle_dfs(_DepList, *vi, &color[0]))
-        return true; */
+{
+    // TODO implement with the new DAG mimic
     return false;
 }
 
@@ -1278,6 +1250,8 @@ std::vector<App::DocumentObject*> Document::getInList(const DocumentObject* me) 
     return result;
 }
 
+#if USE_OLD_DAG
+
 namespace boost {
 // recursive helper function to get all dependencies
 void out_edges_recursive(const Vertex& v, const DependencyList& g, std::set<Vertex>& out)
@@ -1291,6 +1265,7 @@ void out_edges_recursive(const Vertex& v, const DependencyList& g, std::set<Vert
     }
 }
 }
+
 
 std::vector<App::DocumentObject*>
 Document::getDependencyList(const std::vector<App::DocumentObject*>& objs) const
@@ -1363,7 +1338,6 @@ Document::getDependencyList(const std::vector<App::DocumentObject*>& objs) const
         ary.push_back(VertexMap[*it]);
     return ary;
 }
-
 void Document::_rebuildDependencyList(void)
 {
     d->VertexObjectList.clear();
@@ -1396,6 +1370,21 @@ void Document::_rebuildDependencyList(void)
         }
     }
 }
+#else 
+std::vector<App::DocumentObject*>
+Document::getDependencyList(const std::vector<App::DocumentObject*>& objs) const
+{
+    std::vector<App::DocumentObject*> dep;
+    for (auto obj : objs){
+        std::vector<App::DocumentObject*> objDep = obj->getInListRecursive();
+        dep.insert(dep.end(), objDep.begin(), objDep.end());
+        dep.push_back(obj);
+
+    }
+
+    return dep;
+}
+#endif // USE_OLD_DAG
 
 std::vector<App::DocumentObject*> Document::getRootObjects() const
 {
@@ -1529,7 +1518,12 @@ int Document::recompute()
 
 int Document::recompute()
 {
-	int objectCount = 0;
+    int objectCount = 0;
+    // delete recompute log
+    for( auto LogEntry: _RecomputeLog)
+        delete LogEntry;
+    _RecomputeLog.clear();
+
 
 	return objectCount;
 }
@@ -1715,6 +1709,8 @@ void Document::remObject(const char* sName, bool forceIfUndeletable)
         d->activeObject = 0;
 
     signalDeletedObject(*(pos->second));
+
+#if USE_OLD_DAG
     if (!d->vertexMap.empty()) {
         // recompute of document is running
         for (std::map<Vertex,DocumentObject*>::iterator it = d->vertexMap.begin(); it != d->vertexMap.end(); ++it) {
@@ -1724,6 +1720,7 @@ void Document::remObject(const char* sName, bool forceIfUndeletable)
             }
         }
     }
+#endif // USE_OLD_DAG
 
     // Before deleting we must nullify all dependant objects
     breakDependency(pos->second, true);
@@ -1882,7 +1879,12 @@ DocumentObject* Document::copyObject(DocumentObject* obj, bool recursive)
 
     MergeDocuments md(this);
     if (recursive) {
+//#if USE_OLD_DAG
         objs = getDependencyList(objs);
+//#else
+//        std::vector<DocumentObject*> recursiveOutList = obj->getOutListRecursive();
+//        objs.insert(objs.end(), recursiveOutList.begin(), recursiveOutList.end());
+//#endif USE_OLD_DAG
     }
 
     unsigned int memsize=1000; // ~ for the meta-information

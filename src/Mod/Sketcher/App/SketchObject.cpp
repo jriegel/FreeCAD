@@ -1646,7 +1646,11 @@ bool SketchObject::isExternalAllowed(App::Document *pDoc, App::DocumentObject *p
 
     //circular reference prevention
     try {
+#if USE_OLD_DAG
         if (!(this->testIfLinkDAGCompatible(pObj))){
+#else
+        if (!(this->isInInListRecursive(pObj))){
+#endif USE_OLD_DAG
             if (rsn)
                 *rsn = rlCircularReference;
             return false;

@@ -205,7 +205,8 @@ void GraphvizView::updateSvgItem(const App::Document &doc)
 
     // Create graph in dot format
     std::stringstream stream;
-    doc.exportGraphviz(stream);
+    //doc.exportGraphviz(stream);
+    doc.writeDependencyGraphViz(stream);
     graphCode = stream.str();
 
     // Update worker thread, and start it
