@@ -194,35 +194,48 @@ vector<App::DocumentObject*> DocumentObject::getInList(void) const
 
 #endif // if USE_OLD_DAG
 
-void _getInListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj)
+void _getInListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj, const DocumentObject* checkObj, int depth)
 {
     for (const auto objIt : obj->getInList()){
+        // if the check object is in the recursive inList we have a cycle!
+        if (objIt == checkObj || depth <= 0){
+            cerr << "DocumentObject::getInListRecursive(): cyclic dependency detected!"<<endl;
+            throw Base::Exception("DocumentObject::getInListRecursive(): cyclic dependency detected!");
+        }
+
         objSet.insert(objIt);
-        _getInListRecursive(objSet, objIt);
+        _getInListRecursive(objSet, objIt, checkObj,depth-1);
     }
 }
 
 vector<App::DocumentObject*> DocumentObject::getInListRecursive(void) const
 {
+    int maxDepth = getDocument()->countObjects() +2;
     // using a set to avoid duplicates (DAG)
     set<DocumentObject*> objSet;
-    _getInListRecursive(objSet, this);
+    _getInListRecursive(objSet, this, this, maxDepth);
     return vector<App::DocumentObject*>(objSet.begin(), objSet.end());
 }
 
-void _getOutListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj)
+void _getOutListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj, const DocumentObject* checkObj, int depth)
 {
     for (const auto objIt : obj->getOutList()){
+        // if the check object is in the recursive inList we have a cycle!
+        if (objIt == checkObj || depth <= 0){
+            cerr << "DocumentObject::getOutListRecursive(): cyclic dependency detected!" << endl;
+            throw Base::Exception("DocumentObject::getOutListRecursive(): cyclic dependency detected!");
+        }
         objSet.insert(objIt);
-        _getInListRecursive(objSet, objIt);
+        _getOutListRecursive(objSet, objIt, checkObj,depth-1);
     }
 }
 
 vector<App::DocumentObject*> DocumentObject::getOutListRecursive(void) const
 {
+    int maxDepth = getDocument()->countObjects() + 2;
     // using a set to avoid duplicates (DAG)
     set<DocumentObject*> objSet;
-    _getOutListRecursive(objSet, this);
+    _getOutListRecursive(objSet, this, this, maxDepth);
     return vector<App::DocumentObject*>(objSet.begin(), objSet.end());
 }
 

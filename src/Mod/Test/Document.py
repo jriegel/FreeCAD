@@ -280,6 +280,35 @@ class DocumentRecomputeCases(unittest.TestCase):
     self.failUnless(seqDic[self.L5] > seqDic[self.L2])
     self.failUnless(seqDic[self.L5] > seqDic[self.L3])
     self.failUnless(seqDic[self.L5] > seqDic[self.L1])
+    
+    # check proper InList working
+    self.InListRec = self.L5.InListRecursive
+    self.failUnless(self.L1 in self.InListRec)
+    self.failUnless(self.L2 in self.InListRec)
+    self.failUnless(self.L3 in self.InListRec)
+    self.failUnless(len(self.InListRec)==3)
+   
+    # check proper OutList working
+    self.OutListRec = self.L1.OutListRecursive
+    self.failUnless(self.L4 in self.OutListRec)
+    self.failUnless(self.L2 in self.OutListRec)
+    self.failUnless(self.L3 in self.OutListRec)
+    self.failUnless(self.L5 in self.OutListRec)
+    self.failUnless(self.L6 in self.OutListRec)
+    self.failUnless(len(self.OutListRec)==5)
+
+    # test on detecting direct and indirect cycles in the DAG
+    self.L6.Link = self.L1 # create a circular dependency
+    with self.assertRaises(IndexError):
+        self.L1.OutListRecursive
+    with self.assertRaises(IndexError):
+        self.L5.InListRecursive
+    with self.assertRaises(IndexError):
+        self.L6.InListRecursive
+    self.L6.Link = None  # resolve the circular dependency
+    self.failUnless(len(self.L1.OutListRecursive)==5)
+    self.failUnless(len(self.L5.InListRecursive)==3)
+    self.failUnless(len(self.L6.InListRecursive)==2)
  
   def testDescent(self):
     # testing the up and downstream stuff
