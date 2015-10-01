@@ -285,7 +285,7 @@ class DocumentRecomputeCases(unittest.TestCase):
     # testing the up and downstream stuff
 
     self.failUnless((0, 0, 0, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
-    self.failUnless(self.Doc.recompute()==3)
+    self.failUnless(self.Doc.recompute()==4)
     self.failUnless((1, 1, 1, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))
     self.L5.touch()
     self.failUnless((1, 1, 1, 0, 0, 0)==(self.L1.ExecCount,self.L2.ExecCount,self.L3.ExecCount,self.L4.ExecCount,self.L5.ExecCount,self.L6.ExecCount))

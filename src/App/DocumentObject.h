@@ -133,6 +133,10 @@ public:
     std::vector<App::DocumentObject*> getOutListRecursive(void) const;
     /// get all objects link to this object
     std::vector<App::DocumentObject*> getInList(void) const;
+    /// get all objects link to this object
+    const std::vector<App::DocumentObject*>& getInListC(void) const {
+        return _inList;
+    };
     /// get all objects link directly or indirectly to this object 
     std::vector<App::DocumentObject*> getInListRecursive(void) const;
     /// get group if object is part of a group, otherwise 0 is returned

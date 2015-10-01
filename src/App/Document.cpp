@@ -1524,6 +1524,37 @@ int Document::recompute()
         delete LogEntry;
     _RecomputeLog.clear();
 
+    // get the sorted vector of all objects in the document and go though it from the end
+    vector<DocumentObject*> topoSortedObjects = topologicalSort();
+
+    if (topoSortedObjects.size() != d->objectArray.size()){
+        cerr << "App::Document::recompute(): topological sort fails, invalid DAG!" << endl;
+        return -1;
+    }
+
+    for (auto objIt = topoSortedObjects.rbegin(); objIt != topoSortedObjects.rend(); ++objIt){
+        // ask the object if it should be recomputed
+        if ((*objIt)->mustExecute() == 1){
+            objectCount++;
+            if (_recomputeFeature(*objIt)) {
+                // if something happen break execution of recompute
+                return -1;
+            }
+            else{
+                (*objIt)->purgeTouched();
+                // set all dependent object touched to force recompute
+                for (auto inObjIt : (*objIt)->getInListC())
+                    inObjIt->touch();
+            }
+        }
+
+    }
+#ifdef FC_DEBUG
+    // check if all objects are recalculated which were thouched 
+    for (auto objectIt : d->objectArray)
+        if (objectIt->isTouched())
+            cerr << "Document::recompute(): " << objectIt->getNameInDocument() << " still touched after recompute" << endl;
+#endif
 
 	return objectCount;
 }
