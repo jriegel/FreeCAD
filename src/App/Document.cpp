@@ -1376,11 +1376,15 @@ Document::getDependencyList(const std::vector<App::DocumentObject*>& objs) const
 {
     std::vector<App::DocumentObject*> dep;
     for (auto obj : objs){
-        std::vector<App::DocumentObject*> objDep = obj->getInListRecursive();
+        std::vector<App::DocumentObject*> objDep = obj->getOutListRecursive();
         dep.insert(dep.end(), objDep.begin(), objDep.end());
         dep.push_back(obj);
-
     }
+
+    // remove duplicate entries and resize the vector
+    sort(dep.begin(), dep.end());
+    auto newEnd = unique(dep.begin(), dep.end());
+    dep.resize(distance(dep.begin(), newEnd));
 
     return dep;
 }

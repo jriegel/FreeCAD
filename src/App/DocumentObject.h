@@ -259,9 +259,9 @@ private:
 	// this is used by the document (via friend) to have a effective DAG handling
 	std::vector<App::DocumentObject*> _inList;
     // helper for isInInListRecursive()
-    bool _isInInListRecursive(const DocumentObject *act, const DocumentObject* test) const;
+    bool _isInInListRecursive(const DocumentObject *act, const DocumentObject* test, const DocumentObject* checkObj, int depth) const;
     // helper for isInOutListRecursive()
-    bool _isInOutListRecursive(const DocumentObject *act, const DocumentObject* test) const;
+    bool _isInOutListRecursive(const DocumentObject *act, const DocumentObject* test, const DocumentObject* checkObj, int depth) const;
 };
 
 } //namespace App

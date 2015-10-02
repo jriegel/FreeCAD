@@ -30,6 +30,7 @@
 #include "DocumentObjectPy.cpp"
 
 using namespace App;
+using namespace std;
 
 // returns a string which represent the object e.g. when printed in python
 std::string DocumentObjectPy::representation(void) const
@@ -160,7 +161,8 @@ Py::List DocumentObjectPy::getInListRecursive(void) const
     }catch (const Base::Exception& e) {
         throw Py::IndexError(e.what());
     }
-    
+
+
     return ret;    
 }
 
@@ -185,6 +187,15 @@ Py::List DocumentObjectPy::getOutListRecursive(void) const
         // creat the python list for the output
         for (std::vector<DocumentObject*>::iterator It = list.begin(); It != list.end(); ++It)
             ret.append(Py::Object((*It)->getPyObject(), true));
+#if USE_OLD_DAG &&  FC_DEBUG
+        // test case to compare some document methodes:
+        DocumentObject* obj = getDocumentObjectPtr();
+
+        vector<DocumentObject*> param;
+        param.push_back(obj);
+        vector<DocumentObject*> result = obj->getDocument()->getDependencyList(param);
+        assert(list.size() == result.size() - 1);
+#endif
     }
     catch (const Base::Exception& e) {
         throw Py::IndexError(e.what());

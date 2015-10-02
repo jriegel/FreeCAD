@@ -290,13 +290,19 @@ DocumentObjectGroup* DocumentObject::getGroup() const
     return DocumentObjectGroup::getGroupOfObject(this);
 }
 
-bool DocumentObject::_isInInListRecursive(const DocumentObject *act, const DocumentObject* test) const
+bool DocumentObject::_isInInListRecursive(const DocumentObject *act, const DocumentObject* test, const DocumentObject* checkObj, int depth) const
 {
     if (find(_inList.begin(), _inList.end(), test) != _inList.end())
         return true;
 
     for (auto obj : _inList){
-        if (_isInInListRecursive(obj, test))
+        // if the check object is in the recursive inList we have a cycle!
+        if (obj == checkObj || depth <= 0){
+            cerr << "DocumentObject::getOutListRecursive(): cyclic dependency detected!" << endl;
+            throw Base::Exception("DocumentObject::getOutListRecursive(): cyclic dependency detected!");
+        }
+
+        if (_isInInListRecursive(obj, test, checkObj, depth - 1))
             return true;
     }
 
@@ -305,7 +311,7 @@ bool DocumentObject::_isInInListRecursive(const DocumentObject *act, const Docum
 
 bool DocumentObject::isInInListRecursive(DocumentObject *linkTo) const
 {
-    return _isInInListRecursive(this,linkTo);
+    return _isInInListRecursive(this, linkTo, this, getDocument()->countObjects());
 }
 
 bool DocumentObject::isInInList(DocumentObject *linkTo) const
@@ -315,6 +321,33 @@ bool DocumentObject::isInInList(DocumentObject *linkTo) const
     else
         return false;
 }
+
+bool DocumentObject::_isInOutListRecursive(const DocumentObject *act, const DocumentObject* test, const DocumentObject* checkObj, int depth) const
+{
+    vector <DocumentObject*> outList = act->getOutList();
+
+    if (find(outList.begin(), outList.end(), test) != outList.end())
+        return true;
+
+    for (auto obj : outList){
+        // if the check object is in the recursive inList we have a cycle!
+        if (obj == checkObj || depth <= 0){
+            cerr << "DocumentObject::isInOutListRecursive(): cyclic dependency detected!" << endl;
+            throw Base::Exception("DocumentObject::isInOutListRecursive(): cyclic dependency detected!");
+        }
+
+        if (_isInOutListRecursive(obj, test, checkObj, depth - 1))
+            return true;
+    }
+
+    return false;
+}
+
+bool DocumentObject::isInOutListRecursive(DocumentObject *linkTo) const
+{
+    return _isInOutListRecursive(this, linkTo, this, getDocument()->countObjects());
+}
+
 
 #if USE_OLD_DAG
 bool DocumentObject::testIfLinkDAGCompatible(const vector<DocumentObject *> &linksTo) const
