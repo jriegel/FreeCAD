@@ -126,33 +126,59 @@ const char *DocumentObject::getNameInDocument(void) const
 vector<DocumentObject*> DocumentObject::getOutList(void) const
 {
     vector<Property*> List;
-    vector<DocumentObject*> ret;
+    List.reserve(15);
+
+    // get all Properties
     getPropertyList(List);
+
+    // count out list size to avoid resize of the vector while collecting
+    size_t outListSize = 0;
+    for (vector<Property*>::const_iterator It = List.begin(); It != List.end(); ++It) {
+        if ((*It)->isDerivedFrom(PropertyLinkList::getClassTypeId())) {
+            outListSize += static_cast<PropertyLinkList*>(*It)->getSize();
+        }
+        else if ((*It)->isDerivedFrom(PropertyLinkSubList::getClassTypeId())) {
+            outListSize += static_cast<PropertyLinkSubList*>(*It)->getSize();
+        }
+        else if ((*It)->isDerivedFrom(PropertyLink::getClassTypeId())) {
+            if (static_cast<PropertyLink*>(*It)->getValue())
+                outListSize += 1;
+        }
+        else if ((*It)->isDerivedFrom(PropertyLinkSub::getClassTypeId())) {
+            if (static_cast<PropertyLinkSub*>(*It)->getValue())
+                outListSize += 1;
+        }
+    }
+
+    // create the vector in the right size and fill it up
+    vector<DocumentObject*> returnVector;
+    returnVector.reserve(outListSize);
+
     for (vector<Property*>::const_iterator It = List.begin();It != List.end(); ++It) {
         if ((*It)->isDerivedFrom(PropertyLinkList::getClassTypeId())) {
             const vector<DocumentObject*> &OutList = static_cast<PropertyLinkList*>(*It)->getValues();
             for (vector<DocumentObject*>::const_iterator It2 = OutList.begin();It2 != OutList.end(); ++It2) {
                 if (*It2)
-                    ret.push_back(*It2);
+                    returnVector.push_back(*It2);
             }
         }
         else if ((*It)->isDerivedFrom(PropertyLinkSubList::getClassTypeId())) {
             const vector<DocumentObject*> &OutList = static_cast<PropertyLinkSubList*>(*It)->getValues();
             for (vector<DocumentObject*>::const_iterator It2 = OutList.begin();It2 != OutList.end(); ++It2) {
                 if (*It2)
-                    ret.push_back(*It2);
+                    returnVector.push_back(*It2);
             }
         }
         else if ((*It)->isDerivedFrom(PropertyLink::getClassTypeId())) {
             if (static_cast<PropertyLink*>(*It)->getValue())
-                ret.push_back(static_cast<PropertyLink*>(*It)->getValue());
+                returnVector.push_back(static_cast<PropertyLink*>(*It)->getValue());
         }
         else if ((*It)->isDerivedFrom(PropertyLinkSub::getClassTypeId())) {
             if (static_cast<PropertyLinkSub*>(*It)->getValue())
-                ret.push_back(static_cast<PropertyLinkSub*>(*It)->getValue());
+                returnVector.push_back(static_cast<PropertyLinkSub*>(*It)->getValue());
         }
     }
-    return ret;
+    return returnVector;
 }
 
 // The new DAG handling uses pre-computed vectors for the InList...
@@ -176,8 +202,10 @@ vector<App::DocumentObject*> DocumentObject::getInList(void) const
 			vector<App::DocumentObject*> newInList(_inList);
 			sort(oldInList.begin(), oldInList.end());
 			sort(newInList.begin(), newInList.end());
-			if (oldInList != newInList)
-				cerr << "DocumentObject::getInList(): old and new differ in values";
+            if (oldInList != newInList){
+                cerr << "DocumentObject::getInList(): old and new differ in values";
+                assert(0);
+            }
 		}
     }
 #	endif
@@ -194,7 +222,7 @@ vector<App::DocumentObject*> DocumentObject::getInList(void) const
 
 #endif // if USE_OLD_DAG
 
-void _getInListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj, const DocumentObject* checkObj, int depth)
+void _getInListRecursive(vector<DocumentObject*>& objSet, const DocumentObject* obj, const DocumentObject* checkObj, int depth)
 {
     for (const auto objIt : obj->getInList()){
         // if the check object is in the recursive inList we have a cycle!
@@ -203,21 +231,30 @@ void _getInListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj
             throw Base::Exception("DocumentObject::getInListRecursive(): cyclic dependency detected!");
         }
 
-        objSet.insert(objIt);
+        objSet.push_back(objIt);
         _getInListRecursive(objSet, objIt, checkObj,depth-1);
     }
 }
 
 vector<App::DocumentObject*> DocumentObject::getInListRecursive(void) const
 {
+    // number of objects in document is a good estimate in result size
     int maxDepth = getDocument()->countObjects() +2;
-    // using a set to avoid duplicates (DAG)
-    set<DocumentObject*> objSet;
-    _getInListRecursive(objSet, this, this, maxDepth);
-    return vector<App::DocumentObject*>(objSet.begin(), objSet.end());
+    vector<App::DocumentObject*> result;
+    result.reserve(maxDepth);
+
+    // using a rcursie helper to collect all InLists
+    _getInListRecursive(result, this, this, maxDepth);
+
+    // remove duplicate entries and resize the vector
+    sort(result.begin(), result.end());
+    auto newEnd = unique(result.begin(), result.end());
+    result.resize(distance(result.begin(), newEnd));
+
+    return result;
 }
 
-void _getOutListRecursive(set<DocumentObject*>& objSet, const DocumentObject* obj, const DocumentObject* checkObj, int depth)
+void _getOutListRecursive(vector<DocumentObject*>& objSet, const DocumentObject* obj, const DocumentObject* checkObj, int depth)
 {
     for (const auto objIt : obj->getOutList()){
         // if the check object is in the recursive inList we have a cycle!
@@ -225,18 +262,27 @@ void _getOutListRecursive(set<DocumentObject*>& objSet, const DocumentObject* ob
             cerr << "DocumentObject::getOutListRecursive(): cyclic dependency detected!" << endl;
             throw Base::Exception("DocumentObject::getOutListRecursive(): cyclic dependency detected!");
         }
-        objSet.insert(objIt);
+        objSet.push_back(objIt);
         _getOutListRecursive(objSet, objIt, checkObj,depth-1);
     }
 }
 
 vector<App::DocumentObject*> DocumentObject::getOutListRecursive(void) const
 {
+    // number of objects in document is a good estimate in result size
     int maxDepth = getDocument()->countObjects() + 2;
-    // using a set to avoid duplicates (DAG)
-    set<DocumentObject*> objSet;
-    _getOutListRecursive(objSet, this, this, maxDepth);
-    return vector<App::DocumentObject*>(objSet.begin(), objSet.end());
+    vector<App::DocumentObject*> result;
+    result.reserve(maxDepth);
+
+    // using a recursive helper to collect all OutLists
+    _getOutListRecursive(result, this, this, maxDepth);
+
+    // remove duplicate entries and resize the vector
+    sort(result.begin(), result.end());
+    auto newEnd = unique(result.begin(), result.end());
+    result.resize(distance(result.begin(), newEnd));
+
+    return result;
 }
 
 DocumentObjectGroup* DocumentObject::getGroup() const
