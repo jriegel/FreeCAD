@@ -807,6 +807,7 @@ SET(Viewprovider_CPP_SRCS
     ViewProviderDocumentObjectPyImp.cpp
     ViewProviderPythonFeaturePyImp.cpp
     ViewProviderExtern.cpp
+    ViewProviderTest.cpp
     ViewProviderFeature.cpp
     ViewProviderGeometryObject.cpp
     ViewProviderInventorObject.cpp
@@ -831,6 +832,7 @@ SET(Viewprovider_SRCS
     ViewProviderDocumentObject.h
     ViewProviderDocumentObjectGroup.h
     ViewProviderExtern.h
+    ViewProviderTest.h
     ViewProviderFeature.h
     ViewProviderGeometryObject.h
     ViewProviderInventorObject.h

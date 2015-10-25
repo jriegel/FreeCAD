@@ -92,6 +92,7 @@
 #include "View3DInventor.h"
 #include "ViewProvider.h"
 #include "ViewProviderExtern.h"
+#include "ViewProviderTest.h"
 #include "ViewProviderFeature.h"
 #include "ViewProviderPythonFeature.h"
 #include "ViewProviderDocumentObjectGroup.h"
@@ -1503,6 +1504,7 @@ void Application::initTypes(void)
     // View Provider
     Gui::ViewProvider                           ::init();
     Gui::ViewProviderExtern                     ::init();
+    Gui::ViewProviderTest                       ::init();
     Gui::ViewProviderDocumentObject             ::init();
     Gui::ViewProviderFeature                    ::init();
     Gui::ViewProviderDocumentObjectGroup        ::init();
