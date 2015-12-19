@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2004 Jürgen Riegel <juergen.riegel@web.de>              *
+ *   Copyright (c) 20015 Jürgen Riegel <juergen.riegel@web.de>              *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
