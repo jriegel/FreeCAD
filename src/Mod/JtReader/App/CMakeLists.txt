@@ -1,7 +1,7 @@
 if(MSVC)
-    add_definitions(-DFCAppImport -DHAVE_ACOSH -DHAVE_ASINH -DHAVE_ATANH)
+    add_definitions(-DFCAppImport -DHAVE_ACOSH -DHAVE_ASINH -DHAVE_ATANH -DNO_JT_MULTITHREADING)
 else(MSVC)
-    add_definitions(-DHAVE_LIMITS_H -DHAVE_CONFIG_H)
+    add_definitions(-DHAVE_LIMITS_H -DHAVE_CONFIG_H -DNO_JT_MULTITHREADING)
 endif(MSVC)
 
 
@@ -14,6 +14,13 @@ include_directories(
     ${PYTHON_INCLUDE_PATH}
     ${XERCESC_INCLUDE_DIR}
     ${QT_INCLUDE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/TkJt/JtAttribute
+    ${CMAKE_CURRENT_SOURCE_DIR}/TkJt/JtData
+    ${CMAKE_CURRENT_SOURCE_DIR}/TkJt/JtDecode
+    ${CMAKE_CURRENT_SOURCE_DIR}/TkJt/JtElement
+    ${CMAKE_CURRENT_SOURCE_DIR}/TkJt/JtNode
+    ${CMAKE_CURRENT_SOURCE_DIR}/TkJt/JtProperty
+    ${CMAKE_CURRENT_SOURCE_DIR}/TkJt/JtToTopoDS
 )
 
 link_directories(${OCC_LIBRARY_DIR})
@@ -22,6 +29,9 @@ set(JtReader_LIBS
     Mesh
     #${OCC_OCAF_LIBRARIES}
     #${OCC_OCAF_DEBUG_LIBRARIES}
+    ${OCC_LIBRARIES}
+    ${OCC_DEBUG_LIBRARIES}
+
 )
 
 SET(JtReader_SRCS
@@ -37,13 +47,30 @@ SET(JtReader_SRCS
     JcadLibReader.cpp
 )
 
+# JrJt sources 
 FILE( GLOB JRJT_SRCS JrJt/*.cpp JrJt/*.h )
-
 SOURCE_GROUP("JrJt" FILES ${JRJT_SRCS}  )
+
+# TkJt sources 
+FILE( GLOB TKJT_JtAttribute_SRCS TkJt/JtAttribute/*.cxx TkJt/JtAttribute/*.hxx )
+SOURCE_GROUP("TkJt/JtAttribute" FILES ${TKJT_JtAttribute_SRCS}  )
+FILE( GLOB TKJT_JtData_SRCS TkJt/JtData/*.cxx TkJt/JtData/*.hxx )
+SOURCE_GROUP("TkJt/JtData" FILES ${TKJT_JtData_SRCS}  )
+FILE( GLOB TKJT_JtDecode_SRCS TkJt/JtDecode/*.cxx TkJt/JtDecode/*.hxx )
+SOURCE_GROUP("TkJt/JtDecode" FILES ${TKJT_JtDecode_SRCS}  )
+FILE( GLOB TKJT_JtElement_SRCS TkJt/JtElement/*.cxx TkJt/JtElement/*.hxx )
+SOURCE_GROUP("TkJt/JtElement" FILES ${TKJT_JtElement_SRCS}  )
+FILE( GLOB TKJT_JtNode_SRCS TkJt/JtNode/*.cxx TkJt/JtNode/*.hxx )
+SOURCE_GROUP("TkJt/JtNode" FILES ${TKJT_JtNode_SRCS}  )
+FILE( GLOB TKJT_JtProperty_SRCS TkJt/JtProperty/*.cxx TkJt/JtProperty/*.hxx )
+SOURCE_GROUP("TkJt/JtProperty" FILES ${TKJT_JtProperty_SRCS}  )
+FILE( GLOB TKJT_JtToTopoDS_SRCS TkJt/JtToTopoDS/*.cxx TkJt/JtToTopoDS/*.hxx )
+SOURCE_GROUP("TkJt/JtToTopoDS" FILES ${TKJT_JtToTopoDS_SRCS}  )
+
 
 SOURCE_GROUP("Module" FILES ${JtReader_SRCS})
 
-add_library(JtReader SHARED ${JtReader_SRCS} ${JRJT_SRCS} )
+add_library(JtReader SHARED ${JtReader_SRCS} ${JRJT_SRCS} ${TKJT_JtAttribute_SRCS} ${TKJT_JtData_SRCS} ${TKJT_JtDecode_SRCS} ${TKJT_JtElement_SRCS} ${TKJT_JtNode_SRCS} ${TKJT_JtProperty_SRCS} ${TKJT_JtToTopoDS_SRCS} )
 target_link_libraries(JtReader ${JtReader_LIBS})
 
 fc_target_copy_resource(JtReader 

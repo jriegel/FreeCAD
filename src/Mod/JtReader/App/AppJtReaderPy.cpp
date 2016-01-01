@@ -39,6 +39,9 @@
 #include <Mod/Mesh/App/MeshFeature.h>
 #include <App/PartPy.h>
 
+#include <JtData_Model.hxx>
+#include <JtNode_Partition.hxx>
+#include <JtData_Object.hxx>
 
 #include "TestJtReader.h"
 #include "JcadLibReader.h"
@@ -288,7 +291,7 @@ insert(PyObject *self, PyObject *args)
 
 	Py_Return;    
 }
-
+/*
 static PyObject * readJtPart(PyObject *self, PyObject *args)
 {
     char* Name;
@@ -345,6 +348,35 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
         PY_CATCH
 
         Py_Return;
+}
+*/
+
+static PyObject * readJtPart(PyObject *self, PyObject *args)
+{
+    char* Name;
+    PyObject* PartObject = 0;
+    if (!PyArg_ParseTuple(args, "et|O!", "utf-8", &Name, &(App::PartPy::Type), &PartObject))
+        return 0;
+    std::string Utf8Name = std::string(Name);
+    PyMem_Free(Name);
+    App::Part* Part = 0;
+    if (PartObject)
+        App::Part* Part = static_cast<App::PartPy*>(PartObject)->getPartPtr();
+
+    PY_TRY{
+        Handle(JtData_Model) model = new JtData_Model(TCollection_ExtendedString(Utf8Name.c_str()));
+        Handle(JtNode_Partition) partition = model->Init();
+        partition->Load();
+        partition->Dump(cout);
+        const JtData_Object::VectorOfObjects& objVector = partition->Children();
+
+        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++)
+            cout << objVector[i] << " ";
+
+    }
+    PY_CATCH
+
+    Py_Return;
 }
 
 /* registration table  */
