@@ -39,12 +39,9 @@
 #include <Mod/Mesh/App/MeshFeature.h>
 #include <App/PartPy.h>
 
-#include <JtData_Model.hxx>
-#include <JtNode_Partition.hxx>
-#include <JtData_Object.hxx>
-
 #include "TestJtReader.h"
 #include "JcadLibReader.h"
+#include "TkJtLibReader.h"
 #include "App/Part.h"
 
 using std::vector;
@@ -364,14 +361,10 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
         App::Part* Part = static_cast<App::PartPy*>(PartObject)->getPartPtr();
 
     PY_TRY{
-        Handle(JtData_Model) model = new JtData_Model(TCollection_ExtendedString(Utf8Name.c_str()));
-        Handle(JtNode_Partition) partition = model->Init();
-        partition->Load();
-        partition->Dump(cout);
-        const JtData_Object::VectorOfObjects& objVector = partition->Children();
+        TkJtLibReader reader(Utf8Name.c_str());
 
-        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++)
-            cout << objVector[i] << " ";
+        reader.Dump();
+
 
     }
     PY_CATCH

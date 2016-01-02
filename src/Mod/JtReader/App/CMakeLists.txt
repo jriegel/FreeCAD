@@ -45,6 +45,8 @@ SET(JtReader_SRCS
 	FcLodHandler.cpp
     JcadLibReader.h
     JcadLibReader.cpp
+    TkJtLibReader.h
+    TkJtLibReader.cpp
 )
 
 # JrJt sources 

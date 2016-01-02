@@ -22,45 +22,24 @@
 
 #pragma once
 
+// forward of the TkJt data model
+class Handle_JtData_Model;
+class Handle_JtNode_Partition;
+class Handle_JtData_Object;
 
-#include <QString>
-#include <vector>
-
-class AppJtReaderExport JcadLibReader
+class TkJtLibReader 
 {
-    QString log;
-
 public:
+    TkJtLibReader(const char* jtFileName); 
 
-    JcadLibReader();
-    ~JcadLibReader();
-    bool read(const char* fileName);
-
-    const QString& getLog(){ return log; }
-
-    struct MiniVec {
-        float vec[3];
-    };
-    struct Buffer {
-        std::vector<MiniVec> Vertexes;
-        std::vector<MiniVec> Normals;
-        std::vector<MiniVec> Colors;
-        std::vector<int32_t> Indexes;
-    };
-
-    int getFaceCount() const{ return Faces.size(); }
-    const Buffer& getBuffer(int n)const { return Faces[n]; }
-    const QString& getName(int n)const { return Names[n]; }
+    void Dump();
 
 protected:
-    std::vector<Buffer> Faces;
-    std::vector<QString> Names;
+    Handle_JtData_Model *model;
+    Handle_JtNode_Partition *partition;
 
-
+    void traverse(const Handle_JtData_Object& obj, int indent = 0);
 };
-
-
-
 
 
 
