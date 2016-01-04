@@ -34,13 +34,13 @@ public:
     typedef JtData_Vector<uint32_t, int32_t> DecodedU;
 
     //! Return the number of decoded values.
-    Standard_EXPORT virtual int32_t GetOutValCount() const = 0;
+     virtual int32_t GetOutValCount() const = 0;
 
     //! Perform decoding.
-    Standard_EXPORT virtual Decoded::Mover Decode() = 0;
+     virtual Decoded::Mover Decode() = 0;
 
     //! Destructor.
-    Standard_EXPORT virtual ~EncodedData() {};
+     virtual ~EncodedData() {};
 
   protected:
     static Decoded::Mover decodePackage
@@ -65,13 +65,15 @@ public:
   //! Load CDP encoded data from the reader.
   Standard_Boolean Load1 (JtData_Reader& theReader)
   {
-    return myEncodedData = loadCDP1 (theReader);
+    myEncodedData = loadCDP1 (theReader);
+    return  myEncodedData.isValid();
   }
 
   //! Load CDP2 encoded data from the reader.
   Standard_Boolean Load2 (JtData_Reader& theReader)
   {
-    return myEncodedData = loadCDP2 (theReader);
+    myEncodedData = loadCDP2(theReader);
+    return myEncodedData.isValid();
   }
 
   //! Get expected count of output values.
@@ -122,8 +124,8 @@ protected:
   typedef JtData_SingleHandle<EncodedData> EncodedDataHandle;
 
 protected:
-  Standard_EXPORT static EncodedDataHandle loadCDP1 (JtData_Reader& theReader);
-  Standard_EXPORT static EncodedDataHandle loadCDP2 (JtData_Reader& theReader);
+   static EncodedDataHandle loadCDP1 (JtData_Reader& theReader);
+   static EncodedDataHandle loadCDP2 (JtData_Reader& theReader);
 
 
   DecodedData::Mover decode (JtDecode_Unpack& theUnpacker = JtDecode_Unpack_Null)

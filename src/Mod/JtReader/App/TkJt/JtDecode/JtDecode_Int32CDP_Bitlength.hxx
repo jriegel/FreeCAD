@@ -30,7 +30,7 @@ public:
 protected:
 
   //! Decode the data.
-  Standard_EXPORT virtual void decode (int32_t* theResultPtr, int32_t* theResultEnd);
+   virtual void decode (int32_t* theResultPtr, int32_t* theResultEnd);
 
   static const int STEP_SIZE = 2;
 };

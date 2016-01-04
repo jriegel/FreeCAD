@@ -43,21 +43,21 @@ public:
   //! Constructor initializing model by specified file
   //! @param theFileName - name of Jt file
   //! @param theParent - the parent model in case of non monolythic assembly.
-  Standard_EXPORT JtData_Model (const TCollection_ExtendedString& theFileName,
+   JtData_Model (const TCollection_ExtendedString& theFileName,
                                 const Handle(JtData_Model)& theParent = Handle(JtData_Model)());
 
   //! Read JT file header, TOC and LSG and return a handle to the root LSG node.
-  Standard_EXPORT Handle(JtNode_Partition) Init();
+   Handle(JtNode_Partition) Init();
 
   //! Lookup offset of a segment in TOCs of this model and its ancestor models.
-  Standard_EXPORT Handle(JtData_Model) FindSegment (const Jt_GUID& theGUID,
+   Handle(JtData_Model) FindSegment (const Jt_GUID& theGUID,
                                                           Jt_I32&  theOffset) const;
 
   //! Read object from a late loaded segment.
-  Standard_EXPORT Handle(JtData_Object) ReadSegment (const Jt_I32 theOffset) const;
+   Handle(JtData_Object) ReadSegment (const Jt_I32 theOffset) const;
 
   //! Dump this entity.
-  Standard_EXPORT Standard_Integer Dump (Standard_OStream& theStream) const;
+   Standard_Integer Dump (Standard_OStream& theStream) const;
 
   //! Return file name.
   const TCollection_ExtendedString& FileName()     const { return myFileName; }

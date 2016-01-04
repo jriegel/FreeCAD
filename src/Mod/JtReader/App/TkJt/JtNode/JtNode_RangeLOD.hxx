@@ -25,10 +25,10 @@ class JtNode_RangeLOD : public JtNode_LOD
 {
 public:
   //! Read this entity from a JT file.
-  Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader);
+   virtual Standard_Boolean Read (JtData_Reader& theReader);
 
   //! Dump this entity.
-  Standard_EXPORT virtual Standard_Integer Dump (Standard_OStream& theStream) const;
+   virtual Standard_Integer Dump (Standard_OStream& theStream) const;
 
   const Jt_VecF32& RangeLimits() const { return myVecR; }
   const Jt_CoordF32& Center()    const { return myCenter; }

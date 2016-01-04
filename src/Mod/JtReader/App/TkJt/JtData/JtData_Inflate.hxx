@@ -26,19 +26,19 @@ class JtData_Inflate : public JtData_Reader
 {
 public:
   //! Constructor.
-  Standard_EXPORT JtData_Inflate (JtData_Reader& theReader, const Standard_Size theLength);
+   JtData_Inflate (JtData_Reader& theReader, const Standard_Size theLength);
 
   //! Destructor.
-  Standard_EXPORT virtual ~JtData_Inflate();
+   virtual ~JtData_Inflate();
 
   //! Buffered inflate raw bytes.
-  Standard_EXPORT virtual Standard_Boolean ReadBytes (void* theBuffer, Standard_Size theLength);
+   virtual Standard_Boolean ReadBytes (void* theBuffer, Standard_Size theLength);
 
   //! Skip some bytes.
-  Standard_EXPORT virtual Standard_Boolean SkipBytes (Standard_Size theLength);
+   virtual Standard_Boolean SkipBytes (Standard_Size theLength);
 
   //! Get absolute reading position in the inflated data.
-  Standard_EXPORT virtual Standard_Size GetPosition() const;
+   virtual Standard_Size GetPosition() const;
 
 protected:
   Standard_Size read (Bytef* theBuffer, Standard_Size theLength);

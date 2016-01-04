@@ -26,13 +26,13 @@ class JtNode_Shape_TriStripSet : public JtNode_Shape_Vertex
 {
 public:
   //! Read this entity from a JT file.
-  Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader);
+   virtual Standard_Boolean Read (JtData_Reader& theReader);
 
   //! Dump this entity.
-  Standard_EXPORT virtual Standard_Integer Dump (Standard_OStream& theStream) const;
+   virtual Standard_Integer Dump (Standard_OStream& theStream) const;
 
   //! Bind a late loaded property to the object.
-  Standard_EXPORT virtual void BindLateLoads (const ListOfLateLoads& theLateLoads);
+   virtual void BindLateLoads (const ListOfLateLoads& theLateLoads);
 
   DEFINE_STANDARD_RTTI(JtNode_Shape_TriStripSet)
   DEFINE_OBJECT_CLASS (JtNode_Shape_TriStripSet)

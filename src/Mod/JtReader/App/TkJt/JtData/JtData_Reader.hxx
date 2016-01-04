@@ -43,19 +43,19 @@ public:
 
 public:
   //! Constructor.
-  Standard_EXPORT JtData_Reader (const Handle(JtData_Model)& theModel);
+   JtData_Reader (const Handle(JtData_Model)& theModel);
 
   //! Destructor.
-  Standard_EXPORT virtual ~JtData_Reader();
+   virtual ~JtData_Reader();
 
   //! Read raw bytes from the stream.
-  Standard_EXPORT virtual Standard_Boolean ReadBytes (void* theBuffer, Standard_Size theLength) = 0;
+   virtual Standard_Boolean ReadBytes (void* theBuffer, Standard_Size theLength) = 0;
 
   //! Skip some bytes.
-  Standard_EXPORT virtual Standard_Boolean SkipBytes (Standard_Size theLength) = 0;
+   virtual Standard_Boolean SkipBytes (Standard_Size theLength) = 0;
 
   //! Get absolute reading position.
-  Standard_EXPORT virtual Standard_Size GetPosition() const = 0;
+   virtual Standard_Size GetPosition() const = 0;
 
   //! Get the associated model.
   const Handle(JtData_Model)& Model() const { return myModel; }

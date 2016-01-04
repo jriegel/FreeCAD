@@ -27,10 +27,10 @@ public:
   JtDecode_Int32CDP_Null (Jt_VecU32::Mover theCodeText) : myCodeText (theCodeText) {}
 
   //! Get expected count of output values.
-  Standard_EXPORT virtual int32_t GetOutValCount() const;
+   virtual int32_t GetOutValCount() const;
 
   //! Move the loaded not encoded data to the given vector.
-  Standard_EXPORT virtual Decoded::Mover Decode();
+   virtual Decoded::Mover Decode();
 
 protected:
   Jt_VecU32 myCodeText;

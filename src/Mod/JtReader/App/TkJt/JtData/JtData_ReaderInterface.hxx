@@ -182,7 +182,7 @@ public:
   }
 
   //! Read a GUID.
-  Standard_EXPORT Standard_Boolean ReadGUID (Jt_GUID& theGUID)
+   Standard_Boolean ReadGUID (Jt_GUID& theGUID)
     { return ReadValue (theGUID.data.codes.U32) && ReadArray (theGUID.data.codes.U16) && ReadArray (theGUID.data.codes.U8); }
 
   // Explicit reading of basic JT data types

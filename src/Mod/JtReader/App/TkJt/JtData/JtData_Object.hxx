@@ -48,19 +48,19 @@ public:
 public:
   //! Read this entity from a JT file.
   //! @param theReader - current Jt file reader.
-  Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader);
+   virtual Standard_Boolean Read (JtData_Reader& theReader);
 
   //! Dump this entity.
-  Standard_EXPORT virtual Standard_Integer Dump (Standard_OStream& S) const;
+   virtual Standard_Integer Dump (Standard_OStream& S) const;
 
   //! Bind other objects to the object.
-  Standard_EXPORT virtual void BindObjects (const MapOfObjects& theObjectsMap);
+   virtual void BindObjects (const MapOfObjects& theObjectsMap);
 
   //! Bind a late loaded property to the object.
-  Standard_EXPORT virtual void BindLateLoads (const ListOfLateLoads& theLateLoads);
+   virtual void BindLateLoads (const ListOfLateLoads& theLateLoads);
 
   //! Bind a name to the object.
-  Standard_EXPORT virtual void BindName (const TCollection_ExtendedString& theName);
+   virtual void BindName (const TCollection_ExtendedString& theName);
 
   DEFINE_STANDARD_RTTI(JtData_Object)
 };

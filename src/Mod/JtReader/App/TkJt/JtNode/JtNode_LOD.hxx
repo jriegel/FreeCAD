@@ -25,10 +25,10 @@ class JtNode_LOD : public JtNode_Group
 {
 public:
   //! Read this entity from a JT file.
-  Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader);
+   virtual Standard_Boolean Read (JtData_Reader& theReader);
 
   //! Dump this entity.
-  Standard_EXPORT virtual Standard_Integer Dump (Standard_OStream& theStream) const;
+   virtual Standard_Integer Dump (Standard_OStream& theStream) const;
 
   DEFINE_STANDARD_RTTI(JtNode_LOD)
   DEFINE_OBJECT_CLASS (JtNode_LOD)

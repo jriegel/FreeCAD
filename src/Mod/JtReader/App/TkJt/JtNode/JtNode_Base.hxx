@@ -25,16 +25,16 @@ class JtNode_Base : public JtData_Object
 {
 public:
   //! Read this entity from a JT file.
-  Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader);
+   virtual Standard_Boolean Read (JtData_Reader& theReader);
 
   //! Dump this entity.
-  Standard_EXPORT virtual Standard_Integer Dump (Standard_OStream& theStream) const;
+   virtual Standard_Integer Dump (Standard_OStream& theStream) const;
 
   //! Bind other objects to the object.
-  Standard_EXPORT virtual void BindObjects (const MapOfObjects& theObjectsMap);
+   virtual void BindObjects (const MapOfObjects& theObjectsMap);
 
   //! Bind a name to the object.
-  Standard_EXPORT virtual void BindName (const TCollection_ExtendedString& theName);
+   virtual void BindName (const TCollection_ExtendedString& theName);
 
   //! Return object's attributes.
   const VectorOfObjects& Attributes() const { return myAttributes; }

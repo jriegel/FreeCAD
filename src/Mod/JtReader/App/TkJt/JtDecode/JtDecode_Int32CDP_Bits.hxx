@@ -43,17 +43,17 @@ public:
     { myOOBData = theOOBData; }
 
   //! Get expected count of output values.
-  Standard_EXPORT virtual int32_t GetOutValCount() const;
+   virtual int32_t GetOutValCount() const;
 
   //! Allocate the vector and decode the loaded bits.
-  Standard_EXPORT virtual Decoded::Mover Decode();
+   virtual Decoded::Mover Decode();
 
 protected:
   //! Decode the loaded bits into an allocated memory.
-  Standard_EXPORT virtual void decode (int32_t* theResultPtr, int32_t* theResultEnd);
+   virtual void decode (int32_t* theResultPtr, int32_t* theResultEnd);
 
   //! Decode the loaded bits into an allocated memory using decoded out-of-band data.
-  Standard_EXPORT virtual void decode (int32_t* theResultPtr,
+   virtual void decode (int32_t* theResultPtr,
                                        int32_t* theResultEnd,
                                  const int32_t* theOOBDataPtr);
 

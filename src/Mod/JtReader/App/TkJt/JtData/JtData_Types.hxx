@@ -122,13 +122,13 @@ public:
 public:
   Jt_GUID() { memset (this, 0, sizeof (Jt_GUID)); }
 
-  Standard_EXPORT Jt_GUID (Jt_U32 theU32, Jt_U16 theU16_1, Jt_U16 theU16_2,
+   Jt_GUID (Jt_U32 theU32, Jt_U16 theU16_1, Jt_U16 theU16_2,
                            Jt_U8 theU8_1, Jt_U8 theU8_2, Jt_U8 theU8_3, Jt_U8 theU8_4,
                            Jt_U8 theU8_5, Jt_U8 theU8_6, Jt_U8 theU8_7, Jt_U8 theU8_8);
 
-  Standard_EXPORT Jt_GUID (const char* theString);
+   Jt_GUID (const char* theString);
 
-  Standard_EXPORT Standard_Boolean ToString (char* theString) const;
+   Standard_Boolean ToString (char* theString) const;
 
   Standard_Boolean operator == (const Jt_GUID& theOther) const
     { return ((U64 (0) ^ theOther.U64 (0)) | (U64 (1) ^ theOther.U64 (1))) == 0; }

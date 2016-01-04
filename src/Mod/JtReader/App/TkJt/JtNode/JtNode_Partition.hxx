@@ -27,16 +27,16 @@ class JtNode_Partition : public JtNode_Group
 {
 public:
   //! Read this entity from a JT file.
-  Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader);
+   virtual Standard_Boolean Read (JtData_Reader& theReader);
 
   //! Dump this entity.
-  Standard_EXPORT virtual Standard_Integer Dump (Standard_OStream& theStream) const;
+   virtual Standard_Integer Dump (Standard_OStream& theStream) const;
 
   //! Load the referenced JT file and bind its LSG to this node.
-  Standard_EXPORT Standard_Boolean Load();
+   Standard_Boolean Load();
 
   //! Unbind children from this node and unload the referenced JT file.
-  Standard_EXPORT void Unload();
+   void Unload();
 
   //! Returns file name.
   const TCollection_ExtendedString& FileName() const { return myFileName; }

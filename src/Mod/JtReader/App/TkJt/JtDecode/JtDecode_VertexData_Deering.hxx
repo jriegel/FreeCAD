@@ -24,16 +24,16 @@ class JtDecode_VertexData_Deering : public JtDecode_VertexData
 {
 public:
   //! Constructor.
-  Standard_EXPORT JtDecode_VertexData_Deering (
+   JtDecode_VertexData_Deering (
     const Jt_U8 theNbBits,
     JtDecode_Unpack& theUnpacker = JtDecode_Unpack_Null);
 
 protected:
   //! Get expected count of output components.
-  Standard_EXPORT virtual Standard_Integer getOutCompCount (Standard_Size thePackageCount);
+   virtual Standard_Integer getOutCompCount (Standard_Size thePackageCount);
 
   //! Decoding method.
-  Standard_EXPORT virtual void decode (Decoded::Ref theResults);
+   virtual void decode (Decoded::Ref theResults);
 
   Jt_U8 myNbBits;
 };

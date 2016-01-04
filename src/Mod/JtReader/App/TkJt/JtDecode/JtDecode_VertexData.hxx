@@ -33,16 +33,16 @@ public:
   typedef JtData_CompVector<float, int32_t> Decoded;
 
   //! Load lossy quantized vertex coords data.
-  Standard_EXPORT static Handle LoadQuantizedCoords   (JtData_Reader& theReader);
+   static Handle LoadQuantizedCoords   (JtData_Reader& theReader);
 
   //! Load lossless compressed vertex coords data.
-  Standard_EXPORT static Handle LoadCompressedCoords  (JtData_Reader& theReader);
+   static Handle LoadCompressedCoords  (JtData_Reader& theReader);
 
   //! Load lossy quantized vertex normals data.
-  Standard_EXPORT static Handle LoadQuantizedNormals  (JtData_Reader& theReader);
+   static Handle LoadQuantizedNormals  (JtData_Reader& theReader);
 
   //! Load lossless compressed vertex normals data.
-  Standard_EXPORT static Handle LoadCompressedNormals (JtData_Reader& theReader);
+   static Handle LoadCompressedNormals (JtData_Reader& theReader);
 
   //! Get expected count of output vertices.
   int32_t GetOutVertexCount() { return myPackages.IsEmpty() ? 0 : myPackages[0].GetOutValCount(); }
@@ -85,10 +85,10 @@ protected:
   }
 
   //! Get expected count of output components; to be reimplemented in derived classes.
-  Standard_EXPORT virtual Standard_Integer getOutCompCount (Standard_Size thePackageCount) = 0;
+   virtual Standard_Integer getOutCompCount (Standard_Size thePackageCount) = 0;
 
   //! Decode the whole data; to be reimplemented in derived classes.
-  Standard_EXPORT virtual void decode (Decoded::Ref theResults) = 0;
+   virtual void decode (Decoded::Ref theResults) = 0;
 
 private:
 

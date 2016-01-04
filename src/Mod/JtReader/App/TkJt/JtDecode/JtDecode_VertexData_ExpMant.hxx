@@ -24,16 +24,16 @@ class JtDecode_VertexData_ExpMant : public JtDecode_VertexData
 {
 public:
   //! Constructor.
-  Standard_EXPORT JtDecode_VertexData_ExpMant (
+   JtDecode_VertexData_ExpMant (
     const Standard_Size theNbComponents,
     JtDecode_Unpack& theUnpacker = JtDecode_Unpack_Null);
 
 protected:
   //! Get expected count of output components.
-  Standard_EXPORT virtual Standard_Integer getOutCompCount (Standard_Size thePackageCount);
+   virtual Standard_Integer getOutCompCount (Standard_Size thePackageCount);
 
   //! Decoding method.
-  Standard_EXPORT virtual void decode (Decoded::Ref theResults);
+   virtual void decode (Decoded::Ref theResults);
 };
 
 #endif

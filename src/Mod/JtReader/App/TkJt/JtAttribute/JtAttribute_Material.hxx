@@ -24,13 +24,13 @@ class JtAttribute_Material : public JtAttribute_Base
 {
 public:
   //! Default constructor.
-  Standard_EXPORT JtAttribute_Material();
+   JtAttribute_Material();
 
   //! Read this entity from a JT file.
-  Standard_EXPORT virtual Standard_Boolean Read (JtData_Reader& theReader);
+   virtual Standard_Boolean Read (JtData_Reader& theReader);
 
   //! Dump this entity.
-  Standard_EXPORT virtual Standard_Integer Dump (Standard_OStream& theStream) const;
+   virtual Standard_Integer Dump (Standard_OStream& theStream) const;
 
   //! Return ambient color.
   const Jt_F32* AmbientColor()  const { return myAmbientColor;  }

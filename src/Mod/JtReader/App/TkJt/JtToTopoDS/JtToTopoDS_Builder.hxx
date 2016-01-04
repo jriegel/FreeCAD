@@ -29,10 +29,10 @@ class JtToTopoDS_Builder
 {
 public:
 
-  Standard_EXPORT static TopoDS_Shape Build (const Handle(JtNode_Base)&               theObject,
+   static TopoDS_Shape Build (const Handle(JtNode_Base)&               theObject,
                                              const Handle(Transfer_TransientProcess)& theTP);
 
-  Standard_EXPORT static TopoDS_Shape Build (const Handle(JtElement_XTBRep)&          theObject,
+   static TopoDS_Shape Build (const Handle(JtElement_XTBRep)&          theObject,
                                              const Handle(Transfer_TransientProcess)& theTP,
                                              Standard_Mutex*                          theMutex = NULL);
 
