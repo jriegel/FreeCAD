@@ -29,6 +29,7 @@
 #include <Base/Console.h>
 #include <Base/Interpreter.h>
 //#include <JtTk/JtkEntityFactory.h>
+#include "JtPart.h"
 
 
 extern struct PyMethodDef JtReader_methods[];
@@ -41,6 +42,10 @@ void AppJtReaderExport initJtReader() {
 
    // load dependend module
    Base::Interpreter().loadModule("Mesh");
+
+
+   JtReader::JtPart::init();
+
 
     // Initialize JtTk
    //JtkEntityFactory::init();

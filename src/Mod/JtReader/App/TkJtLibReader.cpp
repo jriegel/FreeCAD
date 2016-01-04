@@ -55,14 +55,18 @@ TkJtLibReader::TkJtLibReader(const char* jtFileName)
 
 }
 
+bool TkJtLibReader::isValid() const 
+{ 
+    return !(*partition).IsNull(); 
+}
 
 void TkJtLibReader::Dump()
 {
-    traverse((*partition));
+    traverseDump((*partition));
 
 }
 
-void TkJtLibReader::traverse(const Handle_JtData_Object& obj, int indent){
+void TkJtLibReader::traverseDump(const Handle_JtData_Object& obj, int indent){
 
     // write the indention level to console
     for (int i = 0; i < indent; i++)
@@ -149,7 +153,7 @@ void TkJtLibReader::traverse(const Handle_JtData_Object& obj, int indent){
         const JtData_Object::VectorOfObjects& objVector = group->Children();
         for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
             const Handle(JtData_Object)& childObj = objVector[i];
-            traverse(childObj, ++indent);
+            traverseDump(childObj, ++indent);
         }
 
 
@@ -164,4 +168,31 @@ void TkJtLibReader::HandleTriangulation(const Handle(JtElement_ShapeLOD_TriStrip
         << " Normals:" << ShapeLOD->Normals().Count() << endl;
 
 
+}
+
+int TkJtLibReader::countParts()
+{
+    return traverseCount((*partition));
+}
+
+int TkJtLibReader::traverseCount(const Handle_JtData_Object& obj){
+
+    int returnVal = 0;
+    // get the type name and switch behavior
+    string typeName(obj->DynamicType()->Name());
+
+    if (typeName == "JtNode_Part")
+        returnVal++;
+ 
+    // is it a group type traverse further down:
+    const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast(obj);
+    if (!group.IsNull()){
+        const JtData_Object::VectorOfObjects& objVector = group->Children();
+        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
+            const Handle(JtData_Object)& childObj = objVector[i];
+            returnVal += traverseCount(childObj);
+        }
+    }
+
+    return returnVal;
 }

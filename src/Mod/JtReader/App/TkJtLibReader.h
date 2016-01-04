@@ -34,14 +34,19 @@ class TkJtLibReader
 public:
     TkJtLibReader(const char* jtFileName); 
 
+    bool isValid() const;
+
     void Dump();
+
+    int countParts();
 
 protected:
     Handle_JtData_Model *model;
     Handle_JtNode_Partition *partition;
 
-    void traverse(const Handle_JtData_Object& obj, int indent = 0);
+    void traverseDump(const Handle_JtData_Object& obj, int indent = 0);
     void HandleTriangulation(const Handle_JtElement_ShapeLOD_TriStripSet& ShapeLOD);
+    int traverseCount(const Handle_JtData_Object& obj);
 };
 
 
