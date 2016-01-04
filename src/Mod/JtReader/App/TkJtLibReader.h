@@ -26,6 +26,8 @@
 class Handle_JtData_Model;
 class Handle_JtNode_Partition;
 class Handle_JtData_Object;
+class Handle_JtElement_ShapeLOD_TriStripSet;
+
 
 class TkJtLibReader 
 {
@@ -39,6 +41,7 @@ protected:
     Handle_JtNode_Partition *partition;
 
     void traverse(const Handle_JtData_Object& obj, int indent = 0);
+    void HandleTriangulation(const Handle_JtElement_ShapeLOD_TriStripSet& ShapeLOD);
 };
 
 

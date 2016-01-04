@@ -34,9 +34,14 @@
 #include <JtNode_Partition.hxx>
 #include <JtData_Object.hxx>
 #include <JtNode_Part.hxx>
-#include <JtNode_LOD.hxx>
+#include <JtNode_RangeLOD.hxx>
+#include <JtElement_ShapeLOD_TriStripSet.hxx>
+#include <JtNode_Shape_TriStripSet.hxx>
+
 
 using namespace std;
+
+
 
 TkJtLibReader::TkJtLibReader(const char* jtFileName)
 {
@@ -70,30 +75,93 @@ void TkJtLibReader::traverse(const Handle_JtData_Object& obj, int indent){
 
     if (typeName == "JtNode_Partition"){
         const Handle(JtNode_Partition) partition = Handle(JtNode_Partition)::DownCast(obj);
-        const JtData_Object::VectorOfObjects& objVector = partition->Children();
-        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
-            const Handle(JtData_Object)& childObj = objVector[i];
-            traverse(childObj, ++indent);
-        }
 
+ 
     }
     else if (typeName == "JtNode_Part"){
         const Handle(JtNode_Part) part = Handle(JtNode_Part)::DownCast(obj);
-        const JtData_Object::VectorOfObjects& objVector = part->Children();
+ 
+        const JtData_Object::VectorOfLateLoads& lateLoads = part->LateLoads();
+        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < lateLoads.Count(); i++){
+            const Handle(JtProperty_LateLoaded) lateLoad = lateLoads[i];
+            lateLoad->Load();
+            Handle(JtData_Object) anObject = lateLoad->DefferedObject();
+            anObject->Dump(cout); cout << endl;
+            if (!anObject.IsNull())
+            {
+                Handle(JtElement_ShapeLOD_TriStripSet) aLOD =
+                    Handle(JtElement_ShapeLOD_TriStripSet)::DownCast(anObject);
+
+                if (!aLOD.IsNull())
+                {
+                    HandleTriangulation(aLOD);
+                }
+
+                lateLoad->Unload();
+            }
+        }
+
+    }
+    else if (typeName == "JtNode_RangeLOD"){
+        const Handle(JtNode_RangeLOD) lod = Handle(JtNode_RangeLOD)::DownCast(obj);
+ 
+    }
+    else if (typeName == "JtNode_Group"){
+        const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast(obj);
+
+    }
+    else if (typeName == "JtNode_Shape_TriStripSet"){
+        const Handle(JtNode_Shape_TriStripSet) stripSet = Handle(JtNode_Shape_TriStripSet)::DownCast(obj);
+
+        // get the attributes
+        const JtData_Object::VectorOfObjects& attibutes = stripSet->Attributes();
+        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < attibutes.Count(); i++){
+            attibutes[i].Dump(cout); cout << attibutes[i]->DynamicType() << endl;
+        }
+
+        const JtData_Object::VectorOfLateLoads& lateLoads = stripSet->LateLoads();
+        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < lateLoads.Count(); i++){
+            const Handle(JtProperty_LateLoaded) lateLoad = lateLoads[i];
+            lateLoad->Load();
+            Handle(JtData_Object) anObject = lateLoad->DefferedObject();
+            anObject->Dump(cout); cout << endl;
+            if (!anObject.IsNull())
+            {
+                Handle(JtElement_ShapeLOD_TriStripSet) aLOD =
+                    Handle(JtElement_ShapeLOD_TriStripSet)::DownCast(anObject);
+
+                if (!aLOD.IsNull())
+                {
+                    HandleTriangulation(aLOD);
+                }
+
+                lateLoad->Unload();
+            }
+        }
+
+
+
+    }
+
+    // is it a group type traverse further down:
+    const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast(obj);
+    if (!group.IsNull()){
+        const JtData_Object::VectorOfObjects& objVector = group->Children();
         for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
             const Handle(JtData_Object)& childObj = objVector[i];
             traverse(childObj, ++indent);
         }
 
-    }
-    else if (typeName == "JtNode_LOD"){
-        const Handle(JtNode_LOD) lod = Handle(JtNode_LOD)::DownCast(obj);
-        const JtData_Object::VectorOfObjects& objVector = lod->Children();
-        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
-            const Handle(JtData_Object)& childObj = objVector[i];
-            traverse(childObj, ++indent);
-        }
 
     }
+
+}
+
+void TkJtLibReader::HandleTriangulation(const Handle(JtElement_ShapeLOD_TriStripSet)& ShapeLOD){
+
+    cout << "Indexes: " << ShapeLOD->Indices().Count()
+        << " Vertexes:" << ShapeLOD->Vertices().Count()
+        << " Normals:" << ShapeLOD->Normals().Count() << endl;
+
 
 }
