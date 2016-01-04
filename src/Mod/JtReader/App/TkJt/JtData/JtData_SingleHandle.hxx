@@ -64,7 +64,8 @@ public:
     return anObject;
   }
 
-  operator bool()      const { return  myObject != 0L; }
+  bool isValid() const{ return  myObject != 0L; }
+  //operator bool()      const { return  myObject != 0L; }
   bool  operator !  () const { return  myObject == 0L; }
   Type* operator -> () const { return  myObject; }
   Type& operator *  () const { return *myObject; }
