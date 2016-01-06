@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<GenerateModel xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="generateMetaModel_Module.xsd">
+	<PythonExport 
+		Father="GeoFeaturePy"  
+		Name="JtPartPy" 
+		Twin="JtPart" 
+		TwinPointer="JtPart" 
+		Include="Mod/JtReader/App/JtPart.h" 
+		Namespace="JtReader" 
+		FatherInclude="App/GeoFeaturePy.h" 
+		FatherNamespace="App">
+		<Documentation>
+			<Author Licence="LGPL" Name="Juergen Riegel" EMail="juergen.riegel@web.de" />
+			<UserDocu>The JtPart object
+			</UserDocu>
+		</Documentation>
+
+	</PythonExport>
+</GenerateModel>

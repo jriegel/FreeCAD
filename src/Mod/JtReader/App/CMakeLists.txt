@@ -49,7 +49,17 @@ SET(JtReader_SRCS
     TkJtLibReader.cpp
 	JtPart.h
 	JtPart.cpp
+	JtPartPyImp.cpp
+	JtPartHandle.h
+	JtPartHandle.cpp
 )
+
+generate_from_xml(JtPartPy)
+
+SET(JtReader_XML_SRCS
+    JtPartPy.xml
+)
+SOURCE_GROUP("XML" FILES ${JtReader_XML_SRCS})
 
 # JrJt sources 
 FILE( GLOB JRJT_SRCS JrJt/*.cpp JrJt/*.h )
@@ -74,7 +84,7 @@ SOURCE_GROUP("TkJt/JtToTopoDS" FILES ${TKJT_JtToTopoDS_SRCS}  )
 
 SOURCE_GROUP("Module" FILES ${JtReader_SRCS})
 
-add_library(JtReader SHARED ${JtReader_SRCS} ${JRJT_SRCS} ${TKJT_JtAttribute_SRCS} ${TKJT_JtData_SRCS} ${TKJT_JtDecode_SRCS} ${TKJT_JtElement_SRCS} ${TKJT_JtNode_SRCS} ${TKJT_JtProperty_SRCS} ${TKJT_JtToTopoDS_SRCS} )
+add_library(JtReader SHARED ${JtReader_SRCS} ${JRJT_SRCS} ${TKJT_JtAttribute_SRCS} ${TKJT_JtData_SRCS} ${TKJT_JtDecode_SRCS} ${TKJT_JtElement_SRCS} ${TKJT_JtNode_SRCS} ${TKJT_JtProperty_SRCS} ${TKJT_JtToTopoDS_SRCS} ${JtReader_XML_SRCS})
 target_link_libraries(JtReader ${JtReader_LIBS})
 
 fc_target_copy_resource(JtReader 
