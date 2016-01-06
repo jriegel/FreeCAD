@@ -61,6 +61,7 @@ Handle(JtNode_Partition) JtData_Model::Init()
   if (!open (aFile))
   {
     ALARM ("Error: Failed to open Jt file");
+    ALARM (myFileName);
     return Handle(JtNode_Partition)();
   }
 
@@ -543,7 +544,7 @@ Standard_Boolean JtData_Model::readElement (JtData_Reader&         theReader,
   if (aBytesSpec > aReaderPos)
   {
     Standard_Size aBytesRest = aBytesSpec - aReaderPos;
-    WARNING ("Warning: " + aBytesRest + " element bytes remained after reading, corrected");
+    WARNING ("Warning:  element bytes remained after reading, corrected");
     if (!theReader.Skip (aBytesRest))
       return Standard_False;
   }

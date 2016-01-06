@@ -20,7 +20,7 @@
 #include <Message.hxx>
 #include <Message_Messenger.hxx>
 
-#ifdef OCCT_DEBUG
+#ifdef FC_DEBUG
   #define MESSAGE(msg, type) \
     ::Message::DefaultMessenger()->Send (TCollection_ExtendedString() + msg, type)
 #else
