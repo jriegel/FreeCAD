@@ -42,6 +42,11 @@ public:
         return Standard_False;
 
       Jt_I32 anIdx = myIndices[myIdxIdx];
+
+      // check if we have a index with unsigned int! 
+      if (anIdx < 0)
+          return Standard_False;
+
       if (anIdx > myEntities.Count())
         return Standard_False;
 
