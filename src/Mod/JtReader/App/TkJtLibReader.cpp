@@ -112,8 +112,8 @@ void TkJtLibReader::traverseDump(const Handle_JtData_Object& obj, std::ostream &
         const Handle(JtNode_Partition) partition = Handle(JtNode_Partition)::DownCast(obj);
 
         // load the rest of the referenced jt files:
-        if (partition->Children().Count() <= 0)
-            partition->Load();
+        //if (partition->Children().Count() <= 0)
+        //    partition->Load();
  
     }
     else if (typeName == "JtNode_Part"){
