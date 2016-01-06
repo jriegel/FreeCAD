@@ -26,7 +26,7 @@
 #include <QString>
 #include <vector>
 
-class AppJtReaderExport JcadLibReader
+class JtReaderExport JcadLibReader
 {
     QString log;
 

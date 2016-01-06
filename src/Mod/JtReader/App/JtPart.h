@@ -39,7 +39,7 @@ namespace JtReader
 /** Plane Object
  *  Used to define planar support for all kind of operations in the document space
  */
- class AppJtReaderExport JtPart : public App::GeoFeature
+ class JtReaderExport JtPart : public App::GeoFeature
 {
     PROPERTY_HEADER(App::JtPart);
 

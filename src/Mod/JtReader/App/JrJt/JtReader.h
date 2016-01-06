@@ -7,6 +7,8 @@
 class LodHandler;
 
 
+namespace JrJt
+{
 
 class JtReader
 {
@@ -31,3 +33,4 @@ protected:
 
 };
 
+}

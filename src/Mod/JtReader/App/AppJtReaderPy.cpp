@@ -48,7 +48,7 @@ using std::vector;
 using namespace MeshCore;
 
 
-//using namespace JtReader;
+using namespace JtReader;
 
 /* module functions */
 static PyObject * read(PyObject *self, PyObject *args)
@@ -288,7 +288,7 @@ insert(PyObject *self, PyObject *args)
 
 	Py_Return;    
 }
-/*
+
 static PyObject * readJtPart(PyObject *self, PyObject *args)
 {
     char* Name;
@@ -346,24 +346,22 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
 
         Py_Return;
 }
-*/
 
-static PyObject * readJtPart(PyObject *self, PyObject *args)
+
+static PyObject * dumpTree(PyObject *self, PyObject *args)
 {
     char* Name;
-    PyObject* PartObject = 0;
-    if (!PyArg_ParseTuple(args, "et|O!", "utf-8", &Name, &(App::PartPy::Type), &PartObject))
+    if (!PyArg_ParseTuple(args, "et", "utf-8", &Name))
         return 0;
     std::string Utf8Name = std::string(Name);
     PyMem_Free(Name);
-    App::Part* Part = 0;
-    if (PartObject)
-        App::Part* Part = static_cast<App::PartPy*>(PartObject)->getPartPtr();
 
     PY_TRY{
         TkJtLibReader reader(Utf8Name.c_str());
 
-        reader.Dump();
+        //std::stringstream out;
+
+        reader.Dump(cout);
 
 
     }
@@ -377,8 +375,9 @@ struct PyMethodDef JtReader_methods[] = {
     {"open"       ,open ,       Py_NEWARGS, "open a jt file in a new Document"},				
     {"insert"     ,insert,      Py_NEWARGS, "isert a jt file in a existing document"},
     {"read"       ,read,        Py_NEWARGS, "Read a Mesh from a jt file and returns a Mesh object."},
-    { "readJtPart", readJtPart, METH_VARARGS,
-    "readJtPart(JtFilePath,PartObject) -- Read a Jt into a PartObject" },
+    { "readJtPart", readJtPart, METH_VARARGS },
+    { "dumpTree", dumpTree, METH_VARARGS },
+    {"readJtPart(JtFilePath,PartObject) -- Read a Jt into a PartObject" },
     { NULL, NULL }
 };
 

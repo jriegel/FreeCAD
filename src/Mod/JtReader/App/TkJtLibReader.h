@@ -29,27 +29,39 @@ class Handle_JtData_Object;
 class Handle_JtElement_ShapeLOD_TriStripSet;
 
 
-class TkJtLibReader 
+namespace JtReader
+{
+
+    class JtPartHandle;
+
+
+/** Jt reader class.
+*   Uses the TkJt lib to read jt file(s) and generate
+*   JtPartHandle classes as an interface for late loading
+*   and access to the mesh and meta data in the jt files
+*/
+class TkJtLibReader
 {
 public:
-    TkJtLibReader(const char* jtFileName); 
+    TkJtLibReader(const char* jtFileName);
 
     bool isValid() const;
 
-    void Dump();
+    void Dump(std::ostream &output);
 
     int countParts();
+
+    JtPartHandle* extractSinglePartHandle();
 
 protected:
     Handle_JtData_Model *model;
     Handle_JtNode_Partition *partition;
 
-    void traverseDump(const Handle_JtData_Object& obj, int indent = 0);
-    void HandleTriangulation(const Handle_JtElement_ShapeLOD_TriStripSet& ShapeLOD);
+    void traverseDump(const Handle_JtData_Object& obj, std::ostream &output, int indent = 0);
     int traverseCount(const Handle_JtData_Object& obj);
 };
 
 
-
+}
 
 

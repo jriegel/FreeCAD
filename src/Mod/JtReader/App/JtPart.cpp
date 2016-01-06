@@ -66,7 +66,7 @@ void JtReader::JtPart::onChanged(const App::Property* prop)
         if (! reader.isValid())
             return;
 
-        reader.Dump();
+        reader.Dump(std::cout);
 
         if (reader.countParts() != 1)
             return;

@@ -36,7 +36,7 @@ extern struct PyMethodDef JtReader_methods[];
 
 
 extern "C" {
-void AppJtReaderExport initJtReader() {
+void JtReaderExport initJtReader() {
 
    (void) Py_InitModule("JtReader", JtReader_methods);   /* mod name, table ptr */
 

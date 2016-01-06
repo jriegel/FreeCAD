@@ -2,7 +2,7 @@
 #include "JrJt/JtReader.h"
 
 
-class TestJtReader: public JtReader
+class TestJtReader: public JrJt::JtReader
 {
 public:
 	TestJtReader();
