@@ -35,11 +35,13 @@
 namespace JtReader
 {
 
+ class JtPartHandle;
+
 
 /** Plane Object
  *  Used to define planar support for all kind of operations in the document space
  */
- class JtReaderExport JtPart : public App::GeoFeature
+class JtReaderExport JtPart : public App::GeoFeature
 {
     PROPERTY_HEADER(App::JtPart);
 
@@ -61,7 +63,8 @@ public:
 
     /// Return the bounding box of the plane (this is always a fixed size)
     static Base::BoundBox3d getBoundBox();
-};
+    void initJtHandler(JtPartHandle *partPtr);
+ };
 
 
 } //namespace JtReader

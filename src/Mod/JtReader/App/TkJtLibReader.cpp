@@ -28,6 +28,7 @@
 #include <Base/Console.h>
 
 #include "TkJtLibReader.h"
+#include "JtPartHandle.h"
 
 
 #include <JtData_Model.hxx>
@@ -49,7 +50,9 @@ using namespace JtReader;
 
 
 TkJtLibReader::TkJtLibReader(const char* jtFileName)
+    :doDeepRead(false)
 {
+    // only needed when reed multipart:
     QFileInfo fileInfo(QString::fromUtf8(jtFileName));
     QDir dir(fileInfo.absoluteDir());
     QDir::setCurrent(dir.absolutePath());
@@ -112,8 +115,8 @@ void TkJtLibReader::traverseDump(const Handle_JtData_Object& obj, std::ostream &
         const Handle(JtNode_Partition) partition = Handle(JtNode_Partition)::DownCast(obj);
 
         // load the rest of the referenced jt files:
-        //if (partition->Children().Count() <= 0)
-        //    partition->Load();
+        if (doDeepRead && partition->Children().Count() <= 0)
+            partition->Load(); // TODO reading referenced jt files still buggy
  
     }
     else if (typeName == "JtNode_Part"){
@@ -137,7 +140,11 @@ void TkJtLibReader::traverseDump(const Handle_JtData_Object& obj, std::ostream &
     }
     else if (typeName == "JtNode_RangeLOD"){
         const Handle(JtNode_RangeLOD) lod = Handle(JtNode_RangeLOD)::DownCast(obj);
- 
+
+    }
+    else if (typeName == "JtNode_LOD"){
+        const Handle(JtNode_LOD) lod = Handle(JtNode_LOD)::DownCast(obj);
+
     }
     else if (typeName == "JtNode_Group"){
         const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast(obj);
@@ -195,35 +202,90 @@ void TkJtLibReader::traverseDump(const Handle_JtData_Object& obj, std::ostream &
 
 }
 
-
-int TkJtLibReader::countParts()
-{
-    return traverseCount((*partition));
-}
-
-int TkJtLibReader::traverseCount(const Handle_JtData_Object& obj){
+int traverseTypeCount(const Handle_JtData_Object& obj, const char* typeNameToCount){
 
     int returnVal = 0;
     // get the type name and switch behavior
     string typeName(obj->DynamicType()->Name());
 
-    if (typeName == "JtNode_Part")
+    if (typeName == typeNameToCount)
         returnVal++;
- 
+
     // is it a group type traverse further down:
     const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast(obj);
     if (!group.IsNull()){
         const JtData_Object::VectorOfObjects& objVector = group->Children();
         for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
             const Handle(JtData_Object)& childObj = objVector[i];
-            returnVal += traverseCount(childObj);
+            returnVal += traverseTypeCount(childObj, typeNameToCount);
         }
     }
 
     return returnVal;
 }
 
-JtPartHandle* JtReader::TkJtLibReader::extractSinglePartHandle()
+int TkJtLibReader::countParts()
 {
-    return nullptr;
+    return traverseTypeCount((*partition), "JtNode_Part");
 }
+
+int JtReader::TkJtLibReader::countInstances()
+{
+    return traverseTypeCount((*partition), "JtNode_Instance");
+}
+
+int JtReader::TkJtLibReader::countPartitions()
+{
+    int returnVal = 0;
+
+    // ignore the root Partition and traverse the children:
+    const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast((*partition));
+    if (!group.IsNull()){
+        const JtData_Object::VectorOfObjects& objVector = group->Children();
+        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
+            const Handle(JtData_Object)& childObj = objVector[i];
+            returnVal += traverseTypeCount(childObj, "JtNode_Partition");
+        }
+    }
+
+    return returnVal;
+}
+
+// traverse the tree and collect all Parts into a corsoponding PartHandle
+void collectPartHandles(const Handle_JtData_Object& obj, const Handle_JtData_Object& parentObj, std::vector<JtPartHandle*>& partHandlerVector)
+{
+    // get the type name and switch behavior
+    string typeName(obj->DynamicType()->Name());
+
+    if (typeName == "JtNode_Part"){
+        const Handle(JtNode_Part) part = Handle(JtNode_Part)::DownCast(obj);
+        JtPartHandle *newHandle = new JtPartHandle();
+        newHandle->init(part,parentObj);
+        partHandlerVector.push_back(newHandle);
+
+        // assume no further Part below a Part
+        return;
+    }
+        
+    // is it a group type traverse further down:
+    const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast(obj);
+    if (!group.IsNull()){
+        const JtData_Object::VectorOfObjects& objVector = group->Children();
+        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
+            const Handle(JtData_Object)& childObj = objVector[i];
+            collectPartHandles(childObj, obj , partHandlerVector);
+        }
+    }
+}
+
+std::vector<JtPartHandle*> JtReader::TkJtLibReader::extractPartHandles()
+{
+    std::vector<JtPartHandle*> retVec;
+    retVec.reserve(30);
+
+    collectPartHandles((*partition), Handle_JtData_Object(), retVec);
+
+    return retVec;
+}
+
+

@@ -37,12 +37,16 @@
 #include <Mod/Mesh/App/Core/Elements.h>
 #include <Mod/Mesh/App/MeshPy.h>
 #include <Mod/Mesh/App/MeshFeature.h>
+
 #include <App/PartPy.h>
+#include <App/Part.h>
+#include <App/Document.h>
 
 #include "TestJtReader.h"
 #include "JcadLibReader.h"
 #include "TkJtLibReader.h"
-#include "App/Part.h"
+#include "JtPartHandle.h"
+#include "JtPart.h"
 
 using std::vector;
 using namespace MeshCore;
@@ -289,6 +293,64 @@ insert(PyObject *self, PyObject *args)
 	Py_Return;    
 }
 
+//static PyObject * readJtPart(PyObject *self, PyObject *args)
+//{
+//    char* Name;
+//    PyObject* PartObject = 0;
+//    if (!PyArg_ParseTuple(args, "etO!", "utf-8", &Name, &(App::PartPy::Type), &PartObject))
+//        return 0;
+//    std::string Utf8Name = std::string(Name);
+//    PyMem_Free(Name);
+//    App::Part* Part = static_cast<App::PartPy*>(PartObject)->getPartPtr();
+//
+//    PY_TRY{
+//
+//        JcadLibReader reader;
+//
+//        reader.read(Utf8Name.c_str());
+//
+//        int faceCount = reader.getFaceCount();
+//
+//        for (int i = 0; i < faceCount; i++){
+//
+//            const JcadLibReader::Buffer &buf = reader.getBuffer(i);
+//
+//
+//            MeshPointArray meshPoints;// (buf.Vertexes.size());
+//            MeshFacetArray meshFacets;// (buf.Indexes.size() / 3);
+//
+//            for (auto verts : buf.Vertexes){
+//                meshPoints.push_back(MeshPoint(Base::Vector3f(verts.vec[0], verts.vec[1], verts.vec[2])));
+//            }
+//            for (std::vector<int32_t>::const_iterator it = buf.Indexes.begin(); it != buf.Indexes.end(); it += 3){
+//                meshFacets.push_back(MeshFacet(*it, *(it + 1), *(it + 2)));
+//            }
+//
+//            MeshKernel tmp;
+//            tmp.Adopt(meshPoints, meshFacets, true);
+//
+//            App::Document *doc = Part->getDocument();
+//            App::DocumentObject *obj = doc->addObject("Mesh::Feature", reader.getName(i).toStdString().c_str());
+//
+//            Part->addObject(obj);
+//
+//            Mesh::Feature *meshObj = dynamic_cast<Mesh::Feature*>(obj);
+//
+//            meshObj->Mesh.setValue(tmp);
+//
+//        }
+//
+//
+//        Base::Console().Message(reader.getLog().toStdString().c_str());
+//
+//
+//
+//    }
+//        PY_CATCH
+//
+//        Py_Return;
+//}
+
 static PyObject * readJtPart(PyObject *self, PyObject *args)
 {
     char* Name;
@@ -298,48 +360,30 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
     std::string Utf8Name = std::string(Name);
     PyMem_Free(Name);
     App::Part* Part = static_cast<App::PartPy*>(PartObject)->getPartPtr();
+    App::Document *Doc = Part->getDocument();
 
     PY_TRY{
+        TkJtLibReader reader(Utf8Name.c_str());
 
-        JcadLibReader reader;
+        if (!reader.isValid())
+            Py_Error(Base::BaseExceptionFreeCADError, "Could not read Jt-File");
 
-        reader.read(Utf8Name.c_str());
-
-        int faceCount = reader.getFaceCount();
-
-        for (int i = 0; i < faceCount; i++){
-
-            const JcadLibReader::Buffer &buf = reader.getBuffer(i);
+        if (reader.countPartitions()>0)
+            Py_Error(Base::BaseExceptionFreeCADError, "This method will not read multipart Jt files!");
 
 
-            MeshPointArray meshPoints;// (buf.Vertexes.size());
-            MeshFacetArray meshFacets;// (buf.Indexes.size() / 3);
+        // get all the parts (bodies) of the Jt-file 
+        std::vector<JtPartHandle*> partHandlerVector = reader.extractPartHandles();
 
-            for (auto verts : buf.Vertexes){
-                meshPoints.push_back(MeshPoint(Base::Vector3f(verts.vec[0], verts.vec[1], verts.vec[2])));
-            }
-            for (std::vector<int32_t>::const_iterator it = buf.Indexes.begin(); it != buf.Indexes.end(); it += 3){
-                meshFacets.push_back(MeshFacet(*it, *(it + 1), *(it + 2)));
-            }
- 
-            MeshKernel tmp;
-            tmp.Adopt(meshPoints, meshFacets,true);
+        for (JtPartHandle *partPtr : partHandlerVector){
+             App::DocumentObject* newObj = Doc->addObject("JtReader::JtPart", partPtr->getName() ? partPtr->getName():"JtBody");
+             JtPart* newJtPart = dynamic_cast<JtPart*>(newObj);
 
-            App::Document *doc = Part->getDocument();
-            App::DocumentObject *obj = doc->addObject("Mesh::Feature", reader.getName(i).toStdString().c_str());
-
-            Part->addObject(obj);
-
-            Mesh::Feature *meshObj = dynamic_cast<Mesh::Feature*>(obj);
-
-            meshObj->Mesh.setValue(tmp);
+             // add the handler to the object and put it the App::Part
+             newJtPart->initJtHandler(partPtr);
+             Part->addObject(newJtPart);
 
         }
-
- 
-        Base::Console().Message(reader.getLog().toStdString().c_str());
-
-
 
     }
         PY_CATCH
@@ -359,11 +403,7 @@ static PyObject * dumpTree(PyObject *self, PyObject *args)
     PY_TRY{
         TkJtLibReader reader(Utf8Name.c_str());
 
-        //std::stringstream out;
-
         reader.Dump(cout);
-
-
     }
     PY_CATCH
 

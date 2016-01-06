@@ -28,6 +28,7 @@
 
 
 #include "JtPart.h"
+#include "JtPartHandle.h"
 
 #include "TkJtLibReader.h"
 
@@ -75,6 +76,11 @@ void JtReader::JtPart::onChanged(const App::Property* prop)
         
     }
 
+}
+
+void JtReader::JtPart::initJtHandler(JtPartHandle *partPtr)
+{
+    throw std::logic_error("The method or operation is not implemented.");
 }
 
 

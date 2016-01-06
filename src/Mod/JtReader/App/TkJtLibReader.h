@@ -49,9 +49,18 @@ public:
 
     void Dump(std::ostream &output);
 
+    /// count the number of Parts in the LSG of the Jt-File
     int countParts();
+    /// count the number of Reference objects in the LSG of the Jt-File
+    int countInstances();
+    /// count the number of Partition objects in the LSG, > 0 means the file references to external Jt-File
+    int countPartitions();
 
-    JtPartHandle* extractSinglePartHandle();
+    /// extract all the Parts in the File as a Part Handler
+    std::vector<JtPartHandle*> extractPartHandles();
+
+    /// read referenced files if true
+    bool doDeepRead;
 
 protected:
     Handle_JtData_Model *model;

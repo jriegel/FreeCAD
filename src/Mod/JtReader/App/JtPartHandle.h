@@ -24,29 +24,62 @@
 
 // forward of the TkJt data model
 class Handle_JtData_Model;
-class Handle_JtNode_Partition;
+
 class Handle_JtData_Object;
+
+class Handle_JtNode_Part;
+class Handle_JtNode_Partition;
+class Handle_JtNode_LOD;
+class Handle_JtNode_Instance;
+
+
 class Handle_JtElement_ShapeLOD_TriStripSet;
 
-#include <App/ComplexGeoData.h>
 
+#include <App/ComplexGeoData.h>
 
 namespace JtReader
 {
 
-    class JtPartHandle
-    {
-    public:
-        JtPartHandle(const char* jtFileName);
-
-        void getFaces(int lodLevel, std::vector<Base::Vector3d> &Points, std::vector<Data::ComplexGeoData::Facet> &Topo);
-
-    protected:
-        Handle_JtData_Model *model;
-        Handle_JtNode_Partition *partition;
-
-        
+class JtReaderExport JtPartHandle
+{
+public:
+    struct JtMat {
+        float AmbientColor[4];
+        float DiffuseColor[4];
+        float SpecularColor[4];
+        float EmissionColor[4];
+        float Shininess;
+        float Reflectivity;
     };
+
+public:
+    JtPartHandle();
+    ~JtPartHandle();
+
+    /// fill this handle with the information in the JtPartObject
+    void init(const Handle_JtNode_Part &jtPartObject, const Handle_JtData_Object &parentObject);
+
+    /// get the actual mesh and material 
+    void getFaces(int lodLevel, int fragment, std::vector<Base::Vector3d> &Points, std::vector<Base::Vector3d> &Normals, std::vector<Data::ComplexGeoData::Facet> &Topo,bool &hasMat, JtMat &mat);
+
+    const char* getName();
+    // returns the number of available LODs
+    int getLodCount();
+    // return the number of Meshes (with different material) of a given LOD
+    int getLodFragmentCount(int lodLevel);
+
+    /// uses a callback to provide the Meshes 
+    /// set to true if the Part was under an instance object
+    bool isInstanced;
+
+protected:
+    //Handle_JtData_Model model;
+    Handle_JtNode_Instance *instanceObj;
+    Handle_JtNode_LOD *lodObject;
+    std::string partName;
+    
+};
 
 }
 

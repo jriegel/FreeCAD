@@ -31,12 +31,15 @@
 
 
 #include <JtData_Model.hxx>
-#include <JtNode_Partition.hxx>
 #include <JtData_Object.hxx>
+
+#include <JtNode_Partition.hxx>
 #include <JtNode_Part.hxx>
+#include <JtNode_Instance.hxx>
 #include <JtNode_RangeLOD.hxx>
-#include <JtElement_ShapeLOD_TriStripSet.hxx>
 #include <JtNode_Shape_TriStripSet.hxx>
+
+#include <JtElement_ShapeLOD_TriStripSet.hxx>
 
 
 
@@ -46,23 +49,74 @@ using namespace JtReader;
 
 
 
-JtPartHandle::JtPartHandle(const char* jtFileName)
+JtPartHandle::JtPartHandle()
 {
-    model = new Handle_JtData_Model();
-    partition = new Handle(JtNode_Partition);
-
-    *model = new JtData_Model(TCollection_ExtendedString(jtFileName));
-	//Base::Console().Log("FcLodHandler::startLod()");
-
-    (*partition) = (*model)->Init(); // inti reads the TOC
+    instanceObj = new Handle_JtNode_Instance();
+    lodObject = new Handle_JtNode_LOD();
 
 }
 
-void JtReader::JtPartHandle::getFaces(int lodLevel, std::vector<Base::Vector3d> &Points, std::vector<Data::ComplexGeoData::Facet> &Topo)
+JtPartHandle::~JtPartHandle()
+{
+    delete(instanceObj);
+    delete(lodObject);
+
+}
+
+void JtPartHandle::getFaces(int lodLevel, int fragment, std::vector<Base::Vector3d> &Points, std::vector<Base::Vector3d> &Normals, std::vector<Data::ComplexGeoData::Facet> &Topo, bool &hasMat, JtMat &mat)
 {
     Points.reserve(10);
     Topo.reserve(10);
 
+}
+
+void JtPartHandle::init(const Handle_JtNode_Part &jtPartObject, const Handle_JtData_Object &parentObject)
+{
+    // check on Instancing
+    const Handle(JtNode_Instance) instance = Handle(JtNode_Instance)::DownCast(parentObject);
+    if (!instance.IsNull())
+        (*instanceObj) = instance;
+
+    // retrieve name od part
+    TCollection_ExtendedString name = jtPartObject->Name();
+
+    if (name.Length() == 0 && !instance.IsNull())
+        name = instance->Name();
+
+    if (name.Length() > 0){
+        char* str = new char[name.LengthOfCString() + 1];
+        name.ToUTF8CString(str);
+        partName = str;
+        delete[] str;
+    }
+
+    // get the LOD structure
+    Handle(JtNode_LOD) lod = Handle(JtNode_LOD)::DownCast(jtPartObject->Children()[0]);
+    if (lod.IsNull())
+        throw "JtPartHandle::init(): Nod LOD node found ";
+    (*lodObject) = lod;
+    
+}
+
+int JtPartHandle::getLodCount()
+{
+    return (*lodObject)->Children().Count();
+}
+
+const char* JtReader::JtPartHandle::getName()
+{
+    return 0;
+}
+
+int JtReader::JtPartHandle::getLodFragmentCount(int lodLevel)
+{
+    Handle(JtNode_Group) lod = Handle(JtNode_Group)::DownCast((*lodObject)->Children()[lodLevel]);
+
+    // in case we have no group and directly a TriStrip
+    if (lod.IsNull())
+        return 1;
+    else
+        return lod->Children().Count();
 }
 
 
