@@ -83,12 +83,16 @@ Standard_Integer JtNode_Partition::Dump (Standard_OStream& theStream) const
 Standard_Boolean JtNode_Partition::Load()
 {
   Handle(JtData_Model)     aModel    = new JtData_Model (myFileName, myModel);
-  Handle(JtNode_Partition) aRootNode = aModel->Init();
-  if (aRootNode.IsNull())
+  //Handle(JtNode_Partition) aRootNode = aModel->Init();
+  myExternPartition = aModel->Init();
+
+  if (myExternPartition.IsNull())
     return Standard_False;
 
-  myChildren = aRootNode->Children();
-
+  
+  //myChildren.SafeSet(0, aRootNode->Children()[0]);
+  myChildren = myExternPartition->Children();
+ 
   return Standard_True;
 }
 
@@ -98,5 +102,7 @@ Standard_Boolean JtNode_Partition::Load()
 //=======================================================================
 void JtNode_Partition::Unload()
 {
-  myChildren.Free();
+    myExternPartition.Nullify();
+    myChildren.Free();
+
 }

@@ -47,6 +47,7 @@ public:
 protected:
   Handle(JtData_Model)       myModel;
   TCollection_ExtendedString myFileName;
+  Handle_JtNode_Group        myExternPartition;
 };
 
 DEFINE_STANDARD_HANDLE(JtNode_Partition, JtNode_Group)
