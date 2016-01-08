@@ -266,17 +266,27 @@ void collectPartHandles(const Handle_JtData_Object& obj, const Handle_JtData_Obj
         // assume no further Part below a Part
         return;
     }
-        
-    // is it a group type traverse further down:
-    const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast(obj);
-    if (!group.IsNull()){
-        const JtData_Object::VectorOfObjects& objVector = group->Children();
-        for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
-            const Handle(JtData_Object)& childObj = objVector[i];
-            collectPartHandles(childObj, obj , partHandlerVector);
+
+    if (typeName == "JtNode_Instance"){
+        const Handle(JtNode_Instance) instance = Handle(JtNode_Instance)::DownCast(obj);
+
+        const Handle(JtData_Object)& instancedObj = instance->Object();
+        collectPartHandles(instancedObj, obj, partHandlerVector);
+
+    }
+    else{
+       // is it a group type traverse further down:
+        const Handle(JtNode_Group) group = Handle(JtNode_Group)::DownCast(obj);
+        if (!group.IsNull()){
+            const JtData_Object::VectorOfObjects& objVector = group->Children();
+            for (JtData_Object::VectorOfObjects::SizeType i = 0; i < objVector.Count(); i++){
+                const Handle(JtData_Object)& childObj = objVector[i];
+                collectPartHandles(childObj, obj , partHandlerVector);
+            }
         }
     }
-}
+        
+ }
 
 std::vector<JtPartHandle*> JtReader::TkJtLibReader::extractPartHandles()
 {

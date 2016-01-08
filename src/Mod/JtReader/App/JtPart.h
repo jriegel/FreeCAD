@@ -23,9 +23,7 @@
 
 
 
-#ifndef _AppPlane_h_
-#define _AppPlane_h_
-
+#pragma once
 
 #include <App/GeoFeature.h>
 #include <App/PropertyStandard.h>
@@ -58,17 +56,19 @@ public:
 
     /// returns the type name of the ViewProvider
     virtual const char* getViewProviderName(void) const {
-        return "Gui::ViewProviderJtPart";
+        return "JtReaderGui::ViewProviderJtPart";
     }
 
     /// Return the bounding box of the plane (this is always a fixed size)
-    static Base::BoundBox3d getBoundBox();
-    void initJtHandler(JtPartHandle *partPtr);
- };
+    //static Base::BoundBox3d getBoundBox();
+
+    const JtPartHandle * getPartPtr() const { return _partPtr; }
+    void setPartPtr(JtPartHandle * val) { _partPtr = val; }
+
+protected:
+    JtPartHandle *_partPtr;
+};
 
 
 } //namespace JtReader
 
-
-
-#endif

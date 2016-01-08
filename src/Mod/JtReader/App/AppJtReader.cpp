@@ -30,6 +30,7 @@
 #include <Base/Interpreter.h>
 //#include <JtTk/JtkEntityFactory.h>
 #include "JtPart.h"
+#include "JtFile.h"
 
 
 extern struct PyMethodDef JtReader_methods[];
@@ -45,6 +46,7 @@ void JtReaderExport initJtReader() {
 
 
    JtReader::JtPart::init();
+   JtReader::JtFile::init();
 
 
     // Initialize JtTk

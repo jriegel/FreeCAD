@@ -47,6 +47,7 @@
 #include "TkJtLibReader.h"
 #include "JtPartHandle.h"
 #include "JtPart.h"
+#include "JtFile.h"
 
 using std::vector;
 using namespace MeshCore;
@@ -362,6 +363,11 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
     App::Part* Part = static_cast<App::PartPy*>(PartObject)->getPartPtr();
     App::Document *Doc = Part->getDocument();
 
+    // create a JtFile object as root for all the Jt Bodies (Parts)
+    JtReader::JtFile* newFileObj = static_cast<JtReader::JtFile*>(Doc->addObject("JtReader::JtFile", "JtFile"));
+    Part->addObject(newFileObj);
+    newFileObj->Label.setValue("test");
+
     PY_TRY{
         TkJtLibReader reader(Utf8Name.c_str());
 
@@ -376,12 +382,13 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
         std::vector<JtPartHandle*> partHandlerVector = reader.extractPartHandles();
 
         for (JtPartHandle *partPtr : partHandlerVector){
-             App::DocumentObject* newObj = Doc->addObject("JtReader::JtPart", partPtr->getName() ? partPtr->getName():"JtBody");
+             App::DocumentObject* newObj = Doc->addObject("JtReader::JtPart", "JtBody");
              JtPart* newJtPart = dynamic_cast<JtPart*>(newObj);
 
-             // add the handler to the object and put it the App::Part
-             newJtPart->initJtHandler(partPtr);
-             Part->addObject(newJtPart);
+             // add the handler to the object and put it the JtFile object
+             newJtPart->setPartPtr(partPtr);
+             newFileObj->addObject(newJtPart);
+             newJtPart->Label.setValue("test");
 
         }
 

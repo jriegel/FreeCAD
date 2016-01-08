@@ -33,6 +33,8 @@
 
 #include <Gui/Application.h>
 
+#include "ViewProviderJtPart.h"
+
 //#include "Workbench.h"
 
 // use a different name to CreateCommand()
@@ -61,7 +63,8 @@ void JtReaderGuiExport initJtReaderGui()
     }
 
     //CreateJtReaderCommands();
-    //JtReaderGui::Workbench::init();
+    JtReaderGui::ViewProviderJtPart::init();
+
 }
 
 } // extern "C" {

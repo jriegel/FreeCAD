@@ -36,14 +36,15 @@ class Handle_JtNode_Instance;
 class Handle_JtElement_ShapeLOD_TriStripSet;
 
 
-#include <App/ComplexGeoData.h>
 
 namespace JtReader
 {
 
 class JtReaderExport JtPartHandle
 {
+
 public:
+    // Jt material data-type
     struct JtMat {
         float AmbientColor[4];
         float DiffuseColor[4];
@@ -51,34 +52,52 @@ public:
         float EmissionColor[4];
         float Shininess;
         float Reflectivity;
+        // setter from arrays
+        void set(const float* ambientColor, const float* diffuseColor, const float* specularColor, const float* emissionColor, float shininess, float reflectivity){
+            AmbientColor[0] = ambientColor[0]; AmbientColor[1] = ambientColor[1]; AmbientColor[2] = ambientColor[2]; AmbientColor[3] = ambientColor[3];
+            DiffuseColor[0] = diffuseColor[0]; DiffuseColor[1] = diffuseColor[1]; DiffuseColor[2] = diffuseColor[2]; DiffuseColor[3] = diffuseColor[3];
+            SpecularColor[0] = specularColor[0]; SpecularColor[1] = specularColor[1]; SpecularColor[2] = specularColor[2]; SpecularColor[3] = specularColor[3];
+            EmissionColor[0] = emissionColor[0]; EmissionColor[1] = emissionColor[1]; EmissionColor[2] = emissionColor[2]; EmissionColor[3] = emissionColor[3];
+            Shininess = shininess;
+            Reflectivity = reflectivity;
+        }
     };
 
+    
 public:
     JtPartHandle();
     ~JtPartHandle();
 
-    /// fill this handle with the information in the JtPartObject
-    void init(const Handle_JtNode_Part &jtPartObject, const Handle_JtData_Object &parentObject);
 
     /// get the actual mesh and material 
-    void getFaces(int lodLevel, int fragment, std::vector<Base::Vector3d> &Points, std::vector<Base::Vector3d> &Normals, std::vector<Data::ComplexGeoData::Facet> &Topo,bool &hasMat, JtMat &mat);
+    void getFaces(int lodLevel, int fragment, std::vector<float> &Points, std::vector<float> &Normals, std::vector<int> &Topo, bool &hasMat, JtMat &mat) const;
 
-    const char* getName();
+    const char* getName() const;
     // returns the number of available LODs
-    int getLodCount();
+    int getLodCount() const;
     // return the number of Meshes (with different material) of a given LOD
-    int getLodFragmentCount(int lodLevel);
+    int getLodFragmentCount(int lodLevel) const;
 
     /// uses a callback to provide the Meshes 
     /// set to true if the Part was under an instance object
-    bool isInstanced;
+    bool isInstanced() const { return _Instanced; }
+
+    const JtReader::JtPartHandle::JtMat &getPartMaterial() const;
+    bool hasPartMatrial() const { return _hasPartMatrial; }
+
+    /// fill this handle with the information in the JtPartObject 
+    void init(const Handle_JtNode_Part &jtPartObject, const Handle_JtData_Object &parentObject);
 
 protected:
+
     //Handle_JtData_Model model;
     Handle_JtNode_Instance *instanceObj;
     Handle_JtNode_LOD *lodObject;
     std::string partName;
-    
+    bool _Instanced;
+    JtMat _partMaterial;
+    bool _hasPartMatrial;
+
 };
 
 }

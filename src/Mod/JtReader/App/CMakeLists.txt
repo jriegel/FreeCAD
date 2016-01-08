@@ -49,6 +49,8 @@ SET(JtReader_SRCS
     TkJtLibReader.cpp
 	JtPart.h
 	JtPart.cpp
+	JtFile.h
+	JtFile.cpp
 	JtPartPyImp.cpp
 	JtPartHandle.h
 	JtPartHandle.cpp

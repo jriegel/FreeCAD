@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2012    *
+ *   Copyright (c) Juergen Riegel          (juergen.riegel@web.de) 2016    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -20,74 +20,41 @@
  *                                                                         *
  ***************************************************************************/
 
+#pragma once
 
-#include "PreCompiled.h"
-
-#ifndef _PreComp_
-#endif
-
-
-#include "JtPart.h"
-#include "JtPartHandle.h"
-
-#include "TkJtLibReader.h"
-
-using namespace JtReader;
+#include <App/GeoFeatureGroup.h>
+#include <App/PropertyStandard.h>
 
 
-PROPERTY_SOURCE(JtReader::JtPart, App::GeoFeature)
 
-
-//===========================================================================
-// Feature
-//===========================================================================
-
-JtPart::JtPart(void) 
-:_partPtr(nullptr)
+namespace JtReader
 {
-    ADD_PROPERTY(JtFile, (""));
-    //placement can't be changed
-    Placement.StatusBits.set(3, true);
 
-}
-
-JtPart::~JtPart(void)
+ 
+/** Plane Object
+ *  Used to define planar support for all kind of operations in the document space
+ */
+ class JtReaderExport JtFile : public App::GeoFeatureGroup
 {
-}
+    PROPERTY_HEADER(App::JtFile);
 
-//Base::BoundBox3d JtPart::getBoundBox()
-//{
-//    return Base::BoundBox3d(-10, -10, -10, 10, 10, 10);
-//}
+public:
 
-void JtReader::JtPart::onChanged(const App::Property* prop)
-{
-    App::GeoFeature::onChanged(prop);
+    /// Constructor
+    JtFile(void);
+    virtual ~JtFile();
+    /// additional information about the plane usage (e.g. "BasePlane-xy" in a Part)
+    App::PropertyString FileName;
 
-    //if (prop == &JtFile) {
-    //    TkJtLibReader reader(JtFile.getValue());
+    /// get called by the container when a property was changed
+    virtual void onChanged(const App::Property* prop);
 
-    //    if (! reader.isValid())
-    //        return;
+    /// Return the bounding box 
+    static Base::BoundBox3d getBoundBox();
 
-    //    reader.Dump(std::cout);
-
-    //    if (reader.countParts() != 1)
-    //        return;
+ };
 
 
-    //    
-    //}
-
-}
-
-//void JtReader::JtPart::initJtHandler(JtPartHandle *partPtr)
-//{
-//    throw std::logic_error("The method or operation is not implemented.");
-//}
-//
-//
-//
-
+} //namespace JtReader
 
 

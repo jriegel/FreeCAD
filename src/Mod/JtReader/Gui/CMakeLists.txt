@@ -29,6 +29,8 @@ SET(JtReaderGui_SRCS
     AppJtReaderGuiPy.cpp
     PreCompiled.cpp
     PreCompiled.h
+	ViewProviderJtPart.cpp
+	ViewProviderJtPart.h
 )
 
 add_library(JtReaderGui SHARED ${JtReaderGui_SRCS})

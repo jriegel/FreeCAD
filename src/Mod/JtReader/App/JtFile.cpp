@@ -27,67 +27,60 @@
 #endif
 
 
-#include "JtPart.h"
-#include "JtPartHandle.h"
+#include "JtFile.h"
 
 #include "TkJtLibReader.h"
 
 using namespace JtReader;
 
 
-PROPERTY_SOURCE(JtReader::JtPart, App::GeoFeature)
+PROPERTY_SOURCE(JtReader::JtFile, App::GeoFeatureGroup)
 
 
 //===========================================================================
 // Feature
 //===========================================================================
 
-JtPart::JtPart(void) 
-:_partPtr(nullptr)
+JtFile::JtFile(void)
 {
-    ADD_PROPERTY(JtFile, (""));
+    ADD_PROPERTY(FileName, (""));
     //placement can't be changed
     Placement.StatusBits.set(3, true);
 
 }
 
-JtPart::~JtPart(void)
+JtFile::~JtFile(void)
 {
 }
 
-//Base::BoundBox3d JtPart::getBoundBox()
-//{
-//    return Base::BoundBox3d(-10, -10, -10, 10, 10, 10);
-//}
-
-void JtReader::JtPart::onChanged(const App::Property* prop)
+Base::BoundBox3d JtFile::getBoundBox()
 {
-    App::GeoFeature::onChanged(prop);
+    return Base::BoundBox3d(-10, -10, -10, 10, 10, 10);
+}
 
-    //if (prop == &JtFile) {
-    //    TkJtLibReader reader(JtFile.getValue());
+void JtReader::JtFile::onChanged(const App::Property* prop)
+{
+    App::GeoFeatureGroup::onChanged(prop);
 
-    //    if (! reader.isValid())
-    //        return;
+    if (prop == &FileName) {
+        TkJtLibReader reader(FileName.getValue());
 
-    //    reader.Dump(std::cout);
+        if (! reader.isValid())
+            return;
 
-    //    if (reader.countParts() != 1)
-    //        return;
+        reader.Dump(std::cout);
+
+        if (reader.countParts() != 1)
+            return;
 
 
-    //    
-    //}
+        
+    }
 
 }
 
-//void JtReader::JtPart::initJtHandler(JtPartHandle *partPtr)
-//{
-//    throw std::logic_error("The method or operation is not implemented.");
-//}
-//
-//
-//
+
+
 
 
 
