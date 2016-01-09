@@ -80,7 +80,8 @@ void JtPartHandle::getFaces(int lodLevel, int fragment, std::vector<float> &Poin
     else
         stripSet = Handle(JtNode_Shape_TriStripSet)::DownCast(lod->Children()[fragment]);
  
-    assert(!stripSet.IsNull());
+    if (stripSet.IsNull())
+        return;
 
     const JtData_Object::VectorOfLateLoads& lateLoads = stripSet->LateLoads();
 
