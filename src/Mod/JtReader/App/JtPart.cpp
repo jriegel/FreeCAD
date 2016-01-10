@@ -64,30 +64,5 @@ void JtReader::JtPart::onChanged(const App::Property* prop)
 {
     App::GeoFeature::onChanged(prop);
 
-    //if (prop == &JtFile) {
-    //    TkJtLibReader reader(JtFile.getValue());
-
-    //    if (! reader.isValid())
-    //        return;
-
-    //    reader.Dump(std::cout);
-
-    //    if (reader.countParts() != 1)
-    //        return;
-
-
-    //    
-    //}
-
 }
-
-//void JtReader::JtPart::initJtHandler(JtPartHandle *partPtr)
-//{
-//    throw std::logic_error("The method or operation is not implemented.");
-//}
-//
-//
-//
-
-
 

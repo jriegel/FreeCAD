@@ -1,0 +1,102 @@
+<?xml version="1.0" ?>
+<PLMXML xmlns="http://www.plmxml.org/Schemas/PLMXMLSchema" schemaVersion="4" date="2005-02-14" time="21:15:28" author="Vis Mockup 5.1.0">
+    <ProductDef id="id1">
+        <UserData id="id12" type="__TCC-VIS_MONIKER_INFO">
+            <UserValue value="C:\Program Files\UGS\JT2Go\Examples\2_Cylinder_Engine_Example\2_Cylinder_Engine.jt" title="Path"></UserValue>
+            <UserValue value="file" title="FA_Protocol"></UserValue>
+            <UserValue value="C:/Program Files/UGS/JT2Go/Examples/2_Cylinder_Engine_Example/2_Cylinder_Engine.jt" title="object_id"></UserValue>
+            <UserValue value="C:\Program Files\UGS\JT2Go\Examples\2_Cylinder_Engine_Example\2_Cylinder_Engine.jt" title="LocalCopy"></UserValue>
+            <UserValue value="2.0" title="Version"></UserValue>
+            <UserValue value="local" title="FA_Service"></UserValue>
+            <UserValue value="No" title="MkIsFolder"></UserValue>
+            <UserValue value="2_Cylinder_Engine.jt" title="Title"></UserValue>
+            <UserValue value="DirectModel.Document" title="FileTypeID"></UserValue>
+        </UserData>
+        <InstanceGraph id="id2" rootRefs="inst1798736">
+            <Instance id="inst1798736" name="2_Cylinder_Engine" partRef="#id14">
+                <ApplicationRef application="TCC-VIS" label="2_Cylinder_Engine.asm;0;0:"></ApplicationRef>
+                <UserData id="id20" type="Hidden_Metadata">
+                    <UserValue value="156001" title="TOOLKIT_CUSTOMER"></UserValue>
+                </UserData>
+                <UserData id="id31">
+                    <UserValue value="2_Cylinder_Engine" title="Name"></UserValue>
+                    <UserValue type="int" value="0" title="Version"></UserValue>
+                    <UserValue value="sgerus" title="Creator"></UserValue>
+                    <UserValue value="**Changes not in Library**" title="Revision"></UserValue>
+                    <UserValue value="INITIAL" title="State"></UserValue>
+                    <UserValue value="Jan-30-1998  16:58:30.00" title="Version Create Date + Time"></UserValue>
+                    <UserValue value="2 Cylinder Engine" title="I-DEAS Name"></UserValue>
+                    <UserValue value="123-001" title="I-DEAS Part Number"></UserValue>
+                    <UserValue value="sgerus" title="Last Modifier"></UserValue>
+                    <UserValue value="Jan-10-2005  13:23:55.05" title="Version Mod. Date + Time"></UserValue>
+                </UserData>
+                <Transform id="id15">1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</Transform>
+            </Instance>
+            <Instance id="inst1910440" name="rod:123-699;0,Parts" partRef="#id58">
+                <ApplicationRef application="TCC-VIS" label="rod:123-699;0,Parts.part;0;0:"></ApplicationRef>
+                <Transform id="id59">0.9861037135124207 -0.1661308258771896 0 0 0.1661308258771896 0.9861037135124207 0 0 0 0 1 0 0.07101806253194809 0.02219301462173462 0.02199999988079071 1</Transform>
+            </Instance>
+            <Instance id="inst1937376" name="Piston Sub:;0,Parts" partRef="#id64">
+                <ApplicationRef application="TCC-VIS" label="Piston Sub:;0,Parts.asm;0;0:"></ApplicationRef>
+                <Transform id="id65">-1 0 0 0 0 -1 0 0 0 0 1 0 -0.1368601024150848 0.06445372104644775 0.003820367390289903 1</Transform>
+            </Instance>
+            <Instance id="inst1912768" name="Piston:123-844;0,Parts" partRef="#id74">
+                <ApplicationRef application="TCC-VIS" label="Piston:123-844;0,Parts.part;0;0:"></ApplicationRef>
+                <Transform id="id75">-1 0 0 0 0 -1 0 0 0 0 1 0 -0.294677197933197 0.07397986948490143 0.01617963239550591 1</Transform>
+            </Instance>
+            <Instance id="inst1865720" name="Piston pin:123-845;0,Parts" partRef="#id83">
+                <ApplicationRef application="TCC-VIS" label="Piston pin:123-845;0,Parts.part;0;0:"></ApplicationRef>
+                <Transform id="id84">0.9995650053024292 0.02949320152401924 0 0 -0.0294931884855032 0.9995650053024292 0 0 0 0 1 0 -0.0453154630959034 -0.02461725845932961 -0.02632036805152893 1</Transform>
+            </Instance>
+            <Part id="id14" name="2_Cylinder_Engine" instanceRefs="inst1910440 inst1937376" type="assembly">
+                <UserData id="id33" type="Hidden_Metadata">
+                    <UserValue value="156001" title="TOOLKIT_CUSTOMER"></UserValue>
+                </UserData>
+                <UserData id="id44">
+                    <UserValue value="2_Cylinder_Engine" title="Name"></UserValue>
+                    <UserValue type="int" value="0" title="Version"></UserValue>
+                    <UserValue value="sgerus" title="Creator"></UserValue>
+                    <UserValue value="**Changes not in Library**" title="Revision"></UserValue>
+                    <UserValue value="INITIAL" title="State"></UserValue>
+                    <UserValue value="Jan-30-1998  16:58:30.00" title="Version Create Date + Time"></UserValue>
+                    <UserValue value="2 Cylinder Engine" title="I-DEAS Name"></UserValue>
+                    <UserValue value="123-001" title="I-DEAS Part Number"></UserValue>
+                    <UserValue value="sgerus" title="Last Modifier"></UserValue>
+                    <UserValue value="Jan-10-2005  13:23:55.05" title="Version Mod. Date + Time"></UserValue>
+                </UserData>
+                <Occurrence id="id16" instanceRefs="#inst1798736">
+                    <Transform id="id17">1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</Transform>
+                </Occurrence>
+            </Part>
+            <Part id="id58" name="rod:123-699;0,Parts" type="solid">
+                <Bound id="id61" values="0.02005359902977943 -0.006323420908302069 0 0.09100000560283661 0.03700000047683716 0.009999999776482582"></Bound>
+                <Representation id="id62" format="JT" location="./2_Cylinder_Engine/rod_123_699_0_Parts.jt"></Representation>
+            </Part>
+            <Part id="id64" name="Piston Sub:;0,Parts" instanceRefs="inst1912768 inst1865720" type="assembly">
+                <UserData id="id72">
+                    <UserValue value="Piston Sub" title="I-DEAS Name"></UserValue>
+                    <UserValue value="Piston Sub:;0,Parts" title="Name"></UserValue>
+                    <UserValue type="int" value="0" title="Version"></UserValue>
+                </UserData>
+                <Occurrence id="id66" instanceRefs="#inst1937376">
+                    <Transform id="id67">-1 0 0 0 0 -1 0 0 0 0 1 0 -0.1368601024150848 0.06445372104644775 0.003820367390289903 1</Transform>
+                </Occurrence>
+            </Part>
+            <Part id="id74" name="Piston:123-844;0,Parts" type="solid">
+                <Bound id="id80" values="0.0101108755916357 0.009526152163743973 0 0.05324159190058708 0.04650000110268593 0.04649999737739563"></Bound>
+                <Occurrence id="id76" materialRef="id77" instanceRefs="#inst1912768">
+                    <Transform id="id78">-1 0 0 0 0 -1 0 0 0 0 1.0 0 -0.2946771681308746 0.07397986948490143 0.01617963425815105 1</Transform>
+                </Occurrence>
+                <Representation id="id81" format="JT" location="./2_Cylinder_Engine/Piston_123_844_0_Parts.jt"></Representation>
+            </Part>
+            <Part id="id83" name="Piston pin:123-845;0,Parts" type="solid">
+                <Bound id="id86" values="-0.2534925639629364 0.09658930450677872 0.04250000044703484 0.01099999435245991 0.01099186204373837 0.04250000044703484"></Bound>
+                <Representation id="id87" format="JT" location="./2_Cylinder_Engine/Piston_pin_123_845_0_Parts.jt"></Representation>
+            </Part>
+        </InstanceGraph>
+        <Material id="id77" diffuse="1 0 1" specular="1 0 1" emissive="0 0 0" ambient="0 0 0" shininess="96" alpha="0.1000000238418579"></Material>
+        <Material id="id182" diffuse="0.847058892250061 0.847058892250061 0.847058892250061" specular="0.8000000715255737 0.8000000715255737 0.8000000715255737" emissive="0 0 0" ambient="0.1490196138620377 0.1490196138620377 0.1490196138620377" shininess="96" alpha="0.5"></Material>
+        <Material id="id190" diffuse="0.6509804129600525 0.7921569347381592 0.9411765336990356" specular="0.6509804129600525 0.7921569347381592 0.9411765336990356" emissive="0 0 0" ambient="0.1490196138620377 0.1490196138620377 0.1490196138620377" shininess="96" alpha="0.5"></Material>
+    <Material id="id212" diffuse="1 0 0" specular="1 0 0" emissive="0 0 0" ambient="0.1490196138620377 0.1490196138620377 0.1490196138620377" shininess="96" alpha="0.5"></Material>
+    </ProductDef>
+</PLMXML>

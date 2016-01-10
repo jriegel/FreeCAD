@@ -35,9 +35,13 @@ actDirName =""
 
 def ParseUserData(element):
     res = {}
-    for i in element.findall('{http://www.plmxml.org/Schemas/PLMXMLSchema}UserData'):
-        for value in i.findall('{http://www.plmxml.org/Schemas/PLMXMLSchema}UserValue'):
-            res[value.attrib['title']] = value.attrib['value']
+    if element is not None:
+        UserDat = element.findall('{http://www.plmxml.org/Schemas/PLMXMLSchema}UserData')
+        
+        if UserDat:
+            for i in UserDat:
+                for value in i.findall('{http://www.plmxml.org/Schemas/PLMXMLSchema}UserValue'):
+                    res[value.attrib['title']] = value.attrib['value']
     return res
 
 def addPart(partElement):
@@ -48,24 +52,42 @@ def addPart(partElement):
     userData = ParseUserData(partElement)
 
     bound = partElement.find('{http://www.plmxml.org/Schemas/PLMXMLSchema}Bound')
-    print bound.attrib['values']
+    if bound is not None:
+        print bound.attrib['values']
 
-    representation = partElement.find('{http://www.plmxml.org/Schemas/PLMXMLSchema}Representation')
-    format =  representation.attrib['format']
-    location = representation.attrib['location']
+    representations = partElement.findall('{http://www.plmxml.org/Schemas/PLMXMLSchema}Representation')
+    if representations is None:
+        return
+    print "Repr. Count: ", len(representations)
+    for representation in representations:
+        format = None
+        if not 'format' in representation.attrib:
+            continue
+        format = representation.attrib['format']
+        print format
+        if not format == "JT":
+            print "Cont with: ", format
+            continue
+            
+        location = None
+        if 'location' in representation.attrib:
+            location = representation.attrib['location']
+        if location is None:
+            # get the location from the CompRep
+            CompoundRep = representation.find('{http://www.plmxml.org/Schemas/PLMXMLSchema}CompoundRep')
+            location = CompoundRep.attrib['location']
 
-    print id, name, userData, format, location
-    if FreeCAD_On:
-        import FreeCAD,Assembly
-        print"Create Part"
-        partObject =FreeCAD_Doc.addObject("App::Part",id)
-        FreeCAD_ObjList.append(partObject)
-        partObject.Label = name
-        partObject.Meta = userData
-        if format == "JT":
+        print id, name, userData, format, location
+        if FreeCAD_On:
+            import FreeCAD,Assembly
+            print"Create Part"
+            partObject =FreeCAD_Doc.addObject("App::Part",id)
+            FreeCAD_ObjList.append(partObject)
+            partObject.Label = name
+            partObject.Meta = userData
             import JtReader
-            location = os.path.join(actDirName,location)
-            JtReader.readJtPart(location,partObject)
+            location2 = os.path.join(actDirName,location)
+            JtReader.readJtPart(location2,partObject)
 
 def addAssembly(asmElement):
     global FreeCAD_On,FreeCAD_Doc,FreeCAD_ObjList
@@ -75,6 +97,9 @@ def addAssembly(asmElement):
     id = asmElement.attrib['id']
     instanceRefs = asmElement.attrib['instanceRefs']
     userData['instanceRefs'] = instanceRefs
+    #transform = asmElement.find('{http://www.plmxml.org/Schemas/PLMXMLSchema}Transform')
+    #mtrx = [float(i) for i in transform.text.split(' ')]
+    #print mtrx
 
     print id, name, instanceRefs, userData
     if FreeCAD_On:
@@ -84,6 +109,10 @@ def addAssembly(asmElement):
         FreeCAD_ObjList.append(admObject)
         admObject.Label = name
         admObject.Meta = userData
+        #pos = FreeCAD.Placement(FreeCAD.Matrix(mtrx[0],mtrx[1],mtrx[2],mtrx[3],mtrx[4],mtrx[5],mtrx[6],mtrx[7],mtrx[8],mtrx[9],mtrx[10],mtrx[11],mtrx[12],mtrx[13],mtrx[14],mtrx[15]))
+        #pos = FreeCAD.Placement(FreeCAD.Matrix(mtrx[0],mtrx[4],mtrx[8],mtrx[12],mtrx[1],mtrx[5],mtrx[9],mtrx[12],mtrx[2],mtrx[6],mtrx[10],mtrx[14],mtrx[3],mtrx[7],mtrx[11],mtrx[15]))
+        #refObject.Placement = pos.inverse()
+        #refObject.Placement = pos
 
 def addReference(refElement):
     global FreeCAD_On,FreeCAD_Doc,FreeCAD_ObjList
@@ -92,11 +121,16 @@ def addReference(refElement):
     partRef = refElement.attrib['partRef'][1:]
     userData['partRef'] = partRef
     id = refElement.attrib['id']
-    name = refElement.attrib['name']
+    name = ""
+    if 'name' in refElement.attrib.keys():
+        name = refElement.attrib['name']
     transform = refElement.find('{http://www.plmxml.org/Schemas/PLMXMLSchema}Transform')
-    mtrx = [float(i) for i in transform.text.split(' ')]
-    print mtrx
-    print id,name,partRef
+    hasTransform = False
+    if transform is not None:
+        mtrx = [float(i) for i in transform.text.split(' ')]
+        print mtrx
+        print id,name,partRef
+        hasTransform = True
 
     if FreeCAD_On:
         import FreeCAD,Assembly
@@ -105,7 +139,12 @@ def addReference(refElement):
         FreeCAD_ObjList.append(refObject)
         refObject.Label = name
         refObject.Meta = userData
-        refObject.Placement = FreeCAD.Placement(FreeCAD.Matrix(mtrx[0],mtrx[1],mtrx[2],mtrx[3],mtrx[4],mtrx[5],mtrx[6],mtrx[7],mtrx[8],mtrx[9],mtrx[10],mtrx[11],mtrx[12],mtrx[13],mtrx[14],mtrx[15]))
+        if hasTransform:
+            #pos = FreeCAD.Placement(FreeCAD.Matrix(mtrx[0],mtrx[1],mtrx[2],mtrx[3],mtrx[4],mtrx[5],mtrx[6],mtrx[7],mtrx[8],mtrx[9],mtrx[10],mtrx[11],mtrx[12],mtrx[13],mtrx[14],mtrx[15]))
+            factor = 1
+            pos = FreeCAD.Placement(FreeCAD.Matrix(mtrx[0],mtrx[4],mtrx[8],mtrx[12] * factor,mtrx[1],mtrx[5],mtrx[9],mtrx[13] * factor,mtrx[2],mtrx[6],mtrx[10],mtrx[14] * factor,mtrx[3],mtrx[7],mtrx[11],mtrx[15]))
+            #refObject.Placement = pos.inverse()
+            refObject.Placement = pos
 
 def resolveRefs():
     global FreeCAD_On,FreeCAD_Doc,FreeCAD_ObjList
@@ -132,6 +171,7 @@ def open(fileName):
     FreeCAD_On = True
     parse(fileName)
     resolveRefs()
+    FreeCAD_ObjList = []
 
 def insert(filename,docname):
     """called when freecad imports an PlmXml file"""
@@ -193,7 +233,8 @@ def parse(fileName):
                 continue
             print "Unknown Part type:",child
         else:
-            print "not Type in Part", child
+            print "not Type in Part -> Assume Part", child
+            addPart(child)
 
 
 if __name__ == '__main__':

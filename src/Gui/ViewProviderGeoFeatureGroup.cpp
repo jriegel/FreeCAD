@@ -69,8 +69,8 @@ ViewProviderGeoFeatureGroup::~ViewProviderGeoFeatureGroup()
 
 std::vector<App::DocumentObject*> ViewProviderGeoFeatureGroup::claimChildren(void)const
 {
-    for(App::DocumentObject* obj : static_cast<App::Part*>(getObject())->Items.getValues())
-        Base::Console().Message("Claimed children: %s\n", obj->getNameInDocument());
+    //for(App::DocumentObject* obj : static_cast<App::Part*>(getObject())->Items.getValues())
+    //    Base::Console().Message("Claimed children: %s\n", obj->getNameInDocument());
         
     return std::vector<App::DocumentObject*>(static_cast<App::Part*>(getObject())->Items.getValues());
 }

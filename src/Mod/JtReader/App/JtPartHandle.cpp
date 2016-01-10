@@ -128,7 +128,7 @@ void JtPartHandle::getFaces(int lodLevel, int fragment, std::vector<float> &Poin
     // get the material attribute
     const JtData_Object::VectorOfObjects& attibutes = stripSet->Attributes();
     for (JtData_Object::VectorOfObjects::SizeType i = 0; i < attibutes.Count(); i++){
-        if (string(attibutes[i]->DynamicType()->Name()) == " JtAttribute_Material"){
+        if (string(attibutes[i]->DynamicType()->Name()) == "JtAttribute_Material"){
             Handle(JtAttribute_Material) stripMat = Handle(JtAttribute_Material)::DownCast(attibutes[i]);
             mat.set(stripMat->AmbientColor(), stripMat->DiffuseColor(), stripMat->SpecularColor(), stripMat->EmissionColor(), stripMat->Shininess(), stripMat->Reflectivity());
             hasMat = true;

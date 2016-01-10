@@ -362,12 +362,7 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
     PyMem_Free(Name);
     App::Part* Part = static_cast<App::PartPy*>(PartObject)->getPartPtr();
     App::Document *Doc = Part->getDocument();
-
-    // create a JtFile object as root for all the Jt Bodies (Parts)
-    JtReader::JtFile* newFileObj = static_cast<JtReader::JtFile*>(Doc->addObject("JtReader::JtFile", "JtFile"));
-    Part->addObject(newFileObj);
-    newFileObj->Label.setValue("test");
-
+ 
     PY_TRY{
         TkJtLibReader reader(Utf8Name.c_str());
 
@@ -376,6 +371,13 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
 
         if (reader.countPartitions()>0)
             Py_Error(Base::BaseExceptionFreeCADError, "This method will not read multipart Jt files!");
+
+       // create a JtFile object as root for all the Jt Bodies (Parts)
+        JtReader::JtFile* newFileObj = static_cast<JtReader::JtFile*>(Doc->addObject("JtReader::JtFile", "JtFile"));
+        Part->addObject(newFileObj);
+        newFileObj->FileName.setValue(Utf8Name);
+        boost::filesystem::path p(Utf8Name);
+        newFileObj->Label.setValue(p.filename().string());
 
 
         // get all the parts (bodies) of the Jt-file 
@@ -388,7 +390,7 @@ static PyObject * readJtPart(PyObject *self, PyObject *args)
              // add the handler to the object and put it the JtFile object
              newJtPart->setPartPtr(partPtr);
              newFileObj->addObject(newJtPart);
-             newJtPart->Label.setValue("test");
+             newJtPart->Label.setValue(partPtr->getName());
 
         }
 

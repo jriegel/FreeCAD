@@ -61,22 +61,6 @@ Base::BoundBox3d JtFile::getBoundBox()
 void JtReader::JtFile::onChanged(const App::Property* prop)
 {
     App::GeoFeatureGroup::onChanged(prop);
-
-    if (prop == &FileName) {
-        TkJtLibReader reader(FileName.getValue());
-
-        if (! reader.isValid())
-            return;
-
-        reader.Dump(std::cout);
-
-        if (reader.countParts() != 1)
-            return;
-
-
-        
-    }
-
 }
 
 

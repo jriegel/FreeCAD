@@ -57,11 +57,12 @@ TkJtLibReader::TkJtLibReader(const char* jtFileName)
     QDir dir(fileInfo.absoluteDir());
     QDir::setCurrent(dir.absolutePath());
     
+    std::string test(fileInfo.canonicalFilePath().toUtf8());
 
     model = new Handle_JtData_Model();
     partition = new Handle(JtNode_Partition);
 
-    *model = new JtData_Model(TCollection_ExtendedString(jtFileName));
+    *model = new JtData_Model(TCollection_ExtendedString(test.c_str()));
 	//Base::Console().Log("FcLodHandler::startLod()");
 
     (*partition) = (*model)->Init(); // inti reads the TOC

@@ -188,7 +188,6 @@ std::vector<SoNode*> createLod(int lodLevel, const JtReader::JtPartHandle& partH
 {
     std::vector<SoNode*> retNodes;
 
-    int fragment;
     std::vector<float> Points;
     std::vector<float> Normals;
     std::vector<int> Topo;
@@ -198,67 +197,85 @@ std::vector<SoNode*> createLod(int lodLevel, const JtReader::JtPartHandle& partH
     int fragments = partHandle.getLodFragmentCount(lodLevel);
 
     assert(fragments >= 1);
-    
 
-    partHandle.getFaces(lodLevel, 0, Points, Normals, Topo, hasMat, mat);
+    for (int fragCount = 0; fragCount < fragments; fragCount++){
 
+        partHandle.getFaces(lodLevel, fragCount, Points, Normals, Topo, hasMat, mat);
 
-    //assert(hasMat == false);
+        // create material node if material is given 
+        SoMaterial *material = 0;
+        if (hasMat){
+            material = new SoMaterial;
 
+            material->ambientColor.setValue(mat.AmbientColor[0], mat.AmbientColor[1], mat.AmbientColor[2]);
+            material->diffuseColor.setValue(mat.DiffuseColor[0], mat.DiffuseColor[1], mat.DiffuseColor[2]);
+            material->specularColor.setValue(mat.SpecularColor[0], mat.SpecularColor[1], mat.SpecularColor[2]);
+            material->emissiveColor.setValue(mat.EmissionColor[0], mat.EmissionColor[1], mat.EmissionColor[2]);
+            material->shininess.setValue(mat.Shininess);
+        }
 
-    SoNormalBinding *normb = new SoNormalBinding();
-    normb->value = SoNormalBinding::PER_VERTEX_INDEXED;
+        //SoNormalBinding *normb = new SoNormalBinding();
+        //normb->value = SoNormalBinding::PER_VERTEX_INDEXED;
  
-    SoNormal *norm = new SoNormal();
+        SoNormal *norm = new SoNormal();
 
-    SoCoordinate3  *coords = new SoCoordinate3();
+        SoCoordinate3  *coords = new SoCoordinate3();
 
-    SoIndexedFaceSet *faceset = new SoIndexedFaceSet;
+        SoIndexedFaceSet *faceset = new SoIndexedFaceSet;
  
-    // create memory for the nodes and indexes
-    coords->point.setNum(Points.size()/3);
-    norm->vector.setNum(Normals.size()/3);
-    faceset->coordIndex.setNum(Topo.size() + Topo.size()/3);
-    // get the raw memory for fast fill up
-    SbVec3f* verts = coords->point.startEditing();
-    SbVec3f* norms = norm->vector.startEditing();
-    int32_t* index = faceset->coordIndex.startEditing();
+        // create memory for the nodes and indexes
+        coords->point.setNum(Points.size()/3);
+        norm->vector.setNum(Normals.size()/3);
+        faceset->coordIndex.setNum(Topo.size() + Topo.size()/3);
+        // get the raw memory for fast fill up
+        SbVec3f* verts = coords->point.startEditing();
+        SbVec3f* norms = norm->vector.startEditing();
+        int32_t* index = faceset->coordIndex.startEditing();
  
-    // preset the normal vector with null vector
-    for (int i = 0; i < Normals.size(); i += 3)
-        norms[i / 3] = SbVec3f(Normals[i], Normals[i + 1], Normals[i + 2]);
+        // preset the normal vector with null vector
+        for (int i = 0; i < Normals.size(); i += 3)
+            norms[i / 3] = SbVec3f(Normals[i], Normals[i + 1], Normals[i + 2]);
 
-    for (int i = 0; i < Points.size(); i += 3)
-        verts[i / 3] = SbVec3f(Points[i], Points[i + 1], Points[i + 2]);
+        for (int i = 0; i < Points.size(); i += 3)
+            verts[i / 3] = SbVec3f(Points[i], Points[i + 1], Points[i + 2]);
 
-    for (int i = 0, l = 0; i < Topo.size(); i += 3, l += 4){
-        index[l] = Topo[i];
-        index[l+1] = Topo[i+1];
-        index[l+2] = Topo[i+2];
-        index[l+3] = -1;
-    }
+        for (int i = 0, l = 0; i < Topo.size(); i += 3, l += 4){
+            index[l] = Topo[i];
+            index[l+1] = Topo[i+1];
+            index[l+2] = Topo[i+2];
+            index[l+3] = -1;
+        }
         
 
-    // end the editing of the nodes
-    coords->point.finishEditing();
-    norm->vector.finishEditing();
-    faceset->coordIndex.finishEditing();
+        // end the editing of the nodes
+        coords->point.finishEditing();
+        norm->vector.finishEditing();
+        faceset->coordIndex.finishEditing();
 
-    retNodes.push_back(normb);
-    retNodes.push_back(norm);
-    retNodes.push_back(coords);
-    retNodes.push_back(faceset);
+        Points.clear();
+        Normals.clear();
+        Topo.clear();
+
+        if (hasMat)
+            retNodes.push_back(material);
+        //retNodes.push_back(normb);
+        retNodes.push_back(norm);
+        retNodes.push_back(coords);
+        retNodes.push_back(faceset);
 
 
+    }
+    
     return retNodes;
 }
 
 std::vector<SoNode*> createSoNodesFromHandle(const JtReader::JtPartHandle& partHandle)
 {
     std::vector<SoNode*> retNodes;
+    int lodCount = partHandle.getLodCount();
 
-    if (partHandle.getLodCount() >= 1)
-        return createLod(0, partHandle);
+    if (lodCount >= 1)
+        return createLod(lodCount-1, partHandle);
 
 
 
